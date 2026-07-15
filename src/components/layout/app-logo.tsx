@@ -13,14 +13,6 @@ export const AppLogo = () => {
                 className='app-logo__image'
                 style={{ height: isDesktop ? '40px' : '32px', cursor: 'pointer' }}
             />
-            {isDesktop && (
-                <span
-                    className='app-logo__text'
-                    style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '1.8rem', color: 'var(--text-general)' }}
-                >
-                    Maziwa Trader
-                </span>
-            )}
         </div>
     );
 };
