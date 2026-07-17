@@ -22,6 +22,8 @@ import AccountSwitcher from './account-switcher';
 import MenuItems from './menu-items';
 import MobileMenu from './mobile-menu';
 import PlatformSwitcher from './platform-switcher';
+import TelegramLink from './TelegramLink';
+import YouTubeLink from './YouTubeLink';
 import './header.scss';
 
 type TAppHeaderProps = {
@@ -189,6 +191,8 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
                 {isDesktop && <PlatformSwitcher />}
             </Wrapper>
             <Wrapper variant='right'>
+                {isDesktop && <TelegramLink />}
+                {isDesktop && <YouTubeLink />}
                 {!isDesktop && <PWAInstallButton variant='primary' size='medium' />}
                 {renderAccountSection()}
             </Wrapper>

@@ -9,11 +9,11 @@ export const AppLogo = () => {
         <div className="app-logo" onClick={() => window.location.assign('/')}>
             <img 
                 src="/logo.png" 
-                alt="Dollar Printers Logo" 
+                alt="Maziwa Trader Logo" 
                 className="app-logo__image"
                 style={{ height: isDesktop ? '40px' : '32px', cursor: 'pointer' }}
             />
-            {isDesktop && <span className="app-logo__text" style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '1.8rem', color: 'var(--text-general)' }}>Dollar Printers</span>}
+            {isDesktop && <span className="app-logo__text" style={{ marginLeft: '8px', fontWeight: 'bold', fontSize: '1.8rem', color: 'var(--text-general)' }}>Maziwa Trader</span>}
         </div>
     );
 };

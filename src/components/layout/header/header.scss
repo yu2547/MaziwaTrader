@@ -2,6 +2,23 @@
 @use 'components/shared/styles/mixins' as *;
 
 .app-header {
+    &__social-icon {
+        display: flex;
+        align-items: center;
+        padding: 0 0.8rem;
+        color: var(--text-prominent);
+        opacity: 0.8;
+        transition: opacity 0.2s;
+
+        &:hover {
+            opacity: 1;
+        }
+
+        svg > path {
+            fill: var(--text-prominent);
+        }
+    }
+
     &__account-settings {
         padding-inline-end: 1.2rem;
         border-inline-end: 0.1rem solid var(--general-section-1);
