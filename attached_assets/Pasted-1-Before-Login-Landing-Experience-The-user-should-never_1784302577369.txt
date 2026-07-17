@@ -1,0 +1,178 @@
+1. Before Login (Landing Experience)
+The user should never be presented with a static login screen. Instead, the experience should immediately feel like entering a professional AI-powered trading platform.
+Background
+Deep navy and black gradient.
+Animated floating particles.
+Soft moving light streaks.
+Subtle glass reflections.
+Slow ambient glow that moves across the screen.
+Logo
+The MaziwaTrader logo appears in the center with:
+Soft cyan outer glow.
+Gentle breathing animation.
+Slight 3D floating effect.
+Neon reflection underneath.
+Login Button
+When the Login button is pressed:
+Button shrinks slightly as if being physically pressed.
+Cyan glow expands around it.
+Small ripple animation spreads outward.
+Button changes into a loading state.
+Loading spinner appears inside the button.
+Button text smoothly changes from:
+Login
+to
+Authenticating...
+No page reload should be visible.
+Register Button
+When the Register button is pressed:
+Same smooth press animation.
+Purple-to-cyan glow.
+Ripple animation.
+Glass hover effect.
+Opens registration smoothly with a fade transition.
+After Login (Loading Animation)
+Once authentication succeeds, the login page should not disappear instantly.
+Instead...
+The whole interface slowly fades into an AI loading screen.
+AI Loading Screen
+Dark futuristic background.
+Center:
+MaziwaTrader logo glowing.
+Under the logo:
+Animated status text changing every second.
+Example:
+Connecting to Deriv...
+↓
+Authenticating account...
+↓
+Loading market data...
+↓
+Syncing trading bots...
+↓
+Building dashboard...
+↓
+Analyzing volatility...
+↓
+Preparing AI modules...
+↓
+Loading completed...
+Progress Bar
+Not an ordinary progress bar.
+Use:
+Neon cyan line.
+Light travelling through the line.
+Percentage increasing smoothly.
+0%
+↓
+18%
+↓
+36%
+↓
+58%
+↓
+82%
+↓
+100%
+No jumps.
+Number Animation
+Behind the logo:
+Trading digits constantly changing.
+Examples
+4 8 2
+↓
+7 3 9
+↓
+5 5 1
+↓
+8 1 6
+Like live market ticks.
+Final Transition
+At 100%
+Everything softly brightens.
+Logo slightly enlarges.
+Entire loading screen fades into Dashboard.
+No flickering.
+No white flash.
+Only one continuous cinematic transition.
+Top Toolbar
+When clicking:
+Dashboard
+Bots
+Bulk Trader
+Analysis
+Reports
+Charts
+Settings
+Each menu should respond like a premium trading terminal.
+Active Menu Animation
+When clicked:
+Previous menu loses glow smoothly.
+New menu:
+Slides slightly upward.
+Gets surrounded by a glowing cyan pill.
+Icon becomes brighter.
+Text changes to white.
+Outer glow expands softly.
+Small pulse animation.
+Glow remains until another menu is selected.
+Glow Style
+Not a flat blue.
+Use:
+Electric cyan.
+Soft blur.
+Glass reflection.
+Small bloom effect.
+Looks similar to premium fintech dashboards.
+Page Transition
+After clicking a toolbar item:
+Old page fades to 90%.
+New page slides upward about 10px.
+Opacity:
+0%
+↓
+100%
+Duration:
+250–350ms.
+Feels like a desktop application.
+Left Sidebar
+The sidebar should feel alive.
+When selecting:
+Dashboard
+Bot Builder
+Analysis
+Bulk Trader
+Settings
+etc.
+Sidebar Animation
+Clicked item:
+Moves slightly inward.
+Rounded glass background appears.
+Blue neon glow spreads behind it.
+Left glowing indicator bar slides into place.
+Icon scales slightly larger.
+Text brightens.
+Everything animates smoothly.
+Inactive menus:
+Return to dark gray.
+Glow disappears gradually.
+No instant changes.
+Sidebar Opening
+When opening the sidebar:
+Entire panel slides in smoothly.
+Background blur appears.
+Icons fade in one after another.
+Looks premium.
+Sidebar Closing
+Slides left.
+Opacity decreases.
+Main content expands smoothly.
+Overall Feel
+The entire platform should feel like a high-end AI trading terminal rather than a standard website.
+Every interaction should be:
+Smooth.
+Responsive.
+Glassmorphism-based.
+Neon cyan illuminated.
+Consistent across login, loading, toolbar, sidebar, and page transitions.
+The goal is to create an experience similar to a professional fintech application, where every click and transition feels polished, fluid, and visually premium.

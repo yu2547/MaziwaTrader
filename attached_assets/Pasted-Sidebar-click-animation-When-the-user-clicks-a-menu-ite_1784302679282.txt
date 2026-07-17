@@ -1,0 +1,24 @@
+Sidebar click animation
+When the user clicks a menu item in the left sidebar, the interaction should feel premium and responsive.
+The selected menu item should slide into an active state with a smooth animation lasting about 250–350 ms.
+A rounded glowing background should appear behind the active item, using a cyan/blue neon glow that softly illuminates the surrounding area.
+The glow should not be a solid block; it should have a subtle blur and soft edges to create a futuristic glass effect.
+The active icon should animate by slightly enlarging (around 5–10%) and changing from a muted color to bright cyan or white.
+The menu text should transition smoothly to a brighter color and become slightly bolder.
+A thin glowing vertical indicator bar should appear on the left edge of the active menu item, reinforcing which section is selected.
+As the new item becomes active, the previous one should gently fade back to its normal appearance instead of changing instantly.
+When hovering (desktop), the menu should brighten slightly before being clicked to provide visual feedback.
+Page transition after clicking
+After clicking a sidebar menu such as Dashboard, Bot Builder, Analysis, or Bulk Trader:
+The content area should fade out slightly while the new page loads.
+The newly selected page should fade in and slide upward by a few pixels, creating a smooth, continuous transition.
+During loading, the active sidebar item should keep its glow, showing the user exactly where they are.
+There should be no white flashes, flickering, or abrupt page reloads. Every transition should feel fluid and app-like.
+Overall visual style
+The sidebar should look like a modern AI-powered trading terminal with:
+Soft neon cyan glow.
+Dark glassmorphism background.
+Smooth easing animations.
+Floating active selection.
+High-end fintech/cyberpunk aesthetic similar to premium trading platforms.
+This makes every click feel intentional, polished, and interactive rather than simply switching pages.

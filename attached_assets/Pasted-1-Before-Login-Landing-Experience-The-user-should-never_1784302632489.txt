@@ -1,0 +1,102 @@
+1. Before Login (Landing Experience)
+The user should never be presented with a static login screen. Instead, the experience should immediately feel like entering a professional AI-powered trading platform.
+Background
+Deep navy and black gradient.
+Animated floating particles.
+Soft moving light streaks.
+Subtle glass reflections.
+Slow ambient glow that moves across the screen.
+Logo
+The MaziwaTrader logo appears in the center with:
+Soft cyan outer glow.
+Gentle breathing animation.
+Slight 3D floating effect.
+Neon reflection underneath.
+Login Button
+When the Login button is pressed:
+Button shrinks slightly as if being physically pressed.
+Cyan glow expands around it.
+Small ripple animation spreads outward.
+Button changes into a loading state.
+Loading spinner appears inside the button.
+Button text smoothly changes from:
+Login
+to
+Authenticating...
+No page reload should be visible.
+Register Button
+When the Register button is pressed:
+Same smooth press animation.
+Purple-to-cyan glow.
+Ripple animation.
+Glass hover effect.
+Opens registration smoothly with a fade transition.
+After Login (Loading Animation)
+Once authentication succeeds, the login page should not disappear instantly.
+Instead...
+The whole interface slowly fades into an AI loading screen.
+AI Loading Screen
+Dark futuristic background.
+Center:
+MaziwaTrader logo glowing.
+Under the logo:
+Animated status text changing every second.
+Example:
+Connecting to Deriv...
+↓
+Authenticating account...
+↓
+Loading market data...
+↓
+Syncing trading bots...
+↓
+Building dashboard...
+↓
+Analyzing volatility...
+↓
+Preparing AI modules...
+↓
+Loading completed...
+Progress Bar
+Not an ordinary progress bar.
+Use:
+Neon cyan line.
+Light travelling through the line.
+Percentage increasing smoothly.
+0%
+↓
+18%
+↓
+36%
+↓
+58%
+↓
+82%
+↓
+100%
+No jumps.
+Number Animation
+Behind the logo:
+Trading digits constantly changing.
+Examples
+4 8 2
+↓
+7 3 9
+↓
+5 5 1
+↓
+8 1 6
+Like live market ticks.
+Final Transition
+At 100%
+Everything softly brightens.
+Logo slightly enlarges.
+Entire loading screen fades into Dashboard.
+No flickering.
+No white flash.
+Only one continuous cinematic transition.
+Top Toolbar
+When clicking:
+Dashboard
+Bots
+Bulk Trader
