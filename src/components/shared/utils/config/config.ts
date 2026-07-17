@@ -1,17 +1,15 @@
 import { LocalStorageConstants, LocalStorageUtils, URLUtils } from '@deriv-com/utils';
 import { isStaging } from '../url/helpers';
 
-export const PARTNER_APP_ID = '33QWIzORXN45bHMfeUAdw';
-
 export const APP_IDS = {
-    LOCALHOST: PARTNER_APP_ID,
-    TMP_STAGING: PARTNER_APP_ID,
-    STAGING: PARTNER_APP_ID,
-    STAGING_BE: PARTNER_APP_ID,
-    STAGING_ME: PARTNER_APP_ID,
-    PRODUCTION: PARTNER_APP_ID,
-    PRODUCTION_BE: PARTNER_APP_ID,
-    PRODUCTION_ME: PARTNER_APP_ID,
+    LOCALHOST: 36300,
+    TMP_STAGING: 64584,
+    STAGING: 29934,
+    STAGING_BE: 29934,
+    STAGING_ME: 29934,
+    PRODUCTION: 65555,
+    PRODUCTION_BE: 65556,
+    PRODUCTION_ME: 65557,
 };
 
 export const livechat_license_id = 12049137;
