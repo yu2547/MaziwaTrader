@@ -136,9 +136,6 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
         } else {
             return (
                 <div className='auth-actions'>
-                    <span className='signup-message'>
-                        <Localize i18n_default_text='New to Deriv? Get your free account to unlock premium bots.' />
-                    </span>
                     <Button
                         tertiary
                         onClick={async () => {
@@ -184,11 +181,9 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
             })}
         >
             <Wrapper variant='left'>
-                <AppLogo />
                 <MobileMenu />
                 {isDesktop && <MenuItems.TradershubLink />}
                 {isDesktop && <MenuItems />}
-                {isDesktop && <PlatformSwitcher />}
             </Wrapper>
             <Wrapper variant='right'>
                 {isDesktop && <TelegramLink />}
