@@ -2,6 +2,11 @@
     "name": "bot",
     "private": true,
     "version": "0.0.1",
+    "overrides": {
+        "cross-spawn": "^7.0.6",
+        "braces": "^3.0.3",
+        "brace-expansion@2.0.1": "2.0.2"
+    },
     "engines": {
         "node": "20.x"
     },
@@ -96,7 +101,7 @@
         "@deriv-com/shiftai-cli": "^1.0.12",
         "@deriv/api-types": "^1.0.2463",
         "@jest/globals": "^29.7.0",
-        "@rsbuild/core": "^1.7.3",
+        "@rsbuild/core": "^1.7.6",
         "@rsbuild/plugin-basic-ssl": "^1.2.2",
         "@rsbuild/plugin-react": "^1.4.5",
         "@rsbuild/plugin-sass": "^1.5.0",
@@ -181,10 +186,5 @@
         "sass-embedded-win32-arm64": "1.85.1",
         "sass-embedded-win32-ia32": "1.85.1",
         "sass-embedded-win32-x64": "1.85.1"
-    },
-    "overrides": {
-        "cross-spawn": "^7.0.6",
-        "braces": "^3.0.3",
-        "brace-expansion@2.0.1": "2.0.2"
     }
 }
