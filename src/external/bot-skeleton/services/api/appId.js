@@ -4,46 +4,118 @@ import DerivAPIBasic from '@deriv/deriv-api/dist/DerivAPIBasic';
 import { getInitialLanguage } from '@deriv-com/translations';
 import APIMiddleware from './api-middleware';
 
+// TEMPORARY DEBUG INSTRUMENTATION - remove once the connection issue is confirmed resolved.
+// Tracks every WebSocket instance this app creates (module-level, survives across calls)
+// so we can prove from the console whether more than one is ever live at once, and trace
+// exactly what closes each one.
+if (typeof window !== 'undefined' && !window.__ws_debug__) {
+    window.__ws_debug__ = { instances: [], count: 0 };
+}
+
 export const generateDerivApiInstance = () => {
     const cleanedServer = getSocketURL().replace(/[^a-zA-Z0-9.]/g, '');
-    const cleanedAppId = getAppId()?.replace?.(/[^a-zA-Z0-9]/g, '') ?? getAppId();
+    const rawAppId = getAppId();
+    const cleanedAppId = rawAppId?.replace?.(/[^a-zA-Z0-9]/g, '') ?? rawAppId;
     const socket_url = `wss://${cleanedServer}/websockets/v3?app_id=${cleanedAppId}&l=${getInitialLanguage()}&brand=${website_name.toLowerCase()}`;
 
-    // TEMPORARY DEBUG LOGGING - remove once the connection issue is confirmed resolved.
+    const registry = typeof window !== 'undefined' ? window.__ws_debug__ : null;
+    const instance_id = registry ? ++registry.count : 0;
+    const created_at = new Date().toISOString();
+    const create_stack = new Error('created here').stack;
+
+    const live_count = registry ? registry.instances.filter(i => i.state === 'CONNECTING' || i.state === 'OPEN').length : 0;
+
     // eslint-disable-next-line no-console
-    console.log('[WS DEBUG] connecting to:', socket_url);
+    console.log(`[WS DEBUG #${instance_id}] creating socket`, {
+        socket_url,
+        endpoint: cleanedServer,
+        app_id: cleanedAppId,
+        raw_app_id_before_cleaning: rawAppId,
+        created_at,
+        currently_live_instances_before_this_one: live_count,
+    });
+    if (live_count > 0) {
+        // eslint-disable-next-line no-console
+        console.warn(
+            `[WS DEBUG #${instance_id}] WARNING: ${live_count} other socket(s) are still CONNECTING/OPEN - multiple simultaneous connections detected.`,
+            registry.instances.filter(i => i.state === 'CONNECTING' || i.state === 'OPEN')
+        );
+    }
 
     const deriv_socket = new WebSocket(socket_url);
+    const record = { instance_id, socket_url, created_at, state: 'CONNECTING', create_stack };
+    registry?.instances.push(record);
+
+    // Wrap close() so we can tell whether *our own application code* ever calls it directly,
+    // as opposed to the server closing the connection on us.
+    const native_close = deriv_socket.close.bind(deriv_socket);
+    deriv_socket.close = (...args) => {
+        // eslint-disable-next-line no-console
+        console.log(`[WS DEBUG #${instance_id}] application code called .close() explicitly`, {
+            args,
+            readyState_before_close: deriv_socket.readyState,
+            stack: new Error('close() called here').stack,
+        });
+        return native_close(...args);
+    };
 
     let first_message_logged = false;
     deriv_socket.addEventListener('open', () => {
+        record.state = 'OPEN';
+        record.opened_at = new Date().toISOString();
         // eslint-disable-next-line no-console
-        console.log('[WS DEBUG] open event fired for:', socket_url);
+        console.log(`[WS DEBUG #${instance_id}] OPEN`, {
+            socket_url,
+            ms_since_created: Date.now() - new Date(created_at).getTime(),
+        });
     });
     deriv_socket.addEventListener('close', event => {
+        record.state = 'CLOSED';
+        record.closed_at = new Date().toISOString();
         // eslint-disable-next-line no-console
-        console.log('[WS DEBUG] close event:', {
-            url: socket_url,
+        console.log(`[WS DEBUG #${instance_id}] CLOSE`, {
+            socket_url,
             code: event.code,
-            reason: event.reason,
+            reason: event.reason || '(no reason given by server)',
             wasClean: event.wasClean,
+            never_opened: !record.opened_at,
+            ms_since_created: Date.now() - new Date(created_at).getTime(),
         });
     });
     deriv_socket.addEventListener('error', event => {
         // eslint-disable-next-line no-console
-        console.log('[WS DEBUG] error event for:', socket_url, event);
+        console.log(`[WS DEBUG #${instance_id}] ERROR`, {
+            socket_url,
+            readyState: deriv_socket.readyState,
+            event,
+        });
     });
     deriv_socket.addEventListener('message', event => {
         if (first_message_logged) return;
         first_message_logged = true;
         // eslint-disable-next-line no-console
-        console.log('[WS DEBUG] first message received:', event.data);
+        console.log(`[WS DEBUG #${instance_id}] first MESSAGE received`, event.data);
     });
 
     const deriv_api = new DerivAPIBasic({
         connection: deriv_socket,
         middleware: new APIMiddleware({}),
     });
+
+    // Log exactly when authorize() is sent relative to the socket's readyState, to prove
+    // whether auth is ever attempted before the connection is actually open.
+    const native_authorize = deriv_api.authorize?.bind(deriv_api);
+    if (native_authorize) {
+        deriv_api.authorize = (...args) => {
+            // eslint-disable-next-line no-console
+            console.log(`[WS DEBUG #${instance_id}] authorize() called`, {
+                readyState_at_call_time: deriv_socket.readyState,
+                readyState_meaning: ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'][deriv_socket.readyState],
+            });
+            return native_authorize(...args);
+        };
+    }
+
     return deriv_api;
 };
 

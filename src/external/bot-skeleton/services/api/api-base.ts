@@ -73,16 +73,29 @@ class APIBase {
         this.current_auth_subscriptions = [];
     };
 
+    // TEMPORARY DEBUG - remove once the connection issue is confirmed resolved.
+    init_call_count = 0;
+
     onsocketopen() {
         setConnectionStatus(CONNECTION_STATUS.OPENED);
     }
 
     onsocketclose() {
         setConnectionStatus(CONNECTION_STATUS.CLOSED);
-        this.reconnectIfNotConnected();
+        // eslint-disable-next-line no-console
+        console.log('[WS DEBUG] api_base.onsocketclose fired -> triggering reconnect check');
+        this.reconnectIfNotConnected('onsocketclose');
     }
 
     async init(force_create_connection = false) {
+        this.init_call_count += 1;
+        // eslint-disable-next-line no-console
+        console.log(`[WS DEBUG] api_base.init() call #${this.init_call_count}`, {
+            force_create_connection,
+            existing_readyState: this.api?.connection?.readyState,
+            stack: new Error('init() called here').stack,
+        });
+
         this.toggleRunButton(true);
 
         if (this.api) {
@@ -101,6 +114,9 @@ class APIBase {
             this.api = generateDerivApiInstance();
             this.api?.connection.addEventListener('open', this.onsocketopen.bind(this));
             this.api?.connection.addEventListener('close', this.onsocketclose.bind(this));
+        } else {
+            // eslint-disable-next-line no-console
+            console.log('[WS DEBUG] api_base.init() reused existing OPEN connection, no new socket created');
         }
 
         if (!this.has_active_symbols && !V2GetActiveToken()) {
@@ -153,12 +169,19 @@ class APIBase {
         }
     }
 
-    reconnectIfNotConnected = () => {
+    reconnectIfNotConnected = (source?: string | Event) => {
+        // TEMPORARY DEBUG - identifies which trigger (socket close vs window 'online'/'focus')
+        // caused this reconnect check, to prove/disprove duplicate-attempt scenarios.
+        const source_label = typeof source === 'string' ? source : (source?.type ?? 'unknown');
         // eslint-disable-next-line no-console
-        console.log('connection state: ', this.api?.connection?.readyState);
+        console.log(`[WS DEBUG] reconnectIfNotConnected called (source=${source_label})`, {
+            readyState: this.api?.connection?.readyState,
+        });
         if (this.api?.connection?.readyState && this.api?.connection?.readyState > 1) {
             // eslint-disable-next-line no-console
-            console.log('Info: Connection to the server was closed, trying to reconnect.');
+            console.log(
+                `[WS DEBUG] Info: Connection to the server was closed, trying to reconnect (source=${source_label}).`
+            );
             this.init(true);
         }
     };
