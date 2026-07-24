@@ -8,8 +8,79 @@ import APIMiddleware from './api-middleware';
 // Tracks every WebSocket instance this app creates (module-level, survives across calls)
 // so we can prove from the console whether more than one is ever live at once, and trace
 // exactly what closes each one.
+const maskAppId = id => {
+    if (!id || id.length <= 8) return id;
+    return `${id.slice(0, 4)}${'*'.repeat(id.length - 8)}${id.slice(-4)}`;
+};
+
+const captureEnvironment = () => ({
+    hostname: window.location.hostname,
+    is_localhost: /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname),
+    href: window.location.href,
+    user_agent: navigator.userAgent,
+    timezone_name: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    timezone_offset_minutes: new Date().getTimezoneOffset(),
+});
+
+const timestampWithTz = () => {
+    const now = new Date();
+    const offset_min = -now.getTimezoneOffset();
+    const sign = offset_min >= 0 ? '+' : '-';
+    const pad = n => String(Math.abs(n)).padStart(2, '0');
+    const offset_str = `${sign}${pad(Math.trunc(offset_min / 60))}:${pad(offset_min % 60)}`;
+    return { utc: now.toISOString(), local: now.toString(), offset: offset_str };
+};
+
+// Generates a plain-text diagnostic report suitable for pasting into a support ticket.
+// Call window.__ws_debug__.generateDiagnosticReport() from the browser console.
+const generateDiagnosticReport = () => {
+    const registry = window.__ws_debug__;
+    const env = registry.environment;
+    const lines = [];
+    lines.push('=== MaziwaTrader WebSocket Connection Diagnostic Report ===');
+    lines.push(`Generated: ${new Date().toString()}`);
+    lines.push('');
+    lines.push('-- Environment --');
+    lines.push(`Page: ${env.href}`);
+    lines.push(`Host: ${env.hostname} (${env.is_localhost ? 'localhost' : 'production domain'})`);
+    lines.push(`Browser User-Agent: ${env.user_agent}`);
+    lines.push(`Timezone: ${env.timezone_name} (UTC offset ${env.timezone_offset_minutes * -1} min)`);
+    lines.push('');
+    lines.push(`-- WebSocket attempts (${registry.instances.length} total) --`);
+    registry.instances.forEach(i => {
+        lines.push(
+            [
+                `#${i.instance_id}`,
+                `url=${i.socket_url.replace(/app_id=[^&]+/, `app_id=${maskAppId(i.app_id || '')}`)}`,
+                `created=${i.created_local || i.created_at}`,
+                `opened=${i.opened_at ? 'YES at ' + i.opened_at : 'NO'}`,
+                `first_message=${i.first_message_at ? 'YES' : 'NO'}`,
+                `error=${i.had_error ? 'YES' : 'NO'}`,
+                `close_code=${i.close_code ?? 'n/a'}`,
+                `close_reason=${i.close_reason || '(none given)'}`,
+                `state=${i.state}`,
+            ].join(' | ')
+        );
+    });
+    const opened_count = registry.instances.filter(i => i.opened_at).length;
+    lines.push('');
+    lines.push('-- Summary --');
+    lines.push(`Total connection attempts: ${registry.instances.length}`);
+    lines.push(`Successfully opened: ${opened_count}`);
+    lines.push(`Failed to open: ${registry.instances.length - opened_count}`);
+    const report = lines.join('\n');
+    // eslint-disable-next-line no-console
+    console.log(report);
+    return report;
+};
+
 if (typeof window !== 'undefined' && !window.__ws_debug__) {
-    window.__ws_debug__ = { instances: [], count: 0 };
+    window.__ws_debug__ = {
+        instances: [],
+        count: 0,
+        environment: captureEnvironment(),
+        generateDiagnosticReport,
+    };
 }
 
 export const generateDerivApiInstance = () => {
@@ -20,7 +91,8 @@ export const generateDerivApiInstance = () => {
 
     const registry = typeof window !== 'undefined' ? window.__ws_debug__ : null;
     const instance_id = registry ? ++registry.count : 0;
-    const created_at = new Date().toISOString();
+    const created_ts = timestampWithTz();
+    const created_at = created_ts.utc;
     const create_stack = new Error('created here').stack;
 
     const live_count = registry ? registry.instances.filter(i => i.state === 'CONNECTING' || i.state === 'OPEN').length : 0;
@@ -43,7 +115,20 @@ export const generateDerivApiInstance = () => {
     }
 
     const deriv_socket = new WebSocket(socket_url);
-    const record = { instance_id, socket_url, created_at, state: 'CONNECTING', create_stack };
+    const record = {
+        instance_id,
+        socket_url,
+        app_id: cleanedAppId,
+        endpoint: cleanedServer,
+        created_at,
+        created_local: `${created_ts.local} (UTC${created_ts.offset})`,
+        state: 'CONNECTING',
+        create_stack,
+        had_error: false,
+        close_code: null,
+        close_reason: null,
+        first_message_at: null,
+    };
     registry?.instances.push(record);
 
     // Wrap close() so we can tell whether *our own application code* ever calls it directly,
@@ -72,6 +157,8 @@ export const generateDerivApiInstance = () => {
     deriv_socket.addEventListener('close', event => {
         record.state = 'CLOSED';
         record.closed_at = new Date().toISOString();
+        record.close_code = event.code;
+        record.close_reason = event.reason || '';
         // eslint-disable-next-line no-console
         console.log(`[WS DEBUG #${instance_id}] CLOSE`, {
             socket_url,
@@ -83,6 +170,7 @@ export const generateDerivApiInstance = () => {
         });
     });
     deriv_socket.addEventListener('error', event => {
+        record.had_error = true;
         // eslint-disable-next-line no-console
         console.log(`[WS DEBUG #${instance_id}] ERROR`, {
             socket_url,
@@ -93,6 +181,7 @@ export const generateDerivApiInstance = () => {
     deriv_socket.addEventListener('message', event => {
         if (first_message_logged) return;
         first_message_logged = true;
+        record.first_message_at = new Date().toISOString();
         // eslint-disable-next-line no-console
         console.log(`[WS DEBUG #${instance_id}] first MESSAGE received`, event.data);
     });
