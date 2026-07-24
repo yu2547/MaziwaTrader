@@ -1,15 +1,20 @@
 import { LocalStorageConstants, LocalStorageUtils, URLUtils } from '@deriv-com/utils';
 import { isStaging } from '../url/helpers';
 
+// MaziwaTrader's own Deriv App ID (registered on the Deriv Developer Portal).
+// Newer Deriv app registrations issue alphanumeric App IDs rather than the
+// legacy numeric ones - every environment uses this single registered app.
+const MAZIWA_TRADER_APP_ID = '33QWIzORXN45bHMfeUAdw';
+
 export const APP_IDS = {
-    LOCALHOST: 36300,
-    TMP_STAGING: 64584,
-    STAGING: 29934,
-    STAGING_BE: 29934,
-    STAGING_ME: 29934,
-    PRODUCTION: 65555,
-    PRODUCTION_BE: 65556,
-    PRODUCTION_ME: 65557,
+    LOCALHOST: MAZIWA_TRADER_APP_ID,
+    TMP_STAGING: MAZIWA_TRADER_APP_ID,
+    STAGING: MAZIWA_TRADER_APP_ID,
+    STAGING_BE: MAZIWA_TRADER_APP_ID,
+    STAGING_ME: MAZIWA_TRADER_APP_ID,
+    PRODUCTION: MAZIWA_TRADER_APP_ID,
+    PRODUCTION_BE: MAZIWA_TRADER_APP_ID,
+    PRODUCTION_ME: MAZIWA_TRADER_APP_ID,
 };
 
 export const livechat_license_id = 12049137;
