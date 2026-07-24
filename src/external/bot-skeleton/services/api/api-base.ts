@@ -133,10 +133,17 @@ class APIBase {
         if (this.api) this.api.disconnect();
     }
 
+    has_event_listeners = false;
+
     initEventListeners() {
-        if (window) {
+        // Previously this ran on every init() call (including every reconnect) and never
+        // removed the prior listener, so 'online'/'focus' handlers accumulated on window -
+        // after N reconnects a single focus/online event fired N concurrent reconnect
+        // attempts, each capable of spawning its own socket. Guard so this only registers once.
+        if (window && !this.has_event_listeners) {
             window.addEventListener('online', this.reconnectIfNotConnected);
             window.addEventListener('focus', this.reconnectIfNotConnected);
+            this.has_event_listeners = true;
         }
     }
 
