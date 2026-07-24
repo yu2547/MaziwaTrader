@@ -22,9 +22,14 @@ const FreeBots = lazy(() => import('../pages/free-bots'));
 const AnalysisTool = lazy(() => import('../pages/analysis-tool'));
 
 const { TRANSLATIONS_CDN_URL, R2_PROJECT_NAME, CROWDIN_BRANCH_NAME } = process.env;
-const i18nInstance = initializeI18n({
-    cdnUrl: `${TRANSLATIONS_CDN_URL}/${R2_PROJECT_NAME}/${CROWDIN_BRANCH_NAME}`,
-});
+// These are only set in Deriv's own CI (see .github/workflows/build-and-deploy-production.yml);
+// a fresh Vercel deployment won't have them configured. Without this guard, cdnUrl becomes the
+// literal string "undefined/undefined/undefined" and every load fires a doomed fetch to it -
+// harmless (i18next falls back to each <Localize> call's own default text) but wasteful.
+const i18nInstance =
+    TRANSLATIONS_CDN_URL && R2_PROJECT_NAME && CROWDIN_BRANCH_NAME
+        ? initializeI18n({ cdnUrl: `${TRANSLATIONS_CDN_URL}/${R2_PROJECT_NAME}/${CROWDIN_BRANCH_NAME}` })
+        : initializeI18n({ cdnUrl: '' });
 
 // Simple Suspense wrapper without timeout that causes dark landing page
 const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => {
