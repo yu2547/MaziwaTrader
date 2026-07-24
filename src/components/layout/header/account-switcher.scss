@@ -11,6 +11,12 @@
     justify-content: center;
     padding: 0 1.6rem 0 1.7rem;
     width: max-content;
+    border-radius: 999px;
+    transition: box-shadow 0.25s ease;
+
+    &:hover {
+        box-shadow: 0 0 10px 0 var(--nav-glow);
+    }
 
     &__preloader {
         position: absolute;

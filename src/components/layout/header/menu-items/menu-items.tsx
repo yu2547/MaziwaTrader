@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import clsx from 'clsx';
 import { observer } from 'mobx-react-lite';
+import { useLocation } from 'react-router-dom';
 import { useFirebaseCountriesConfig } from '@/hooks/firebase/useFirebaseCountriesConfig';
 import { useStore } from '@/hooks/useStore';
 import useStoreWalletAccountsList from '@/hooks/useStoreWalletAccountsList';
@@ -9,11 +11,23 @@ import { MenuItem, Text, useDevice } from '@deriv-com/ui';
 import { MenuItems as items, TRADERS_HUB_LINK_CONFIG } from '../header-config';
 import './menu-items.scss';
 
+// Only same-origin (in-app) links can ever be "active" - cross-app links
+// (Cashier, Reports) navigate away from this SPA and are never highlighted.
+const isItemActive = (href: string, pathname: string) => {
+    try {
+        const url = new URL(href);
+        return url.origin === window.location.origin && url.pathname === pathname;
+    } catch {
+        return false;
+    }
+};
+
 export const MenuItems = observer(() => {
     const { localize } = useTranslations();
     const { isDesktop } = useDevice();
     const store = useStore();
     const { has_wallet = false } = useStoreWalletAccountsList() || {};
+    const { pathname } = useLocation();
 
     if (!store) return null;
 
@@ -57,17 +71,22 @@ export const MenuItems = observer(() => {
         <>
             {is_logged_in &&
                 (isDesktop
-                    ? filtered_items.map(({ as, href, icon, label }) => (
-                          <MenuItem
-                              as={as}
-                              className='app-header__menu'
-                              href={getModifiedHref(href)}
-                              key={label}
-                              leftComponent={icon}
-                          >
-                              <Text>{localize(label)}</Text>
-                          </MenuItem>
-                      ))
+                    ? filtered_items.map(({ as, href, icon, label }) => {
+                          const modified_href = getModifiedHref(href);
+                          const is_active = isItemActive(modified_href, pathname);
+                          return (
+                              <MenuItem
+                                  as={as}
+                                  className={clsx('app-header__menu', { 'app-header__menu--active': is_active })}
+                                  href={modified_href}
+                                  key={label}
+                                  leftComponent={icon}
+                              >
+                                  <Text>{localize(label)}</Text>
+                                  <span className='app-header__menu-underline' />
+                              </MenuItem>
+                          );
+                      })
                     : // For mobile, show the first available item after filtering
                       filtered_items.length > 0 && (
                           <MenuItem

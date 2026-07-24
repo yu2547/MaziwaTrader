@@ -1,4 +1,46 @@
 .app-header__menu {
     gap: 0.8rem;
     padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+    position: relative;
+    transition:
+        color 0.2s ease,
+        transform 0.2s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+
+        .app-header__menu-underline {
+            transform: scaleX(1);
+            opacity: 1;
+        }
+    }
+
+    &-underline {
+        content: '';
+        position: absolute;
+        left: 1.5rem;
+        right: 1.25rem;
+        bottom: 0.6rem;
+        height: 2px;
+        border-radius: 2px;
+        background: var(--nav-underline);
+        transform: scaleX(0);
+        transform-origin: center;
+        opacity: 0;
+        transition:
+            transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1),
+            opacity 0.25s ease;
+        pointer-events: none;
+    }
+
+    &--active {
+        .app-header__menu-underline {
+            transform: scaleX(1);
+            opacity: 1;
+        }
+
+        svg path {
+            filter: drop-shadow(0 0 4px var(--nav-glow));
+        }
+    }
 }

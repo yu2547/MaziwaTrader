@@ -5,6 +5,8 @@
     border-inline-start: 1px solid var(--general-section-1);
     border-width: 1px;
     margin-inline-end: 2rem;
+    display: flex;
+    align-items: center;
 
     @include mobile-or-tablet-screen {
         margin-inline-end: 0;
@@ -16,5 +18,32 @@
         top: 5rem;
         right: 20rem;
         position: absolute;
+    }
+
+    > button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 3.4rem;
+        height: 3.4rem;
+        border-radius: 50%;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        backdrop-filter: blur(12px);
+        backdrop-filter: blur(12px);
+        transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease,
+            border-color 0.2s ease;
+
+        &:hover {
+            transform: translateY(-1px);
+            border-color: var(--nav-glow);
+            box-shadow: 0 0 12px 0 var(--nav-glow);
+        }
+
+        svg path {
+            fill: var(--text-prominent);
+        }
     }
 }

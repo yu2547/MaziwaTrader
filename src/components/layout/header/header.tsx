@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import clsx from 'clsx';
 import { observer } from 'mobx-react-lite';
 import PWAInstallButton from '@/components/pwa-install-button';
-import { generateOAuthURL, redirectToLogin, standalone_routes } from '@/components/shared';
+import { redirectToLogin, standalone_routes } from '@/components/shared';
 import Button from '@/components/shared_ui/button';
 import useActiveAccount from '@/hooks/api/account/useActiveAccount';
 import { useOauth2 } from '@/hooks/auth/useOauth2';
@@ -10,18 +10,17 @@ import { useFirebaseCountriesConfig } from '@/hooks/firebase/useFirebaseCountrie
 import { useApiBase } from '@/hooks/useApiBase';
 import { useStore } from '@/hooks/useStore';
 import useTMB from '@/hooks/useTMB';
-import { clearAuthData, handleOidcAuthFailure } from '@/utils/auth-utils';
 import { StandaloneCircleUserRegularIcon } from '@deriv/quill-icons/Standalone';
-import { requestOidcAuthentication } from '@deriv-com/auth-client';
 import { Localize, useTranslations } from '@deriv-com/translations';
 import { Header, useDevice, Wrapper } from '@deriv-com/ui';
 import { Tooltip } from '@deriv-com/ui';
 import { AppLogo } from '../app-logo';
+import CustomNotifications from './custom-notifications/custom-notifications';
 import AccountsInfoLoader from './account-info-loader';
 import AccountSwitcher from './account-switcher';
+import HeaderClock from './HeaderClock';
 import MenuItems from './menu-items';
 import MobileMenu from './mobile-menu';
-import PlatformSwitcher from './platform-switcher';
 import TelegramLink from './TelegramLink';
 import YouTubeLink from './YouTubeLink';
 import './header.scss';
@@ -55,7 +54,7 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
         } else if (activeLoginid) {
             return (
                 <>
-                    {/* <CustomNotifications /> */}
+                    <CustomNotifications />
 
                     {isDesktop &&
                         (has_wallet ? (
@@ -96,7 +95,11 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
                             </Button>
                         ))}
 
-                    <AccountSwitcher activeAccount={activeAccount} />
+                    <div className='app-header__balance-pill'>
+                        <AccountSwitcher activeAccount={activeAccount} />
+                    </div>
+
+                    <HeaderClock />
 
                     {isDesktop &&
                         (() => {
@@ -125,9 +128,11 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
                                     href={redirect_url.toString()}
                                     tooltipContent={localize('Manage account settings')}
                                     tooltipPosition='bottom'
-                                    className='app-header__account-settings'
+                                    className='app-header__account-settings app-header__avatar'
                                 >
-                                    <StandaloneCircleUserRegularIcon className='app-header__profile_icon' />
+                                    <span className='app-header__avatar-inner'>
+                                        <StandaloneCircleUserRegularIcon className='app-header__profile_icon' />
+                                    </span>
                                 </Tooltip>
                             );
                         })()}
@@ -136,6 +141,7 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
         } else {
             return (
                 <div className='auth-actions'>
+                    <HeaderClock />
                     <Button
                         tertiary
                         onClick={async () => {

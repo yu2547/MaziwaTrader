@@ -6,8 +6,27 @@
         padding-inline-end: 1rem;
         border-inline-end: 1px solid var(--general-section-1);
         display: flex;
+        align-items: center;
         height: 100%;
         cursor: pointer;
+
+        button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 3.2rem;
+            height: 3.2rem;
+            border-radius: 999px;
+            transition:
+                background 0.2s ease,
+                box-shadow 0.2s ease;
+
+            &:hover,
+            &:active {
+                background: var(--glass-bg);
+                box-shadow: 0 0 10px 0 var(--nav-glow);
+            }
+        }
     }
 
     &__footer {
@@ -66,13 +85,25 @@
                 height: 5.6rem;
                 cursor: pointer;
                 width: 100%;
+                border-inline-start: 2px solid transparent;
+                transition:
+                    border-color 0.2s ease,
+                    background 0.2s ease;
 
                 .deriv-toggle-switch {
                     margin-left: auto;
                     margin-right: 1.6rem;
                 }
 
+                &:active {
+                    background: var(--glass-bg);
+                }
+
                 &--active {
+                    border-inline-start: 2px solid transparent;
+                    border-image: var(--nav-underline) 1;
+                    background: var(--glass-bg);
+
                     .deriv-text {
                         color: var(--text-prominent);
                         font-weight: bold;
@@ -138,7 +169,14 @@
     }
 
     .deriv-drawer__container {
-        background: var(--general-main-1);
+        // The header became a `position: sticky` containing block (redesign-v2),
+        // which collapses this absolutely-positioned drawer to the header's own
+        // height unless explicitly restored here.
+        height: 100vh !important;
+        background: var(--glass-bg-solid);
+        backdrop-filter: blur(20px) saturate(160%);
+        backdrop-filter: blur(20px) saturate(160%);
+        border-inline-start: 1px solid var(--glass-border);
     }
 
     &__toggle,

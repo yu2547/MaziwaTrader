@@ -196,6 +196,15 @@
         // Header
         --header-background-mt5: #{constants.$color-blue-8};
         --header-background-others: #{constants.$color-green-7};
+
+        // Premium top nav (redesign-v2)
+        --glass-bg: rgb(255 255 255 / 55%);
+        --glass-bg-solid: rgb(255 255 255 / 92%);
+        --glass-border: rgb(10 20 35 / 10%);
+        --glass-shadow: rgb(10 20 35 / 12%);
+        --nav-glow: rgb(47 182 224 / 35%);
+        --nav-underline: linear-gradient(90deg, #2fb6e0 0%, #d4af37 100%);
+        --avatar-ring: linear-gradient(135deg, #2fb6e0 0%, #d4af37 100%);
     }
 
     .theme--dark {
@@ -337,5 +346,14 @@
         // Header
         --header-background-mt5: #{constants.$color-blue-8};
         --header-background-others: #{constants.$color-green-7};
+
+        // Premium top nav (redesign-v2)
+        --glass-bg: rgb(10 14 26 / 60%);
+        --glass-bg-solid: rgb(10 14 26 / 94%);
+        --glass-border: rgb(255 255 255 / 8%);
+        --glass-shadow: rgb(0 0 0 / 45%);
+        --nav-glow: rgb(47 182 224 / 55%);
+        --nav-underline: linear-gradient(90deg, #2fb6e0 0%, #d4af37 100%);
+        --avatar-ring: linear-gradient(135deg, #2fb6e0 0%, #d4af37 100%);
     }
 }

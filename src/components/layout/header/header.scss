@@ -2,6 +2,78 @@
 @use 'components/shared/styles/mixins' as *;
 
 .app-header {
+    &.deriv-header,
+    &.app-header--desktop,
+    &.app-header--mobile {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--glass-bg) !important;
+        backdrop-filter: blur(20px) saturate(160%);
+        backdrop-filter: blur(20px) saturate(160%);
+        border-bottom: 1px solid var(--glass-border);
+        box-shadow: 0 4px 24px 0 var(--glass-shadow);
+        transition: box-shadow 0.25s ease;
+
+        @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+            background: var(--glass-bg-solid) !important;
+        }
+    }
+
+    &__balance-pill {
+        display: flex;
+        align-items: center;
+        border-radius: 999px;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        backdrop-filter: blur(12px);
+        backdrop-filter: blur(12px);
+        margin-inline-end: 0.8rem;
+        transition:
+            box-shadow 0.25s ease,
+            border-color 0.25s ease;
+
+        &:hover {
+            border-color: var(--nav-glow);
+            box-shadow: 0 0 14px 0 var(--nav-glow);
+        }
+    }
+
+    &__avatar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 3.4rem;
+        height: 3.4rem;
+        border-radius: 50%;
+        margin-inline-start: 0.4rem;
+        background: var(--avatar-ring);
+        padding: 2px;
+        transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease;
+
+        &-inner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: var(--general-main-1);
+        }
+
+        &:hover {
+            transform: scale(1.06);
+            box-shadow: 0 0 12px 0 var(--nav-glow);
+        }
+
+        svg {
+            width: 1.8rem;
+            height: 1.8rem;
+        }
+    }
+
     &__social-icon {
         display: flex;
         align-items: center;
