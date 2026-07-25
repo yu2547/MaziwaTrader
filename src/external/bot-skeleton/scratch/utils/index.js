@@ -699,11 +699,102 @@ export const modifyContextMenu = (menu, add_new_items = []) => {
     }
 };
 
+/**
+ * Arithmetic-only expression evaluator: +, -, *, /, parentheses, decimal numbers.
+ * Used instead of eval()/new Function() so this field can't execute arbitrary JS -
+ * relevant because its value can come from an imported bot XML file (load from
+ * file/URL/Google Drive), not just direct user typing.
+ */
+const evaluateArithmetic = expression => {
+    let index = 0;
+
+    const peek = () => expression[index];
+    const isDigit = ch => ch >= '0' && ch <= '9';
+    const skipSpaces = () => {
+        while (peek() === ' ') index++;
+    };
+
+    const parseNumber = () => {
+        const start = index;
+        let has_digits = false;
+        while (isDigit(peek())) {
+            index++;
+            has_digits = true;
+        }
+        if (peek() === '.') {
+            index++;
+            while (isDigit(peek())) {
+                index++;
+                has_digits = true;
+            }
+        }
+        if (!has_digits) throw new Error('Expected a number');
+        return Number(expression.slice(start, index));
+    };
+
+    // A number or a parenthesized sub-expression - deliberately NOT recursive into
+    // another unary sign, so "--5" is rejected as invalid input just like the
+    // previous new Function()-based implementation (a SyntaxError there).
+    const parseAtom = () => {
+        skipSpaces();
+        if (peek() === '(') {
+            index++;
+            const value = parseExpression();
+            skipSpaces();
+            if (peek() !== ')') throw new Error('Expected )');
+            index++;
+            return value;
+        }
+        return parseNumber();
+    };
+
+    const parseUnary = () => {
+        skipSpaces();
+        if (peek() === '+' || peek() === '-') {
+            const sign = peek() === '-' ? -1 : 1;
+            index++;
+            return sign * parseAtom();
+        }
+        return parseAtom();
+    };
+
+    const parseTerm = () => {
+        let value = parseUnary();
+        skipSpaces();
+        while (peek() === '*' || peek() === '/') {
+            const op = peek();
+            index++;
+            const rhs = parseUnary();
+            value = op === '*' ? value * rhs : value / rhs;
+            skipSpaces();
+        }
+        return value;
+    };
+
+    const parseExpression = () => {
+        let value = parseTerm();
+        skipSpaces();
+        while (peek() === '+' || peek() === '-') {
+            const op = peek();
+            index++;
+            const rhs = parseTerm();
+            value = op === '+' ? value + rhs : value - rhs;
+            skipSpaces();
+        }
+        return value;
+    };
+
+    skipSpaces();
+    const result = parseExpression();
+    skipSpaces();
+    if (index !== expression.length) throw new Error('Unexpected trailing input');
+    return result;
+};
+
 export const evaluateExpression = value => {
     if (!value) return 'invalid_input';
     try {
-        // eslint-disable-next-line no-new-func
-        const result = new Function(`return ${value.trim()}`)();
+        const result = evaluateArithmetic(value.trim());
         return isNaN(result) ? 'invalid_input' : result;
     } catch (e) {
         return 'invalid_input';

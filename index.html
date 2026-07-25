@@ -132,6 +132,15 @@
                     console.log('[HTML] Message from service worker:', event.data);
                 });
             }
+
+            // Surface CSP violations to the console with enough detail to fix them -
+            // the browser's own network-panel reporting is easy to miss.
+            document.addEventListener('securitypolicyviolation', event => {
+                console.error(
+                    `[CSP] Blocked: ${event.violatedDirective} - ${event.blockedURI}`,
+                    { sourceFile: event.sourceFile, lineNumber: event.lineNumber, originalPolicy: event.originalPolicy }
+                );
+            });
         </script>
     </body>
 </html>
