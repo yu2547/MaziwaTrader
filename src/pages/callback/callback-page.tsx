@@ -84,7 +84,6 @@ const CallbackPage = () => {
                             }
                         }
                     } else {
-                        localStorage.setItem('callback_token', authorize.toString());
                         const clientAccountsArray = Object.values(clientAccounts);
                         const firstId = authorize?.account_list[0]?.loginid;
                         const filteredTokens = clientAccountsArray.filter(account => account.loginid === firstId);
