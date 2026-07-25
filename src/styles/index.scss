@@ -1,5 +1,8 @@
 @use 'components/shared/styles/themes' as *;
-@import 'https://fonts.googleapis.com/css?family=IBM+Plex+Sans:300,400,500,700&display=swap&subset=cyrillic,cyrillic-ext,latin-ext,vietnamese';
+// IBM Plex Sans is loaded via a <link> tag in index.html instead of an @import
+// here - an @import inside this always-loaded global stylesheet meant the
+// browser couldn't discover/fetch the font until after downloading and
+// parsing this whole CSS file, instead of in parallel with it from the start.
 
 body {
     font-family: 'IBM Plex Sans', sans-serif;

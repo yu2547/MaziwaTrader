@@ -66,7 +66,13 @@ const AnnouncementDialog = ({
                 {Array.isArray(media) && (
                     <>
                         {media.map((src, index) => (
-                            <img className={`${base_classname}__image`} key={index} src={src} alt={src} />
+                            <img
+                                className={`${base_classname}__image`}
+                                key={index}
+                                src={src}
+                                alt={src}
+                                loading='lazy'
+                            />
                         ))}
                     </>
                 )}

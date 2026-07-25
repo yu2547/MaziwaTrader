@@ -38,7 +38,11 @@ const StrategyDescription = observer(({ item, font_size }: TStrategyDescription)
             const class_names = classNames(`qs__description__image ${class_name}`);
             return (
                 <div className={class_names} style={item?.styles}>
-                    <img src={is_dark_mode_on ? (item.dark_src ?? item.src) : item.src} alt={item.alt} />
+                    <img
+                        src={is_dark_mode_on ? (item.dark_src ?? item.src) : item.src}
+                        alt={item.alt}
+                        loading='lazy'
+                    />
                 </div>
             );
         }

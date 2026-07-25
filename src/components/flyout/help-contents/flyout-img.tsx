@@ -9,7 +9,7 @@ const FlyoutImage = (props: TFlyoutImageProps) => {
 
     return (
         <div className='flyout__item' data-testid='dt_flyout_image'>
-            <img src={url} className='flyout__image' style={style} />
+            <img src={url} className='flyout__image' style={style} loading='lazy' />
         </div>
     );
 };

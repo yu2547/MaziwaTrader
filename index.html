@@ -5,6 +5,17 @@
         <link rel="icon" type="image/png" href="/logo.png" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
+        <!-- Font loading: preconnect so the browser can open the connection before it
+             even discovers the stylesheet needs it, and an explicit <link> for our own
+             IBM Plex Sans (previously an @import inside the global stylesheet, which
+             blocked discovery until that whole CSS file was fetched and parsed). -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:300,400,500,700&display=swap&subset=cyrillic,cyrillic-ext,latin-ext,vietnamese"
+        />
+
         <!-- PWA Manifest -->
         <link rel="manifest" href="/manifest.json" />
 

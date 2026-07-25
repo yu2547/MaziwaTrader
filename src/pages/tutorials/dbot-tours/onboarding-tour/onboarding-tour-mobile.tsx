@@ -115,7 +115,7 @@ const OnboardingTourMobile = observer(() => {
             )}
             {img && (
                 <div className='dbot-slider__image'>
-                    <img src={img} />
+                    <img src={img} loading='lazy' />
                 </div>
             )}
 

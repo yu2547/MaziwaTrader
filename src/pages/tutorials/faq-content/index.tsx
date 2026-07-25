@@ -20,7 +20,7 @@ type TFAQList = {
 };
 
 const FAQ = ({ type, content = '', src, imageclass, is_mobile }: TDescription) => {
-    if (type === 'image') return <img src={src} className={imageclass} />;
+    if (type === 'image') return <img src={src} className={imageclass} loading='lazy' />;
 
     return (
         <Text
