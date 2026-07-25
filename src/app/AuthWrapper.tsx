@@ -100,7 +100,14 @@ const setLocalStorageToken = async (
 
 export const AuthWrapper = () => {
     const [isAuthComplete, setIsAuthComplete] = React.useState(false);
-    const { loginInfo, paramsToDelete } = URLUtils.getLoginInfoFromURL();
+    // getLoginInfoFromURL() returns a new array/object every call, since it parses
+    // the current URL fresh each time. Called unmemoized, it destabilized the
+    // useEffect below's dependency array (loginInfo/paramsToDelete looked "changed"
+    // on every render), causing that effect to re-run every render and, once
+    // offline, spiral into a genuine infinite render loop (React's own "Maximum
+    // update depth exceeded"). Login info in the URL is a load-time concern, not
+    // something that needs re-parsing on every re-render - compute it once.
+    const { loginInfo, paramsToDelete } = React.useMemo(() => URLUtils.getLoginInfoFromURL(), []);
     const { isOnline } = useOfflineDetection();
 
     React.useEffect(() => {
