@@ -1,3 +1,5 @@
+import { wsLog } from './ws-logger';
+
 export type TSubscriptionRequest = Record<string, unknown>;
 
 export type TSubscriptionResult = {
@@ -37,13 +39,11 @@ export default class SubscriptionManager {
     async subscribe(key: string, request: TSubscriptionRequest) {
         const existing = this.entries.get(key);
         if (existing?.subscription_id) {
-            // eslint-disable-next-line no-console
-            console.log(`[SUB DEBUG] ${key} already active (id=${existing.subscription_id}) - skipping duplicate subscribe`);
+            wsLog('Subscription', `${key} already active (id=${existing.subscription_id}) - skipping duplicate subscribe`);
             return existing;
         }
 
-        // eslint-disable-next-line no-console
-        console.log(`[SUB DEBUG] subscribing: ${key}`, request);
+        wsLog('Subscription', `Subscribing: ${key}`, request);
         this.entries.set(key, { key, request, subscription_id: null });
 
         const response = await this.send(request);
@@ -62,30 +62,25 @@ export default class SubscriptionManager {
      */
     async restoreAll() {
         if (this.is_restoring) {
-            // eslint-disable-next-line no-console
-            console.log('[SUB DEBUG] restore already in progress - skipping duplicate restore trigger');
+            wsLog('Subscription', 'Restore already in progress - skipping duplicate restore trigger');
             return;
         }
         if (this.entries.size === 0) return;
 
         this.is_restoring = true;
-        // eslint-disable-next-line no-console
-        console.log(`[SUB DEBUG] restoring ${this.entries.size} subscription(s): ${[...this.entries.keys()].join(', ')}`);
+        wsLog('Subscription', `Restoring ${this.entries.size} subscription(s): ${[...this.entries.keys()].join(', ')}`);
 
         try {
             for (const entry of this.entries.values()) {
                 // The old subscription id belonged to a socket that no longer exists.
                 entry.subscription_id = null;
-                // eslint-disable-next-line no-console
-                console.log(`[SUB DEBUG] restoring: ${entry.key}`);
+                wsLog('Subscription', `Restoring ${entry.key}`);
                 // eslint-disable-next-line no-await-in-loop
                 const response = await this.send(entry.request);
                 entry.subscription_id = response?.subscription?.id ?? null;
-                // eslint-disable-next-line no-console
-                console.log(`[SUB DEBUG] restored: ${entry.key} (id=${entry.subscription_id ?? 'n/a'})`);
+                wsLog('Subscription', `Restored ${entry.key} (id=${entry.subscription_id ?? 'n/a'})`);
             }
-            // eslint-disable-next-line no-console
-            console.log('[SUB DEBUG] restore sequence complete');
+            wsLog('Subscription', `Complete (${this.entries.size} restored)`);
         } finally {
             this.is_restoring = false;
         }

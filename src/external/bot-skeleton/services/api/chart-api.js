@@ -1,13 +1,15 @@
 import ConnectionManager from './connection-manager';
+import { wsLog } from './ws-logger';
 
 class ChartAPI {
     api;
 
-    // Owns socket creation/open/close listeners - see connection-manager.ts. This
-    // used to be a near-duplicate of api-base.ts's own inline implementation.
+    // Owns socket creation/open/close listeners, reconnect backoff, and heartbeat -
+    // see connection-manager.ts. This used to be a near-duplicate of api-base.ts's
+    // own inline implementation.
     connection_manager = new ConnectionManager({
         label: 'chart',
-        onClose: () => this.reconnectIfNotConnected(),
+        onClose: source => this.reconnectIfNotConnected(source),
     });
 
     init = async (force_create_connection = false) => {
@@ -24,11 +26,10 @@ class ChartAPI {
         }
     }
 
-    reconnectIfNotConnected = () => {
+    reconnectIfNotConnected = source => {
         if (this.connection_manager.api?.connection?.readyState && this.connection_manager.api.connection.readyState > 1) {
-            // eslint-disable-next-line no-console
-            console.log('[WS DEBUG][chart] Info: Chart connection to the server was closed, trying to reconnect.');
-            this.init(true);
+            wsLog('Connection', `chart: connection was closed, scheduling reconnect (source=${source ?? 'unknown'})`);
+            this.connection_manager.scheduleReconnect(() => this.init(true));
         }
     };
 }

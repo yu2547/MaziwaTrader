@@ -384,11 +384,16 @@ export default class ClientStore {
         return api_base?.api
             ?.logout()
             .then(() => {
+                // Explicit logout: don't let the socket closing (server-side, as a
+                // result of the logout call above, or otherwise) trigger an
+                // auto-reconnect - the user asked to be signed out.
+                api_base.terminate();
                 resolveNavigation();
                 return Promise.resolve();
             })
             .catch((error: Error) => {
                 console.error('test Logout failed:', error);
+                api_base.terminate();
                 resolveNavigation();
                 return Promise.reject(error);
             });

@@ -17,6 +17,7 @@ import { generateDerivApiInstance, V2GetActiveClientId, V2GetActiveToken } from 
 import chart_api from './chart-api';
 import ConnectionManager, { CONNECTION_STATE } from './connection-manager';
 import SubscriptionManager from './subscription-manager';
+import { wsLog } from './ws-logger';
 
 type CurrentSubscription = {
     id: string;
@@ -121,8 +122,7 @@ class APIBase {
 
     async init(force_create_connection = false) {
         this.init_call_count += 1;
-        // eslint-disable-next-line no-console
-        console.log(`[WS DEBUG] api_base.init() call #${this.init_call_count}`, {
+        wsLog('Connection', `api_base.init() call #${this.init_call_count}`, {
             force_create_connection,
             existing_readyState: this.api?.connection?.readyState,
             stack: new Error('init() called here').stack,
@@ -139,8 +139,7 @@ class APIBase {
             ApiHelpers.disposeInstance();
             setConnectionStatus(CONNECTION_STATUS.CLOSED);
         } else {
-            // eslint-disable-next-line no-console
-            console.log('[WS DEBUG] api_base.init() reused existing OPEN connection, no new socket created');
+            wsLog('Connection', 'api_base.init() reused existing OPEN connection, no new socket created');
         }
         this.api = this.connection_manager.api;
 
@@ -169,8 +168,10 @@ class APIBase {
         return 'Socket not initialized';
     }
 
+    // intentional=true: an explicit disconnect (bot's terminate-connection action,
+    // or the logout flow in client-store.ts) should not trigger auto-reconnect.
     terminate() {
-        this.connection_manager.teardown();
+        this.connection_manager.teardown(true);
     }
 
     initEventListeners() {
@@ -188,19 +189,14 @@ class APIBase {
     }
 
     reconnectIfNotConnected = (source?: string | Event) => {
-        // TEMPORARY DEBUG - identifies which trigger (socket close vs window 'online'/'focus')
-        // caused this reconnect check, to prove/disprove duplicate-attempt scenarios.
+        // Identifies which trigger (socket close, window 'online'/'focus', or a
+        // heartbeat-detected stale socket) caused this reconnect check.
         const source_label = typeof source === 'string' ? source : (source?.type ?? 'unknown');
-        // eslint-disable-next-line no-console
-        console.log(`[WS DEBUG] reconnectIfNotConnected called (source=${source_label})`, {
+        wsLog('Connection', `reconnectIfNotConnected called (source=${source_label})`, {
             readyState: this.api?.connection?.readyState,
         });
         if (this.api?.connection?.readyState && this.api?.connection?.readyState > 1) {
-            // eslint-disable-next-line no-console
-            console.log(
-                `[WS DEBUG] Info: Connection to the server was closed, trying to reconnect (source=${source_label}).`
-            );
-            this.init(true);
+            this.connection_manager.scheduleReconnect(() => this.init(true));
         }
     };
 
