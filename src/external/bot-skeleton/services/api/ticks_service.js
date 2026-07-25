@@ -225,6 +225,32 @@ export default class TicksService {
         }
     }
 
+    /**
+     * Called via api_base.onReconnected() (wired up by TradeEngine). The message
+     * listener bound by observe() above is tied to whichever socket existed at
+     * construction time - after a reconnect it's listening to a dead socket, so
+     * rebind it. The ticks_history/candles subscriptions themselves also need to
+     * be re-sent: the server-side subscription belonged to the old socket too, and
+     * requestStream()'s dedup check (ticks_history_promise/candles_promise) would
+     * otherwise skip re-sending them since those promises still look "resolved".
+     */
+    async restoreSubscriptions() {
+        this.observe();
+
+        const restore = async (promise_holder, label) => {
+            if (!promise_holder) return;
+            const options = JSON.parse(promise_holder.stringified_options);
+            // eslint-disable-next-line no-console
+            console.log(`[SUB DEBUG] restoring ${label}:`, options);
+            await this.requestTicks(options);
+            // eslint-disable-next-line no-console
+            console.log(`[SUB DEBUG] restored ${label}`);
+        };
+
+        await restore(this.ticks_history_promise, 'ticks_history');
+        await restore(this.candles_promise, 'candles');
+    }
+
     requestStream(options) {
         const { style } = options;
         const stringified_options = JSON.stringify(options);

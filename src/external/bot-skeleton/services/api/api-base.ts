@@ -15,7 +15,8 @@ import {
 import ApiHelpers from './api-helpers';
 import { generateDerivApiInstance, V2GetActiveClientId, V2GetActiveToken } from './appId';
 import chart_api from './chart-api';
-import ConnectionManager from './connection-manager';
+import ConnectionManager, { CONNECTION_STATE } from './connection-manager';
+import SubscriptionManager from './subscription-manager';
 
 type CurrentSubscription = {
     id: string;
@@ -61,6 +62,28 @@ class APIBase {
     common_store: CommonStore | undefined;
     landing_company: string | null = null;
 
+    // Single mutable slot (not an accumulating event list) for "something wants to
+    // know when subscriptions have just been restored after a reconnect". Kept as
+    // a single overwritable callback rather than the Observer/globalObserver event
+    // bus: TradeEngine is recreated on every bot run, and registering a new
+    // Observer listener each time without ever unregistering the old one would
+    // itself be a new listener leak - exactly the class of bug this whole effort
+    // is fixing. The current TradeEngine simply overwrites this on construction.
+    private reconnected_callback: (() => void) | null = null;
+
+    onReconnected(callback: () => void) {
+        this.reconnected_callback = callback;
+    }
+
+    // Owns balance/transaction/proposal_open_contract: dedupes duplicate subscribe
+    // calls, and replays them in order after a reconnect (restoreAll()). See
+    // subscription-manager.ts. Fixes a gap the architecture audit found: the server
+    // side subscribe requests were already being re-sent on reconnect via
+    // authorizeAndSubscribe() re-running, but nothing tracked *what* was active
+    // before the disconnect in order to restore it deliberately/in order/exactly
+    // once.
+    subscription_manager = new SubscriptionManager(request => doUntilDone(() => this.api?.send(request), [], this));
+
     unsubscribeAllSubscriptions = () => {
         this.current_auth_subscriptions?.forEach(subscription_promise => {
             subscription_promise.then(({ subscription }) => {
@@ -72,6 +95,13 @@ class APIBase {
             });
         });
         this.current_auth_subscriptions = [];
+
+        // Best-effort forget of the subscription-manager-tracked streams too - the
+        // old socket may already be gone, in which case this is a harmless no-op.
+        this.subscription_manager.getActiveSubscriptionIds().forEach(id => {
+            this.api?.send({ forget: id });
+        });
+        this.subscription_manager.markAllInactive();
     };
 
     // Owns socket creation, open/close listeners, and the online/focus reconnect
@@ -181,6 +211,7 @@ class APIBase {
         this.account_id = V2GetActiveClientId() ?? '';
         setIsAuthorizing(true);
         setIsAuthorized(false);
+        this.connection_manager.setState(CONNECTION_STATE.AUTHORIZING);
 
         try {
             const { authorize, error } = await this.api.authorize(this.token);
@@ -204,6 +235,7 @@ class APIBase {
             setAuthData(authorize);
             setIsAuthorized(true);
             this.is_authorized = true;
+            this.connection_manager.setState(CONNECTION_STATE.AUTHORIZED);
             localStorage.setItem('client_account_details', JSON.stringify(authorize?.account_list));
             localStorage.setItem('client.country', authorize?.country);
 
@@ -212,7 +244,16 @@ class APIBase {
             } else {
                 this.active_symbols_promise = this.getActiveSymbols();
             }
-            this.subscribe();
+            // Awaited (previously fire-and-forget) so RESTORING_SUBSCRIPTIONS/READY
+            // and the reconnected callback only fire once subscriptions are
+            // actually back, not merely requested.
+            await this.subscribe();
+            this.connection_manager.setState(CONNECTION_STATE.READY);
+            // Tells whatever has its own listeners bound to the (now-replaced)
+            // socket's message stream - TradeEngine's observeBalance/Proposals/
+            // OpenContract, ticks_service.js - to rebind against the current
+            // this.api. Harmless on a first connect too; nothing is registered yet.
+            this.reconnected_callback?.();
             // this.getSelfExclusion(); commented this so we dont call it from two places
         } catch (e) {
             console.error('Authorization failed:', e);
@@ -232,27 +273,23 @@ class APIBase {
     }
 
     async subscribe() {
-        const subscribeToStream = (streamName: string) => {
-            return doUntilDone(
-                () => {
-                    const subscription = this.api?.send({
-                        [streamName]: 1,
-                        subscribe: 1,
-                        ...(streamName === 'balance' ? { account: 'all' } : {}),
-                    });
-                    if (subscription) {
-                        this.current_auth_subscriptions.push(subscription);
-                    }
-                    return subscription;
-                },
-                [],
-                this
-            );
-        };
+        // Restore path (reconnect - subscription_manager already has entries from
+        // before the disconnect, marked inactive by unsubscribeAllSubscriptions()):
+        // re-send each one, in the order they were originally registered.
+        if (this.subscription_manager.hasEntries()) {
+            this.connection_manager.setState(CONNECTION_STATE.RESTORING_SUBSCRIPTIONS);
+            await this.subscription_manager.restoreAll();
+            return;
+        }
 
-        const streamsToSubscribe = ['balance', 'transaction', 'proposal_open_contract'];
+        // First-connect path: register each stream for the first time.
+        const streams: Array<{ key: string; request: Record<string, unknown> }> = [
+            { key: 'balance', request: { balance: 1, subscribe: 1, account: 'all' } },
+            { key: 'transaction', request: { transaction: 1, subscribe: 1 } },
+            { key: 'proposal_open_contract', request: { proposal_open_contract: 1, subscribe: 1 } },
+        ];
 
-        await Promise.all(streamsToSubscribe.map(subscribeToStream));
+        await Promise.all(streams.map(({ key, request }) => this.subscription_manager.subscribe(key, request)));
     }
 
     getActiveSymbols = async () => {

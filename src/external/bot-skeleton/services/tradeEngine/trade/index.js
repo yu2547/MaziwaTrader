@@ -75,6 +75,24 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
         this.subscription_id_for_accumulators = null;
         this.is_proposal_requested_for_accumulators = false;
         this.store = createStore(rootReducer, applyMiddleware(thunk));
+
+        // observeBalance/observeProposals/observeOpenContract (called by observe()
+        // above) each bind their own api_base.api.onMessage() listener once, at
+        // construction time, to whichever socket is live *right now*. If api_base
+        // later replaces that socket (a forced reconnect), those listeners are left
+        // listening to a dead socket's message stream forever - balance/proposal/
+        // contract updates would silently stop reaching a running bot until a full
+        // page reload. api_base.onReconnected is a single-slot callback (not an
+        // accumulating event registration - see api-base.ts for why that matters
+        // given a new TradeEngine is constructed on every bot run) that fires once
+        // subscriptions are confirmed restored after a reconnect; re-running
+        // observe() rebinds all three listeners against the current api_base.api,
+        // and ticksService needs the same treatment for its own tick/candle
+        // subscriptions.
+        api_base.onReconnected(() => {
+            this.observe();
+            this.$scope.ticksService?.restoreSubscriptions?.();
+        });
     }
 
     init(...args) {
