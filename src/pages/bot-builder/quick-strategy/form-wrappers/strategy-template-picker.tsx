@@ -1,11 +1,12 @@
 import React from 'react';
+import classNames from 'classnames';
 import { useFormikContext } from 'formik';
 import { observer } from 'mobx-react-lite';
+import Input from '@/components/shared_ui/input';
+import Text from '@/components/shared_ui/text';
 import { DBOT_TABS } from '@/constants/bot-contents';
 import { useStore } from '@/hooks/useStore';
 import { LegacyGuide1pxIcon } from '@deriv/quill-icons';
-import { Chip } from '@deriv-com/quill-ui';
-import { SearchField } from '@deriv-com/quill-ui-next';
 import { localize } from '@deriv-com/translations';
 import { TFormData } from '../types';
 import StrategyList from './strategy-list';
@@ -16,6 +17,32 @@ type TStrategyTemplatePicker = {
     setCurrentStep: (current_step: QsSteps) => void;
     setSelectedTradeType: (selected_trade_type: string) => void;
 };
+
+type TSelectableChip = {
+    label: string;
+    onClick: () => void;
+    selected: boolean;
+};
+
+/**
+ * Minimal in-house replacement for @deriv-com/quill-ui's Chip.Selectable (removed
+ * to drop that package's ~3.4MB CSS chunk - see H1 in the performance review).
+ * Same selectable-pill behavior: a row of these, one active at a time.
+ */
+const SelectableChip = ({ label, onClick, selected }: TSelectableChip) => (
+    <button
+        type='button'
+        className={classNames('strategy-template-picker__chip', {
+            'strategy-template-picker__chip--selected': selected,
+        })}
+        aria-pressed={selected}
+        onClick={onClick}
+    >
+        <Text as='span' size='xs'>
+            {label}
+        </Text>
+    </button>
+);
 
 const StrategyTemplatePicker = observer(({ setCurrentStep, setSelectedTradeType }: TStrategyTemplatePicker) => {
     const { dashboard, quick_strategy } = useStore();
@@ -52,16 +79,18 @@ const StrategyTemplatePicker = observer(({ setCurrentStep, setSelectedTradeType 
     return (
         <div className='strategy-template-picker'>
             <div className='strategy-template-picker__panel'>
-                <SearchField
-                    onChange={(value: string | number) => {
-                        setSearchValue(value as string);
+                <Input
+                    type='text'
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                        const value = event.target.value;
+                        setSearchValue(value);
                         setIsSearching(true);
-                        setFAQSearchValue(value as string);
-                        filterTuotrialTab(value as string);
+                        setFAQSearchValue(value);
+                        filterTuotrialTab(value);
                     }}
                     placeholder={localize('Search')}
                     value={search_value}
-                    size='sm'
+                    field_className='strategy-template-picker__search-field'
                 />
 
                 <button
@@ -85,11 +114,10 @@ const StrategyTemplatePicker = observer(({ setCurrentStep, setSelectedTradeType 
             </div>
             <div className='strategy-template-picker__chips'>
                 {TRADE_TYPES.map((item, index) => (
-                    <Chip.Selectable
+                    <SelectableChip
                         key={index}
                         onClick={() => handleChipSelect(index)}
                         selected={index == selector_chip_value}
-                        size='sm'
                         label={item}
                     />
                 ))}

@@ -1,0 +1,23 @@
+.dc-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0;
+    border: none;
+    background: unset;
+    color: var(--text-prominent);
+    text-decoration: none;
+    cursor: pointer;
+
+    &__text {
+        color: inherit;
+    }
+
+    &__chevron {
+        flex-shrink: 0;
+
+        svg path {
+            fill: var(--text-prominent);
+        }
+    }
+}

@@ -1,6 +1,6 @@
 import React from 'react';
+import Link from '@/components/shared_ui/link';
 import Text from '@/components/shared_ui/text';
-import { Link } from '@deriv-com/quill-ui';
 import { localize } from '@deriv-com/translations';
 import {
     STRATEGY_TRADE_ASSOCIATIONS,
@@ -32,7 +32,7 @@ const StrategyBlock = ({ title, items, onSelectStrategy }: TStrategyBlock) => {
             </div>
             {items.map((item, index) => (
                 <div className='strategy-template-picker__links' key={index}>
-                    <Link hasChevron size='sm' onClick={() => onSelectStrategy(item.name, title)}>
+                    <Link hasChevron size='xs' onClick={() => onSelectStrategy(item.name, title)}>
                         {item.display_name}
                     </Link>
                 </div>

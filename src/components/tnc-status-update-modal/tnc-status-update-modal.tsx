@@ -4,10 +4,12 @@ import { api_base } from '@/external/bot-skeleton/services/api/api-base';
 import { useApiBase } from '@/hooks/useApiBase';
 import useIsTNCNeeded from '@/hooks/useIsTNCNeeded';
 import { useStore } from '@/hooks/useStore';
-import { Button, Link, Text } from '@deriv-com/quill-ui';
 import { Localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
+import Button from '../shared_ui/button';
+import Link from '../shared_ui/link';
 import Modal from '../shared_ui/modal';
+import Text from '../shared_ui/text';
 import './tnc-status-update-modal.scss';
 
 const TncStatusUpdateModal: React.FC = observer(() => {
@@ -43,29 +45,26 @@ const TncStatusUpdateModal: React.FC = observer(() => {
     return (
         <Modal className='tnc-status-update-modal-wrapper' is_open={is_tnc_open} has_close_icon={false} width='44rem'>
             <div className='tnc-status-update-modal'>
-                <Text size={isDesktop ? 'sm' : 'md'} bold>
+                <Text size={isDesktop ? 'xs' : 's'} weight='bold'>
                     <Localize i18n_default_text="Updated T&C's" />
                 </Text>
                 <div className='tnc-status-update-modal__text-container'>
-                    <Text size={isDesktop ? 'sm' : 'md'}>
+                    <Text size={isDesktop ? 'xs' : 's'}>
                         <Localize
                             i18n_default_text='Please review our updated <0>terms and conditions</0>.'
                             components={[
-                                <Link className='tnc-link' key={0} size={isDesktop ? 'sm' : 'md'} href={tncLink} />,
+                                <Link className='tnc-link' key={0} size={isDesktop ? 'xs' : 's'} href={tncLink} />,
                             ]}
                         />
                     </Text>
-                    <Text size={isDesktop ? 'sm' : 'md'}>
+                    <Text size={isDesktop ? 'xs' : 's'}>
                         <Localize i18n_default_text='By continuing you understand and accept the changes.' />
                     </Text>
                 </div>
                 <div className='tnc-status-update-modal__button'>
-                    <Button
-                        onClick={onClick}
-                        size='md'
-                        variant='primary'
-                        label={<Localize i18n_default_text='Continue' />}
-                    />
+                    <Button primary onClick={onClick}>
+                        <Localize i18n_default_text='Continue' />
+                    </Button>
                 </div>
             </div>
         </Modal>

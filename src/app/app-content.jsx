@@ -16,12 +16,10 @@ import { useApiBase } from '@/hooks/useApiBase';
 import useIntercom from '@/hooks/useIntercom';
 import { useOfflineDetection } from '@/hooks/useOfflineDetection';
 import { useStore } from '@/hooks/useStore';
-import useThemeSwitcher from '@/hooks/useThemeSwitcher';
 import useTrackjs from '@/hooks/useTrackjs';
 import initDatadog from '@/utils/datadog';
 import initHotjar from '@/utils/hotjar';
 import { setSmartChartsPublicPath } from '@deriv/deriv-charts';
-import { ThemeProvider } from '@deriv-com/quill-ui';
 import { localize } from '@deriv-com/translations';
 import Audio from '../components/audio';
 import BlocklyLoading from '../components/blockly-loading';
@@ -40,7 +38,10 @@ const AppContent = observer(() => {
     const store = useStore();
     const { app, transactions, common, client } = store;
     const { showDigitalOptionsMaltainvestError } = app;
-    const { is_dark_mode_on } = useThemeSwitcher();
+    // useThemeSwitcher() used to be called here only to feed @deriv-com/quill-ui's
+    // ThemeProvider, removed alongside it (see H1 in the performance review). The
+    // app's real theming (the theme--dark/theme--light class on <body>, driven by
+    // that same hook) is untouched and lives in useThemeSwitcher.tsx.
     const { isOnline } = useOfflineDetection();
 
     const { recovered_transactions, recoverPendingContracts } = transactions;
@@ -283,29 +284,6 @@ const AppContent = observer(() => {
         console.log('[Offline] Bypassing loader, showing dashboard directly');
         return (
             <AuthLoadingWrapper>
-                <ThemeProvider theme={is_dark_mode_on ? 'dark' : 'light'}>
-                    <BlocklyLoading />
-                    <div className='bot-dashboard bot' data-testid='dt_bot_dashboard'>
-                        {/* <PWAInstallModalTest /> */}
-                        <Audio />
-                        <Main />
-                        <BotBuilder />
-                        <BotStopped />
-                        <TransactionDetailsModal />
-                        <PWAInstallModal />
-                        <ToastContainer limit={3} draggable={false} />
-                        <TncStatusUpdateModal />
-                    </div>
-                </ThemeProvider>
-            </AuthLoadingWrapper>
-        );
-    }
-
-    return is_loading ? (
-        <ChunkLoader message={getLoadingMessage()} />
-    ) : (
-        <AuthLoadingWrapper>
-            <ThemeProvider theme={is_dark_mode_on ? 'dark' : 'light'}>
                 <BlocklyLoading />
                 <div className='bot-dashboard bot' data-testid='dt_bot_dashboard'>
                     {/* <PWAInstallModalTest /> */}
@@ -318,7 +296,26 @@ const AppContent = observer(() => {
                     <ToastContainer limit={3} draggable={false} />
                     <TncStatusUpdateModal />
                 </div>
-            </ThemeProvider>
+            </AuthLoadingWrapper>
+        );
+    }
+
+    return is_loading ? (
+        <ChunkLoader message={getLoadingMessage()} />
+    ) : (
+        <AuthLoadingWrapper>
+            <BlocklyLoading />
+            <div className='bot-dashboard bot' data-testid='dt_bot_dashboard'>
+                {/* <PWAInstallModalTest /> */}
+                <Audio />
+                <Main />
+                <BotBuilder />
+                <BotStopped />
+                <TransactionDetailsModal />
+                <PWAInstallModal />
+                <ToastContainer limit={3} draggable={false} />
+                <TncStatusUpdateModal />
+            </div>
         </AuthLoadingWrapper>
     );
 });

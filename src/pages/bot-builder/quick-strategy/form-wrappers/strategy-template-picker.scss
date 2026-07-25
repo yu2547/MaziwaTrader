@@ -34,20 +34,18 @@
         height: 3.2rem;
         margin-bottom: 1.6rem;
 
-        .quill-input {
+        .dc-input {
+            flex: 1;
+
             &__container {
                 background-color: var(--general-section-1);
                 border-radius: 1rem;
-
-                .input__align--left {
-                    background-color: var(--general-section-6);
-                }
             }
+        }
 
-            &__wrapper__variant--outline {
-                background-color: unset;
-                border: none;
-            }
+        &__search-field {
+            background-color: unset;
+            border: none;
         }
     }
 
@@ -58,13 +56,27 @@
         column-gap: 0.8rem;
     }
 
+    &__chip {
+        padding: 0.4rem 1.2rem;
+        border: 1px solid var(--general-section-6);
+        border-radius: 2rem;
+        background-color: unset;
+        cursor: pointer;
+
+        &--selected {
+            background-color: var(--general-section-1);
+            border-color: var(--text-prominent);
+        }
+    }
+
     &__strategies {
         display: flex;
         flex-direction: column;
 
-        .quill-link {
+        .dc-link {
             display: flex;
             justify-content: space-between;
+            width: 100%;
             text-decoration: none;
             border-bottom: 1px solid var(--general-section-1);
 
@@ -75,7 +87,7 @@
             }
         }
 
-        .quill-typography {
+        .dc-text {
             margin: 0.8rem 0;
         }
     }
@@ -139,9 +151,40 @@
             .qs-stepper {
                 margin: 0 1.6rem;
 
+                &__list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1.6rem;
+                    margin: 0;
+                    padding: 0;
+                    list-style: none;
+                }
+
                 .step {
-                    .quill-typography {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.8rem;
+                    color: var(--text-less-prominent);
+
+                    .dc-text {
                         font-size: 1.4rem;
+                    }
+
+                    &__marker {
+                        flex-shrink: 0;
+                        width: 0.8rem;
+                        height: 0.8rem;
+                        border-radius: 50%;
+                        background-color: var(--general-section-6);
+                    }
+
+                    &--completed,
+                    &--active {
+                        color: var(--text-prominent);
+
+                        .step__marker {
+                            background-color: var(--text-prominent);
+                        }
                     }
                 }
             }
