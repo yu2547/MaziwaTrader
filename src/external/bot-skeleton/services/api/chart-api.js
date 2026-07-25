@@ -1,21 +1,18 @@
-import { generateDerivApiInstance } from './appId';
+import ConnectionManager from './connection-manager';
 
 class ChartAPI {
     api;
 
-    onsocketclose() {
-        this.reconnectIfNotConnected();
-    }
+    // Owns socket creation/open/close listeners - see connection-manager.ts. This
+    // used to be a near-duplicate of api-base.ts's own inline implementation.
+    connection_manager = new ConnectionManager({
+        label: 'chart',
+        onClose: () => this.reconnectIfNotConnected(),
+    });
 
     init = async (force_create_connection = false) => {
-        if (!this.api || force_create_connection) {
-            if (this.api?.connection) {
-                this.api.disconnect();
-                this.api.connection.removeEventListener('close', this.onsocketclose.bind(this));
-            }
-            this.api = await generateDerivApiInstance();
-            this.api?.connection.addEventListener('close', this.onsocketclose.bind(this));
-        }
+        this.connection_manager.connect(force_create_connection);
+        this.api = this.connection_manager.api;
         this.getTime();
     };
 
@@ -28,11 +25,9 @@ class ChartAPI {
     }
 
     reconnectIfNotConnected = () => {
-        // eslint-disable-next-line no-console
-        console.log('chart connection state: ', this.api?.connection?.readyState);
-        if (this.api?.connection?.readyState && this.api?.connection?.readyState > 1) {
+        if (this.connection_manager.api?.connection?.readyState && this.connection_manager.api.connection.readyState > 1) {
             // eslint-disable-next-line no-console
-            console.log('Info: Chart connection to the server was closed, trying to reconnect.');
+            console.log('[WS DEBUG][chart] Info: Chart connection to the server was closed, trying to reconnect.');
             this.init(true);
         }
     };

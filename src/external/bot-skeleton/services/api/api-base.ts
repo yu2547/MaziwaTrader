@@ -15,6 +15,7 @@ import {
 import ApiHelpers from './api-helpers';
 import { generateDerivApiInstance, V2GetActiveClientId, V2GetActiveToken } from './appId';
 import chart_api from './chart-api';
+import ConnectionManager from './connection-manager';
 
 type CurrentSubscription = {
     id: string;
@@ -73,19 +74,20 @@ class APIBase {
         this.current_auth_subscriptions = [];
     };
 
+    // Owns socket creation, open/close listeners, and the online/focus reconnect
+    // triggers - see connection-manager.ts for why this replaced the previous
+    // inline implementation (duplicated in chart-api.js, and had a listener leak).
+    connection_manager = new ConnectionManager({
+        label: 'main',
+        onOpen: () => setConnectionStatus(CONNECTION_STATUS.OPENED),
+        onClose: source => {
+            setConnectionStatus(CONNECTION_STATUS.CLOSED);
+            this.reconnectIfNotConnected(source);
+        },
+    });
+
     // TEMPORARY DEBUG - remove once the connection issue is confirmed resolved.
     init_call_count = 0;
-
-    onsocketopen() {
-        setConnectionStatus(CONNECTION_STATUS.OPENED);
-    }
-
-    onsocketclose() {
-        setConnectionStatus(CONNECTION_STATUS.CLOSED);
-        // eslint-disable-next-line no-console
-        console.log('[WS DEBUG] api_base.onsocketclose fired -> triggering reconnect check');
-        this.reconnectIfNotConnected('onsocketclose');
-    }
 
     async init(force_create_connection = false) {
         this.init_call_count += 1;
@@ -102,22 +104,15 @@ class APIBase {
             this.unsubscribeAllSubscriptions();
         }
 
-        if (!this.api || this.api?.connection.readyState !== 1 || force_create_connection) {
-            if (this.api?.connection) {
-                ApiHelpers.disposeInstance();
-                setConnectionStatus(CONNECTION_STATUS.CLOSED);
-                this.api.disconnect();
-                this.api.connection.removeEventListener('open', this.onsocketopen.bind(this));
-                this.api.connection.removeEventListener('close', this.onsocketclose.bind(this));
-            }
-
-            this.api = generateDerivApiInstance();
-            this.api?.connection.addEventListener('open', this.onsocketopen.bind(this));
-            this.api?.connection.addEventListener('close', this.onsocketclose.bind(this));
+        const created_new_connection = this.connection_manager.connect(force_create_connection);
+        if (created_new_connection) {
+            ApiHelpers.disposeInstance();
+            setConnectionStatus(CONNECTION_STATUS.CLOSED);
         } else {
             // eslint-disable-next-line no-console
             console.log('[WS DEBUG] api_base.init() reused existing OPEN connection, no new socket created');
         }
+        this.api = this.connection_manager.api;
 
         if (!this.has_active_symbols && !V2GetActiveToken()) {
             this.active_symbols_promise = this.getActiveSymbols();
@@ -145,22 +140,15 @@ class APIBase {
     }
 
     terminate() {
-        // eslint-disable-next-line no-console
-        if (this.api) this.api.disconnect();
+        this.connection_manager.teardown();
     }
 
-    has_event_listeners = false;
-
     initEventListeners() {
-        // Previously this ran on every init() call (including every reconnect) and never
-        // removed the prior listener, so 'online'/'focus' handlers accumulated on window -
-        // after N reconnects a single focus/online event fired N concurrent reconnect
-        // attempts, each capable of spawning its own socket. Guard so this only registers once.
-        if (window && !this.has_event_listeners) {
-            window.addEventListener('online', this.reconnectIfNotConnected);
-            window.addEventListener('focus', this.reconnectIfNotConnected);
-            this.has_event_listeners = true;
-        }
+        // registerAutoReconnectTriggers is itself guarded to only attach once - see
+        // connection-manager.ts. Previously this method managed that guard inline and
+        // called it on every init() (including every reconnect) without ever removing
+        // the prior listener, so 'online'/'focus' handlers accumulated on window.
+        this.connection_manager.registerAutoReconnectTriggers(source => this.reconnectIfNotConnected(source));
     }
 
     async createNewInstance(account_id: string) {
