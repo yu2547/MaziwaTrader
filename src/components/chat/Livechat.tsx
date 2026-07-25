@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useIsIntercomAvailable } from '@/hooks/useIntercom';
 import { LegacyLiveChatOutlineIcon } from '@deriv/quill-icons/Legacy';
@@ -13,17 +14,27 @@ const Livechat = observer(() => {
 
     const isNeitherChatNorLiveChatAvailable = !is_livechat_available && !icAvailable;
 
+    // Quick fix for making sure livechat won't popup if feature flag is late to enable.
+    // We will add a refactor after this. This used to be a bare setInterval() call in
+    // the render body with no cleanup - every re-render of this observer() component
+    // created a new interval that ran forever, since none were ever cleared. Same
+    // polling behavior, but now only one interval is alive at a time, recreated when
+    // icAvailable changes and cleared on unmount.
+    useEffect(() => {
+        if (isNeitherChatNorLiveChatAvailable) return undefined;
+
+        const intervalId = setInterval(() => {
+            if (icAvailable) {
+                window.LiveChatWidget?.call('destroy');
+            }
+        }, 10);
+
+        return () => clearInterval(intervalId);
+    }, [icAvailable, isNeitherChatNorLiveChatAvailable]);
+
     if (isNeitherChatNorLiveChatAvailable) {
         return null;
     }
-
-    // Quick fix for making sure livechat won't popup if feature flag is late to enable.
-    // We will add a refactor after this
-    setInterval(() => {
-        if (icAvailable) {
-            window.LiveChatWidget?.call('destroy');
-        }
-    }, 10);
 
     const liveChatClickHandler = () => {
         icAvailable ? window.Intercom('show') : window.LiveChatWidget?.call('maximize');
