@@ -16,7 +16,10 @@ export const useInvalidTokenHandler = (): { unregisterHandler: () => void } => {
     const { retriggerOAuth2Login } = useOauth2();
 
     const handleInvalidToken = () => {
-        // Clear localStorage similar to client.logout
+        // Does not clear localStorage - just redirects into OIDC re-auth, which
+        // overwrites authToken/active_loginid/accountsList/clientAccounts on
+        // success. If the user abandons the redirect, the known-invalid token is
+        // left in localStorage until the next successful login overwrites it.
         retriggerOAuth2Login();
     };
 

@@ -5,6 +5,7 @@ import { removeCookies } from '@/components/shared/utils/storage/storage';
 import { api_base } from '@/external/bot-skeleton';
 import { setAuthData } from '@/external/bot-skeleton/services/api/observables/connection-status-stream';
 import { TAuthData } from '@/types/api-types';
+import { clearAuthData } from '@/utils/auth-utils';
 // TODO: need to fix this on auth cliet side
 // import { requestSessionActive } from '@deriv-com/auth-client';
 
@@ -318,12 +319,9 @@ const useTMB = (): UseTMBReturn => {
 
     const logout = useCallback(async () => {
         try {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('active_loginid');
-            localStorage.removeItem('clientAccounts');
-            localStorage.removeItem('accountsList');
-            // Go to logged out version of the app instead of redirecting to OAuth
-            window.location.reload();
+            // clearAuthData(true) also reloads - go to logged out version of the
+            // app instead of redirecting to OAuth.
+            clearAuthData();
         } catch (error) {
             // eslint-disable-next-line no-console
             console.error('Failed to logout:', error);

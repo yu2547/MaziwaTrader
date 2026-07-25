@@ -10,6 +10,7 @@ import {
     setIsAuthorized,
 } from '@/external/bot-skeleton/services/api/observables/connection-status-stream';
 import type { TAuthData, TLandingCompany } from '@/types/api-types';
+import { clearAuthData } from '@/utils/auth-utils';
 import type { Balance, GetAccountStatus, GetSettings, WebsiteStatus } from '@deriv/api-types';
 import { Analytics } from '@deriv-com/analytics';
 
@@ -347,10 +348,8 @@ export default class ClientStore {
 
         this.all_accounts_balance = null;
 
-        localStorage.removeItem('active_loginid');
-        localStorage.removeItem('accountsList');
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('clientAccounts');
+        // No reload here - resolveNavigation() below handles leaving the page.
+        clearAuthData(false);
         removeCookies('client_information');
 
         setIsAuthorized(false);
