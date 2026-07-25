@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { isFirefox, isSafari } from '@/components/shared/utils/browser/browser_detect';
 import Text from '@/components/shared_ui/text';
 import { useStore } from '@/hooks/useStore';
-import { StandaloneBullhornRegularIcon } from '@deriv/quill-icons';
+import { StandaloneBullhornRegularIcon } from '@deriv/quill-icons/Standalone';
 import { localize } from '@deriv-com/translations';
 import { Notifications as Announcement } from '@deriv-com/ui';
 import { rudderStackSendOpenEvent } from '../../../analytics/rudderstack-common-events';

@@ -1,7 +1,7 @@
 import React from 'react';
 import Dialog from '@/components/shared_ui/dialog';
 import Text from '@/components/shared_ui/text';
-import { LabelPairedCheckCaptionFillIcon } from '@deriv/quill-icons';
+import { LabelPairedCheckCaptionFillIcon } from '@deriv/quill-icons/LabelPaired';
 import { rudderStackSendCloseEvent } from '../../../analytics/rudderstack-common-events';
 import { IconAnnounceModal } from './announcement-components';
 import { TAnnounce, TContentItem } from './config';

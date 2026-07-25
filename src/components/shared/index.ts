@@ -15,7 +15,6 @@ export * from './utils/files';
 export * from './utils/helpers';
 export * from './utils/helpers';
 export * from './utils/hooks';
-export * from './utils/loader';
 export * from './utils/loader-handler';
 export * from './utils/loader-handler';
 export * from './utils/location';

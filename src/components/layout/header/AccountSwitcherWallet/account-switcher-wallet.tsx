@@ -7,7 +7,7 @@ import { useFirebaseCountriesConfig } from '@/hooks/firebase/useFirebaseCountrie
 import { useOnClickOutside } from '@/hooks/useOnClickOutside';
 import useStoreWalletAccountsList from '@/hooks/useStoreWalletAccountsList';
 import { handleTraderHubRedirect } from '@/utils/traders-hub-redirect';
-import { StandaloneChevronDownBoldIcon } from '@deriv/quill-icons';
+import { StandaloneChevronDownBoldIcon } from '@deriv/quill-icons/Standalone';
 import { Localize } from '@deriv-com/translations';
 import { AccountSwitcherWalletList } from './account-switcher-wallet-list';
 import './account-switcher-wallet.scss';

@@ -6,7 +6,7 @@ import Input from '@/components/shared_ui/input';
 import Text from '@/components/shared_ui/text';
 import { DBOT_TABS } from '@/constants/bot-contents';
 import { useStore } from '@/hooks/useStore';
-import { LegacyGuide1pxIcon } from '@deriv/quill-icons';
+import { LegacyGuide1pxIcon } from '@deriv/quill-icons/Legacy';
 import { localize } from '@deriv-com/translations';
 import { TFormData } from '../types';
 import StrategyList from './strategy-list';

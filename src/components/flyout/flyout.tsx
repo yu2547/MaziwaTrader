@@ -4,7 +4,7 @@ import { observer } from 'mobx-react-lite';
 import { useStore } from '@/hooks/useStore';
 import GTM from '@/utils/gtm';
 import { help_content_config } from '@/utils/help-content/help-content.config';
-import { LabelPairedCircleExclamationCaptionFillIcon } from '@deriv/quill-icons';
+import { LabelPairedCircleExclamationCaptionFillIcon } from '@deriv/quill-icons/LabelPaired';
 import { localize } from '@deriv-com/translations';
 import { getPlatformSettings } from '../shared';
 import Input from '../shared_ui/input';

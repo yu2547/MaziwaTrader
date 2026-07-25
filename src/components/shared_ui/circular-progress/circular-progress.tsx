@@ -1,5 +1,5 @@
 import classNames from 'classnames';
-import { LegacyTimeIcon } from '@deriv/quill-icons';
+import { LegacyTimeIcon } from '@deriv/quill-icons/Legacy';
 
 type TCircularProgressProps = {
     className?: string;
