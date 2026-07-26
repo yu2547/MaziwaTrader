@@ -1,0 +1,41 @@
+.mw-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.6rem;
+    max-width: 1000px;
+    margin: 2rem auto 5.6rem;
+    padding: 3.2rem 2rem;
+    border-radius: 20px;
+    background: rgb(255 255 255 / 3%);
+    border: 1px solid rgb(255 255 255 / 7%);
+
+    &__item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.6rem;
+        text-align: center;
+    }
+
+    &__value {
+        font-size: clamp(2.6rem, 3.4vw, 3.6rem);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        background: linear-gradient(120deg, var(--mw-gold), var(--mw-blue));
+        background-clip: text;
+        color: transparent;
+    }
+
+    &__label {
+        font-size: 1.3rem;
+        color: rgb(255 255 255 / 60%);
+        letter-spacing: 0.02em;
+    }
+}
+
+@media (width <= 720px) {
+    .mw-stats {
+        grid-template-columns: repeat(2, 1fr);
+        row-gap: 2.4rem;
+    }
+}

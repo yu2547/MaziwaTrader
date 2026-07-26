@@ -1,0 +1,391 @@
+.mw-hero {
+    position: relative;
+    overflow: hidden;
+    min-height: 88vh;
+    display: flex;
+    align-items: center;
+    background: radial-gradient(ellipse at 50% 20%, #0b1530 0%, #060b18 70%);
+
+    &__scene {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        filter: brightness(var(--mw-ambient, 1));
+    }
+
+    &__canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+
+    &__grid {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: center;
+        gap: 4rem;
+        max-width: 1280px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 6rem 3.2rem;
+    }
+
+    &__copy {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.8rem;
+    }
+
+    &__badge {
+        display: inline-flex;
+        padding: 0.7rem 1.6rem;
+        border-radius: 999px;
+        background: rgb(255 255 255 / 6%);
+        border: 1px solid rgb(232 182 76 / 35%);
+        color: var(--mw-gold, #e8b64c);
+        font-size: 1.2rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    &__headline {
+        font-size: clamp(3.6rem, 5.2vw, 5.6rem);
+        line-height: 1.08;
+        font-weight: 700;
+        margin: 0;
+        color: #fff;
+
+        span {
+            display: block;
+        }
+    }
+
+    &__headline-accent {
+        background: linear-gradient(120deg, #e8b64c, #2f7dff);
+        background-clip: text;
+        color: transparent;
+    }
+
+    &__subheading {
+        max-width: 520px;
+        font-size: 1.7rem;
+        line-height: 1.6;
+        color: rgb(255 255 255 / 70%);
+        margin: 0;
+    }
+
+    &__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.6rem;
+        margin-top: 0.6rem;
+    }
+
+    &__btn {
+        appearance: none;
+        border: none;
+        border-radius: 999px;
+        padding: 1.4rem 3.2rem;
+        font-size: 1.6rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease,
+            background 0.2s ease;
+
+        &--primary {
+            color: #06111f;
+            background: linear-gradient(120deg, #e8b64c, #2f7dff);
+            box-shadow: 0 8px 28px rgb(47 125 255 / 35%);
+
+            &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 12px 34px rgb(47 125 255 / 50%);
+            }
+        }
+
+        // "Modern glass" button - translucent with a soft blur, distinct
+        // from the solid gradient primary action.
+        &--glass {
+            color: #fff;
+            background: rgb(255 255 255 / 8%);
+            border: 1px solid rgb(255 255 255 / 20%);
+            backdrop-filter: blur(10px);
+
+            &:hover {
+                transform: translateY(-2px);
+                background: rgb(255 255 255 / 13%);
+                border-color: rgb(255 255 255 / 32%);
+            }
+        }
+    }
+
+    &__trust {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem 2rem;
+        margin-top: 0.8rem;
+        font-size: 1.3rem;
+        color: rgb(255 255 255 / 50%);
+
+        span {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+
+            &:before {
+                content: '';
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--mw-gold, #e8b64c);
+            }
+        }
+    }
+
+    &__visual {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 420px;
+    }
+
+    &__logo-stage {
+        display: flex;
+        justify-content: center;
+        perspective: 1200px;
+    }
+
+    &__logo-wrap {
+        position: relative;
+        animation: mw-hero-logo-float-tilt 9s ease-in-out infinite;
+        will-change: transform;
+    }
+
+    // Frameless treatment identical to the loading screen's logo: the source
+    // PNG has its own dark (non-transparent) background baked in, not a true
+    // alpha cutout, so screen-blend plus a radial mask feathers the
+    // rectangular edges into the scene instead of showing a box.
+    &__logo {
+        position: relative;
+        z-index: 1;
+        display: block;
+        width: min(420px, 82vw);
+        height: auto;
+        mix-blend-mode: screen;
+        filter: drop-shadow(0 8px 28px rgb(0 0 0 / 45%));
+        mask-image: radial-gradient(ellipse 62% 56% at 50% 48%, #000 15%, transparent 72%);
+    }
+
+    &__logo-glow {
+        position: absolute;
+        inset: -22%;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgb(47 125 255 / 32%) 0%, rgb(232 182 76 / 20%) 45%, transparent 72%);
+        filter: blur(46px) brightness(calc(1 + var(--mw-progress, 0.8) * 0.3));
+        animation: mw-hero-logo-glow-pulse 4.5s ease-in-out infinite;
+        z-index: 0;
+    }
+
+    &__logo-sweep {
+        position: absolute;
+        inset: -10%;
+        background: linear-gradient(
+            100deg,
+            transparent 42%,
+            rgb(255 255 255 / 35%) 50%,
+            rgb(232 182 76 / 28%) 54%,
+            transparent 62%
+        );
+        mix-blend-mode: screen;
+        transform: translateX(-160%) rotate(8deg);
+        opacity: 0;
+        animation: mw-hero-logo-sweep 6s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 2;
+    }
+
+    &__cards {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+    }
+
+    &__card {
+        position: absolute;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        padding: 1rem 1.6rem;
+        border-radius: 14px;
+        background: rgb(255 255 255 / 6%);
+        border: 1px solid rgb(255 255 255 / 14%);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 12px 30px rgb(0 0 0 / 35%);
+        animation: mw-hero-card-float 7s ease-in-out infinite;
+
+        &--0 {
+            top: 6%;
+            right: 4%;
+            animation-delay: 0s;
+        }
+
+        &--1 {
+            top: 42%;
+            left: 0%;
+            animation-delay: 1.4s;
+        }
+
+        &--2 {
+            bottom: 10%;
+            right: 10%;
+            animation-delay: 2.6s;
+        }
+    }
+
+    &__card-name {
+        font-size: 1.2rem;
+        letter-spacing: 0.04em;
+        color: rgb(255 255 255 / 55%);
+    }
+
+    &__card-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+
+        &--up {
+            color: #2be08e;
+        }
+
+        &--down {
+            color: #ff4d5e;
+        }
+    }
+}
+
+@keyframes mw-hero-logo-float-tilt {
+    0% {
+        transform: perspective(1000px) rotateX(2deg) rotateY(-3deg) translateY(0);
+    }
+
+    25% {
+        transform: perspective(1000px) rotateX(-1deg) rotateY(2deg) translateY(-8px);
+    }
+
+    50% {
+        transform: perspective(1000px) rotateX(-3deg) rotateY(4deg) translateY(0);
+    }
+
+    75% {
+        transform: perspective(1000px) rotateX(1deg) rotateY(-2deg) translateY(8px);
+    }
+
+    100% {
+        transform: perspective(1000px) rotateX(2deg) rotateY(-3deg) translateY(0);
+    }
+}
+
+@keyframes mw-hero-logo-glow-pulse {
+    0%,
+    100% {
+        opacity: 0.55;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.85;
+        transform: scale(1.06);
+    }
+}
+
+@keyframes mw-hero-logo-sweep {
+    0%,
+    88%,
+    100% {
+        transform: translateX(-160%) rotate(8deg);
+        opacity: 0;
+    }
+
+    90% {
+        opacity: 0.85;
+    }
+
+    96% {
+        transform: translateX(160%) rotate(8deg);
+        opacity: 0;
+    }
+}
+
+@keyframes mw-hero-card-float {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mw-hero__logo-wrap,
+    .mw-hero__logo-glow,
+    .mw-hero__logo-sweep,
+    .mw-hero__card,
+    .mw-hero__btn {
+        animation: none;
+        transition: none;
+    }
+}
+
+@media (width <= 1080px) {
+    .mw-hero__grid {
+        grid-template-columns: 1fr;
+        text-align: center;
+        padding: 5.2rem 2.4rem;
+    }
+
+    .mw-hero__copy {
+        align-items: center;
+    }
+
+    .mw-hero__trust {
+        justify-content: center;
+    }
+
+    .mw-hero__visual {
+        min-height: 340px;
+    }
+
+    .mw-hero__card {
+        display: none;
+    }
+}
+
+@media (width <= 600px) {
+    .mw-hero {
+        min-height: auto;
+    }
+
+    .mw-hero__grid {
+        padding: 4.4rem 1.6rem 3.2rem;
+    }
+
+    .mw-hero__actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .mw-hero__btn {
+        width: 100%;
+    }
+}

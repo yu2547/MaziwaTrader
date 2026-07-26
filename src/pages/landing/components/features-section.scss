@@ -1,0 +1,92 @@
+.mw-features {
+    padding: 5.6rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+
+    &__title {
+        text-align: center;
+        font-size: clamp(2.4rem, 3.6vw, 3.2rem);
+        font-weight: 700;
+        color: #fff;
+        margin: 0 0 3.6rem;
+    }
+
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.6rem;
+    }
+
+    &__card {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 2rem;
+        border-radius: 16px;
+        background: rgb(255 255 255 / 4%);
+        border: 1px solid rgb(255 255 255 / 8%);
+        transition:
+            transform 0.25s ease,
+            border-color 0.25s ease,
+            background 0.25s ease,
+            box-shadow 0.25s ease;
+
+        // Same blue/gold lighting language as the loading screen and hero.
+        &:hover {
+            transform: translateY(-4px);
+            border-color: rgb(232 182 76 / 40%);
+            background: rgb(255 255 255 / 6%);
+            box-shadow:
+                0 14px 34px rgb(47 125 255 / 18%),
+                0 4px 18px rgb(232 182 76 / 16%);
+        }
+    }
+
+    &__icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, rgb(232 182 76 / 25%), rgb(47 125 255 / 22%));
+        color: var(--mw-gold);
+    }
+
+    &__icon-svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    &__card-title {
+        font-size: 1.7rem;
+        font-weight: 600;
+        color: #fff;
+        margin: 0;
+    }
+
+    &__card-desc {
+        font-size: 1.4rem;
+        line-height: 1.55;
+        color: rgb(255 255 255 / 62%);
+        margin: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mw-features__card {
+        transition: none;
+    }
+}
+
+@media (width <= 1024px) {
+    .mw-features__grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (width <= 560px) {
+    .mw-features__grid {
+        grid-template-columns: 1fr;
+    }
+}

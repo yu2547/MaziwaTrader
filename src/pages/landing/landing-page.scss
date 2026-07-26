@@ -1,0 +1,25 @@
+// Landing-page-scoped tokens - deliberately separate from the shared
+// dashboard theme (_themes.scss) so this page can have its own navy/cyan
+// identity without touching any dashboard colors.
+.mw-landing {
+    --mw-navy: #060b18;
+    --mw-navy-2: #0b1530;
+    --mw-blue: #1e5fff;
+    --mw-cyan: #33e5ff;
+    --mw-gold: #e8b64c;
+    --mw-green: #2be08e;
+    --mw-red: #ff4d5e;
+
+    position: relative;
+    min-height: 100vh;
+    width: 100%;
+    overflow-x: hidden;
+    background: radial-gradient(ellipse at 50% 0%, var(--mw-navy-2) 0%, var(--mw-navy) 60%);
+    color: #fff;
+    font-family: inherit;
+
+    &__content {
+        position: relative;
+        z-index: 1;
+    }
+}

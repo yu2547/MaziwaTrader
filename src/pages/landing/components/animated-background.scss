@@ -1,0 +1,123 @@
+.mw-bg {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    z-index: 0;
+    pointer-events: none;
+
+    &__grid {
+        position: absolute;
+        inset: -10%;
+        background-image:
+            linear-gradient(rgb(51 229 255 / 5%) 1px, transparent 1px),
+            linear-gradient(90deg, rgb(51 229 255 / 5%) 1px, transparent 1px);
+        background-size: 64px 64px;
+        mask-image: radial-gradient(ellipse at 50% 20%, #000 0%, transparent 70%);
+        animation: mw-bg-grid-drift 40s linear infinite;
+        will-change: transform;
+    }
+
+    &__glow {
+        position: absolute;
+        width: 46vw;
+        height: 46vw;
+        border-radius: 50%;
+        filter: blur(90px);
+        will-change: transform;
+
+        &--one {
+            top: -10%;
+            left: -10%;
+            background: rgb(30 95 255 / 22%);
+            animation: mw-bg-drift-one 16s ease-in-out infinite alternate;
+        }
+
+        &--two {
+            bottom: -15%;
+            right: -10%;
+            background: rgb(51 229 255 / 16%);
+            animation: mw-bg-drift-two 18s ease-in-out infinite alternate;
+        }
+    }
+
+    &__particles {
+        position: absolute;
+        inset: 0;
+    }
+
+    &__particle {
+        position: absolute;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: var(--mw-cyan);
+        box-shadow: 0 0 8px 1px rgb(51 229 255 / 70%);
+        opacity: 0;
+        animation-name: mw-bg-particle-drift;
+        animation-timing-function: ease-in-out;
+        animation-iteration-count: infinite;
+        will-change: transform, opacity;
+    }
+}
+
+@keyframes mw-bg-grid-drift {
+    from {
+        transform: translate3d(0, 0, 0);
+    }
+
+    to {
+        transform: translate3d(-64px, -64px, 0);
+    }
+}
+
+@keyframes mw-bg-drift-one {
+    from {
+        transform: translate3d(0, 0, 0);
+    }
+
+    to {
+        transform: translate3d(6%, 8%, 0);
+    }
+}
+
+@keyframes mw-bg-drift-two {
+    from {
+        transform: translate3d(0, 0, 0);
+    }
+
+    to {
+        transform: translate3d(-6%, -8%, 0);
+    }
+}
+
+@keyframes mw-bg-particle-drift {
+    0% {
+        transform: translate3d(0, 0, 0);
+        opacity: 0;
+    }
+
+    15% {
+        opacity: 0.8;
+    }
+
+    85% {
+        opacity: 0.5;
+    }
+
+    100% {
+        transform: translate3d(-24px, -40px, 0);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mw-bg__grid,
+    .mw-bg__glow,
+    .mw-bg__particle {
+        animation: none;
+    }
+
+    .mw-bg__particle {
+        opacity: 0.5;
+    }
+}

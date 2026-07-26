@@ -1,7 +1,7 @@
-import { website_name } from '@/utils/site-config';
+import { DERIV_REFERRAL_URL, website_name } from '@/utils/site-config';
 import { domain_app_ids, getAppId, getCurrentProductionDomain } from '../config/config';
 import { CookieStorage, isStorageSupported, LocalStore } from '../storage/storage';
-import { getStaticUrl, urlForCurrentDomain } from '../url';
+import { urlForCurrentDomain } from '../url';
 import { deriv_urls } from '../url/constants';
 
 export const redirectToLogin = (is_logged_in: boolean, language: string, has_params = true, redirect_delay = 0) => {
@@ -17,7 +17,7 @@ export const redirectToLogin = (is_logged_in: boolean, language: string, has_par
 };
 
 export const redirectToSignUp = () => {
-    window.open('https://partner-tracking.deriv.com/click?a=36679&o=1&c=3&link_id=1');
+    window.open(DERIV_REFERRAL_URL);
 };
 
 type TLoginUrl = {
