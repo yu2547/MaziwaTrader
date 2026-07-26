@@ -12,7 +12,7 @@ type TStat = {
 const prefersReducedMotion = () =>
     typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-const useCountUp = (target: number, active: boolean, decimals: number, duration_ms = 1400) => {
+const useCountUp = (target: number, active: boolean, decimals: number, duration_ms = 1700) => {
     const [value, setValue] = useState(active ? target : 0);
     const started = useRef(false);
     const factor = 10 ** decimals;

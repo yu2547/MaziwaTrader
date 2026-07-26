@@ -7,9 +7,25 @@
     justify-content: space-between;
     gap: 2.4rem;
     padding: 1.4rem 3.2rem;
-    background: rgb(6 11 24 / 55%);
-    backdrop-filter: blur(14px);
-    border-bottom: 1px solid rgb(255 255 255 / 6%);
+    background: rgb(6 11 24 / 45%);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgb(255 255 255 / 5%);
+    transition:
+        background 0.3s ease,
+        backdrop-filter 0.3s ease,
+        border-color 0.3s ease,
+        padding 0.3s ease;
+
+    // Deepens once the hero has scrolled past - a subtle cue the chrome is
+    // "aware" of the page, rather than a static bar sitting on top of it.
+    &--scrolled {
+        background: rgb(6 11 24 / 82%);
+        backdrop-filter: blur(18px);
+        border-bottom-color: rgb(255 255 255 / 9%);
+        padding-top: 1.1rem;
+        padding-bottom: 1.1rem;
+        box-shadow: 0 8px 24px rgb(0 0 0 / 25%);
+    }
 
     &__brand {
         display: flex;
@@ -28,7 +44,7 @@
     &__wordmark {
         font-size: 1.5rem;
         font-weight: 700;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.05em;
         color: #fff;
         white-space: nowrap;
     }
@@ -41,14 +57,43 @@
     }
 
     &__link {
+        position: relative;
+        padding-bottom: 0.3rem;
         font-size: 1.4rem;
         font-weight: 500;
-        color: rgb(255 255 255 / 65%);
+        color: rgb(255 255 255 / 72%);
         text-decoration: none;
         transition: color 0.2s ease;
 
+        // Underline grows from the center on hover/active rather than a
+        // hard color-only swap - a small, premium detail.
+        &::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            width: 0;
+            height: 2px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, var(--mw-gold, #e8b64c), var(--mw-blue, #2f7dff));
+            transform: translateX(-50%);
+            transition: width 0.25s ease;
+        }
+
         &:hover {
             color: #fff;
+
+            &::after {
+                width: 100%;
+            }
+        }
+
+        &[aria-current='page'] {
+            color: #fff;
+
+            &::after {
+                width: 100%;
+            }
         }
     }
 
@@ -63,7 +108,7 @@
         appearance: none;
         border: 1px solid rgb(255 255 255 / 14%);
         background: rgb(255 255 255 / 5%);
-        color: rgb(255 255 255 / 80%);
+        color: rgb(255 255 255 / 85%);
         border-radius: 999px;
         width: 36px;
         height: 36px;
@@ -73,11 +118,13 @@
         cursor: pointer;
         transition:
             border-color 0.2s ease,
-            background 0.2s ease;
+            background 0.2s ease,
+            transform 0.2s ease;
 
         &:hover {
             border-color: rgb(232 182 76 / 50%);
             background: rgb(255 255 255 / 8%);
+            transform: translateY(-1px);
         }
     }
 
@@ -100,12 +147,74 @@
             box-shadow: 0 8px 22px rgb(47 125 255 / 35%);
         }
     }
+
+    &__burger {
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 4px;
+        appearance: none;
+        border: 1px solid rgb(255 255 255 / 14%);
+        background: rgb(255 255 255 / 5%);
+        border-radius: 8px;
+        width: 36px;
+        height: 36px;
+        cursor: pointer;
+
+        span {
+            display: block;
+            width: 16px;
+            height: 2px;
+            border-radius: 2px;
+            background: #fff;
+            transition:
+                transform 0.25s ease,
+                opacity 0.2s ease;
+        }
+
+        &--open {
+            span:first-child {
+                transform: translateY(6px) rotate(45deg);
+            }
+
+            span:nth-child(2) {
+                opacity: 0;
+            }
+
+            span:last-child {
+                transform: translateY(-6px) rotate(-45deg);
+            }
+        }
+    }
+
+    &__mobile {
+        display: none;
+    }
+}
+
+// Consistent, visible focus rings across every interactive nav control -
+// deliberately not the browser default outline (too thin against this dark
+// glass background) but still a clear, always-present ring, not just a
+// color swap that vanishes at low contrast.
+.mw-nav__link:focus-visible,
+.mw-nav__theme:focus-visible,
+.mw-nav__signup:focus-visible,
+.mw-nav__burger:focus-visible,
+.mw-nav__mobile-link:focus-visible {
+    outline: 2px solid var(--mw-gold, #e8b64c);
+    outline-offset: 3px;
+    border-radius: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .mw-nav,
     .mw-nav__theme,
     .mw-nav__signup,
-    .mw-nav__link {
+    .mw-nav__link,
+    .mw-nav__link::after,
+    .mw-nav__burger span,
+    .mw-nav__mobile {
         transition: none;
     }
 }
@@ -113,6 +222,46 @@
 @media (width <= 960px) {
     .mw-nav__links {
         display: none;
+    }
+
+    .mw-nav__burger {
+        display: inline-flex;
+    }
+
+    .mw-nav__mobile {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        display: flex;
+        flex-direction: column;
+        background: rgb(6 11 24 / 96%);
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid rgb(255 255 255 / 8%);
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        transition:
+            max-height 0.3s ease,
+            opacity 0.25s ease;
+
+        &--open {
+            max-height: 400px;
+            opacity: 1;
+        }
+    }
+
+    .mw-nav__mobile-link {
+        padding: 1.4rem 2.4rem;
+        font-size: 1.5rem;
+        color: rgb(255 255 255 / 78%);
+        text-decoration: none;
+        border-bottom: 1px solid rgb(255 255 255 / 5%);
+
+        &:hover {
+            color: #fff;
+            background: rgb(255 255 255 / 4%);
+        }
     }
 }
 

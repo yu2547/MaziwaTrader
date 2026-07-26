@@ -223,9 +223,17 @@ export type TMarketSceneCanvasProps = {
     // canvas. Omit to skip writing these entirely.
     ambientTargetSelector?: string;
     className?: string;
+    // 'default' (the loading screen's frozen look, unchanged) or 'hero' -
+    // a handful of realism refinements (crisper particles, a glassy candle
+    // highlight, a soft depth-fog veil near the horizon, a subtle floor
+    // reflection echo) that only apply when explicitly opted into, so the
+    // loading screen's rendered output never changes just because this
+    // shared engine gets improved for the landing page.
+    variant?: 'default' | 'hero';
 };
 
-const MarketSceneCanvas = ({ energy, ambientTargetSelector, className }: TMarketSceneCanvasProps) => {
+const MarketSceneCanvas = ({ energy, ambientTargetSelector, className, variant = 'default' }: TMarketSceneCanvasProps) => {
+    const is_hero = variant === 'hero';
     const canvas_ref = useRef<HTMLCanvasElement>(null);
     const energy_ref = useRef(energy);
 
@@ -303,6 +311,21 @@ const MarketSceneCanvas = ({ energy, ambientTargetSelector, className }: TMarket
             ctx.fill();
             ctx.restore();
             return light;
+        };
+
+        // A soft veil that gently softens the busiest, most-distant part of
+        // the scene (right around the vanishing point) - real depth-of-field
+        // makes far detail read as atmosphere rather than sharp clutter.
+        // Hero-only: a subtractive, not additive, effect - it simplifies the
+        // convergence point instead of adding another visual layer.
+        const drawDepthFog = (w: number, h: number, brightness: number) => {
+            const vpX = w * 0.5;
+            const vpY = h * VP_Y_FRACTION;
+            const grad = ctx.createRadialGradient(vpX, vpY, 0, vpX, vpY, Math.min(w, h) * 0.34);
+            grad.addColorStop(0, `rgba(8, 12, 22, ${0.22 * brightness})`);
+            grad.addColorStop(1, 'transparent');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
         };
 
         // A soft tint across each strip's whole region, brightest at the
@@ -397,15 +420,18 @@ const MarketSceneCanvas = ({ energy, ambientTargetSelector, className }: TMarket
                 const up = candle.close >= candle.open;
 
                 // Atmospheric haze: distant candles desaturate toward a
-                // neutral tone and dim, near ones stay sharp and vivid.
-                const color = lerpColor(cfg.color, HAZE_RGB, eased * 0.62);
+                // neutral tone and dim, near ones stay sharp and vivid. The
+                // hero variant hazes slightly less aggressively - a touch
+                // more of the color survives into the distance, reading as
+                // clearer air rather than fog.
+                const color = lerpColor(cfg.color, HAZE_RGB, eased * (is_hero ? 0.5 : 0.62));
                 const alpha = (1 - eased * 0.72) * brightness * (up ? 1 : 0.62);
 
                 ctx.globalAlpha = alpha;
                 ctx.strokeStyle = rgba(color, alpha);
                 ctx.fillStyle = rgba(color, alpha);
                 ctx.shadowColor = cfg.glow;
-                ctx.shadowBlur = 6 * (1 - eased * 0.6);
+                ctx.shadowBlur = (is_hero ? 4 : 6) * (1 - eased * 0.6);
                 ctx.lineWidth = Math.max(0.6, scale);
 
                 ctx.beginPath();
@@ -416,7 +442,18 @@ const MarketSceneCanvas = ({ energy, ambientTargetSelector, className }: TMarket
                 const bodyWidth = Math.max(1.4, CANDLE_WIDTH * scale);
                 const bodyTop = yFor(Math.max(candle.open, candle.close));
                 const bodyBottom = yFor(Math.min(candle.open, candle.close));
-                ctx.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, Math.max(1.4, bodyBottom - bodyTop));
+                const bodyHeight = Math.max(1.4, bodyBottom - bodyTop);
+                ctx.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
+
+                // A thin brighter sliver along the top edge - a cheap glass/
+                // glossy highlight instead of a flat matte rectangle. Skipped
+                // for tiny/far candles where it wouldn't read as anything but
+                // noise.
+                if (is_hero && bodyWidth > 2.5) {
+                    ctx.globalAlpha = alpha * 0.5;
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.fillRect(x - bodyWidth / 2, bodyTop, bodyWidth, Math.min(1.2, bodyHeight * 0.18));
+                }
             });
             ctx.globalAlpha = 1;
             ctx.shadowBlur = 0;
@@ -497,6 +534,24 @@ const MarketSceneCanvas = ({ energy, ambientTargetSelector, className }: TMarket
             ctx.beginPath();
             ctx.ellipse(cx, cy, maxR * 0.4, maxR * 0.4 * flatten, 0, 0, Math.PI * 2);
             ctx.fill();
+
+            // A faint echo of each wall's color bleeding onto the glossy
+            // floor beneath it - not a literal mirrored candle reflection
+            // (too costly for too little payoff), just enough of a color
+            // cue that the floor reads as reflective rather than matte.
+            if (is_hero) {
+                const reflLeft = ctx.createLinearGradient(0, cy - maxR * 0.18, 0, cy + maxR * 0.05);
+                reflLeft.addColorStop(0, `rgba(255, 176, 68, ${0.05 * brightness})`);
+                reflLeft.addColorStop(1, 'transparent');
+                ctx.fillStyle = reflLeft;
+                ctx.fillRect(0, cy - maxR * 0.18, maxR * 0.6, maxR * 0.23);
+
+                const reflRight = ctx.createLinearGradient(0, cy - maxR * 0.18, 0, cy + maxR * 0.05);
+                reflRight.addColorStop(0, `rgba(76, 168, 255, ${0.05 * brightness})`);
+                reflRight.addColorStop(1, 'transparent');
+                ctx.fillStyle = reflRight;
+                ctx.fillRect(w - maxR * 0.6, cy - maxR * 0.18, maxR * 0.6, maxR * 0.23);
+            }
             ctx.restore();
 
             // Ring glow breathes slightly in thickness, not just alpha, so
@@ -591,7 +646,9 @@ const MarketSceneCanvas = ({ energy, ambientTargetSelector, className }: TMarket
                 ctx.globalAlpha = Math.min(1, alpha);
                 ctx.fillStyle = p.gold ? 'rgba(255, 176, 68, 1)' : 'rgba(76, 168, 255, 1)';
                 ctx.shadowColor = p.gold ? 'rgba(255, 176, 68, 0.8)' : 'rgba(76, 168, 255, 0.8)';
-                ctx.shadowBlur = 6 * p.z;
+                // Less bloom for the hero variant - crisper points of light
+                // read as instrument-grade data, less as game sparkle.
+                ctx.shadowBlur = (is_hero ? 4 : 6) * p.z;
                 ctx.beginPath();
                 ctx.arc(px, py, size, 0, Math.PI * 2);
                 ctx.fill();
@@ -646,6 +703,7 @@ const MarketSceneCanvas = ({ energy, ambientTargetSelector, className }: TMarket
             drawStreaks(streaksLeft, strips[0].cfg, dt, w, h, brightness);
             drawStreaks(streaksRight, strips[1].cfg, dt, w, h, brightness);
             drawParticles(dt, w, h, brightness, light_ref);
+            if (is_hero) drawDepthFog(w, h, brightness);
 
             raf = requestAnimationFrame(tick);
         };
@@ -655,7 +713,7 @@ const MarketSceneCanvas = ({ energy, ambientTargetSelector, className }: TMarket
             cancelAnimationFrame(raf);
             window.removeEventListener('resize', resize);
         };
-    }, [ambientTargetSelector]);
+    }, [ambientTargetSelector, is_hero]);
 
     return <canvas ref={canvas_ref} className={className} aria-hidden='true' />;
 };

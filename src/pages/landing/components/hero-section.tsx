@@ -20,12 +20,13 @@ const HeroSection = () => {
                     energy={HERO_ENERGY}
                     ambientTargetSelector='.mw-hero__scene'
                     className='mw-hero__canvas'
+                    variant='hero'
                 />
             </div>
 
             <div className='mw-hero__grid'>
                 <div className='mw-hero__copy'>
-                    <span className='mw-hero__badge'>{localize('AI-Powered Trading Platform')}</span>
+                    <span className='mw-hero__badge'>{localize('Free Deriv Bots, Automation & Trading Tools')}</span>
                     <h1 className='mw-hero__headline'>
                         <span>{localize('Trade Smarter.')}</span>
                         <span className='mw-hero__headline-accent'>{localize('Execute Faster.')}</span>

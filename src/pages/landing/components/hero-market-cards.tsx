@@ -8,11 +8,13 @@ const SYMBOLS = [
     { name: 'BOOM 500', base: 2242.67 },
 ];
 
+const FLASH_DURATION_MS = 500;
+
 const prefersReducedMotion = () =>
     typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 const HeroMarketCards = () => {
-    const [values, setValues] = useState(() => SYMBOLS.map(s => ({ value: s.base, dir: 1 as 1 | -1 })));
+    const [values, setValues] = useState(() => SYMBOLS.map(s => ({ value: s.base, dir: 1 as 1 | -1, flash: false })));
 
     useEffect(() => {
         if (prefersReducedMotion()) return undefined;
@@ -20,9 +22,14 @@ const HeroMarketCards = () => {
             setValues(prev =>
                 prev.map(v => {
                     const delta = (Math.random() - 0.42) * 1.1;
-                    return { value: Math.max(0, v.value + delta), dir: delta >= 0 ? 1 : -1 };
+                    return { value: Math.max(0, v.value + delta), dir: delta >= 0 ? 1 : -1, flash: true };
                 })
             );
+            // Clear the flash shortly after so it reads as a brief pulse on
+            // each update rather than a permanently-lit card.
+            setTimeout(() => {
+                setValues(prev => prev.map(v => ({ ...v, flash: false })));
+            }, FLASH_DURATION_MS);
         }, 2200);
         return () => clearInterval(id);
     }, []);
@@ -30,7 +37,10 @@ const HeroMarketCards = () => {
     return (
         <div className='mw-hero__cards' aria-hidden='true'>
             {SYMBOLS.map((symbol, i) => (
-                <div className={`mw-hero__card mw-hero__card--${i}`} key={symbol.name}>
+                <div
+                    className={`mw-hero__card mw-hero__card--${i} ${values[i].flash ? 'mw-hero__card--flash' : ''}`}
+                    key={symbol.name}
+                >
                     <span className='mw-hero__card-name'>{symbol.name}</span>
                     <span
                         className={`mw-hero__card-value ${values[i].dir > 0 ? 'mw-hero__card-value--up' : 'mw-hero__card-value--down'}`}

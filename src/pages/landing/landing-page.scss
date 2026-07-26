@@ -13,7 +13,12 @@
     position: relative;
     min-height: 100vh;
     width: 100%;
-    overflow-x: hidden;
+    // Not overflow-x: hidden - setting only one axis makes the other
+    // compute to auto per spec, which silently turns this into a scroll
+    // container and breaks position: sticky on the nav below (it sticks
+    // relative to its nearest scrolling ancestor, not the window). `clip`
+    // prevents horizontal bleed without creating a scrollport.
+    overflow-x: clip;
     background: radial-gradient(ellipse at 50% 0%, var(--mw-navy-2) 0%, var(--mw-navy) 60%);
     color: #fff;
     font-family: inherit;
