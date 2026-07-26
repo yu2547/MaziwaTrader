@@ -1,5 +1,12 @@
 @use 'components/shared/styles/mixins' as *;
 
+.mw-dashboard-shell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
 .bot-dashboard {
     --translate-panel-rtl: -367px;
     --translate-panel-ltr: 367px;
@@ -109,6 +116,8 @@
 
 .tab {
     &__dashboard {
+        position: relative;
+        z-index: 1;
         display: flex;
         width: 100%;
 
@@ -370,6 +379,20 @@
 
                 &:hover {
                     cursor: pointer;
+
+                    .tab__dashboard__table__images {
+                        transform: translateY(-4px);
+                        border-color: rgb(212 175 55 / 45%);
+                        background: rgb(255 255 255 / 6%);
+                        box-shadow:
+                            0 8px 20px rgb(0 0 0 / 20%),
+                            0 0 0 1px rgb(47 182 224 / 12%) inset,
+                            0 10px 28px rgb(47 182 224 / 14%);
+
+                        svg {
+                            transform: scale(1.08);
+                        }
+                    }
                 }
 
                 span {
@@ -395,10 +418,20 @@
             }
 
             &__images {
-                background-color: var(--general-section-1);
+                background: rgb(255 255 255 / 3%);
+                border: 1px solid var(--glass-border, rgb(255 255 255 / 8%));
                 margin-bottom: 0.8rem;
-                border-radius: 0.8rem;
+                border-radius: 12px;
                 padding: 1.6rem;
+                transition:
+                    transform 0.25s ease,
+                    border-color 0.25s ease,
+                    background 0.25s ease,
+                    box-shadow 0.25s ease;
+
+                svg {
+                    transition: transform 0.25s ease;
+                }
 
                 &--minimized {
                     @include mobile-or-tablet-screen {

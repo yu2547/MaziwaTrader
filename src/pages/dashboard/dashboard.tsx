@@ -8,6 +8,8 @@ import { useDevice } from '@deriv-com/ui';
 import OnboardTourHandler from '../tutorials/dbot-tours/onboarding-tour';
 import Announcements from './announcements';
 import Cards from './cards';
+import DashboardBackground from './dashboard-background';
+import DashboardHero from './dashboard-hero';
 import InfoPanel from './info-panel';
 
 type TMobileIconGuide = {
@@ -22,7 +24,9 @@ const DashboardComponent = observer(({ handleTabChange }: TMobileIconGuide) => {
     const { isDesktop, isTablet } = useDevice();
 
     return (
-        <React.Fragment>
+        <div className='mw-dashboard-shell'>
+            <DashboardBackground />
+            {client.is_logged_in && <DashboardHero />}
             <div
                 className={classNames('tab__dashboard', {
                     'tab__dashboard--tour-active': active_tour,
@@ -68,7 +72,7 @@ const DashboardComponent = observer(({ handleTabChange }: TMobileIconGuide) => {
             </div>
             <InfoPanel />
             {active_tab === 0 && <OnboardTourHandler is_mobile={!isDesktop} />}
-        </React.Fragment>
+        </div>
     );
 });
 
