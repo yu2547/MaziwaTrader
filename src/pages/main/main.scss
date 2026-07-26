@@ -49,6 +49,10 @@
             overflow: hidden;
         }
 
+        .main__tabs-row {
+            position: relative;
+        }
+
         &--active {
             // css for onboard tour overlay
             &:before {
@@ -66,17 +70,27 @@
 
         .dc-tabs {
             &__active-line {
-                background-color: var(--general-main-1);
-                transition: none;
+                height: 3px;
+                background: var(--nav-underline, linear-gradient(90deg, #2fb6e0 0%, #d4af37 100%));
+                border-radius: 999px;
+                transition:
+                    left 0.25s ease,
+                    width 0.25s ease;
             }
 
             &__active {
                 background: var(--general-main-1);
+                color: var(--text-prominent);
             }
 
             &__list {
-                background: var(--general-section-1);
+                background: var(--glass-bg, var(--general-section-1));
+                backdrop-filter: blur(14px);
+                border: 1px solid var(--glass-border, transparent);
+                border-radius: 12px;
                 justify-content: start;
+                gap: 0.2rem;
+                padding: 0 0.4rem;
 
                 @include mobile-or-tablet-screen {
                     overflow-x: auto;
@@ -155,12 +169,28 @@
                 height: 4.8rem;
                 padding: 0 2rem;
                 width: auto;
+                font-weight: 600;
+                transition:
+                    background 0.2s ease,
+                    color 0.2s ease,
+                    box-shadow 0.2s ease;
 
                 @include flex-center;
+
+                &:hover:not(.dc-tabs__active) {
+                    background: var(--nav-glow, rgb(47 182 224 / 8%));
+                    box-shadow: 0 0 0 1px var(--nav-glow, rgb(47 182 224 / 20%)) inset;
+                }
+
+                &:focus-visible {
+                    outline: 2px solid #d4af37;
+                    outline-offset: -2px;
+                }
 
                 svg {
                     padding-inline-end: 0;
                     margin-inline-end: 0.8rem;
+                    flex: none;
 
                     @include mobile-or-tablet-screen {
                         margin-inline-end: 0.4rem;

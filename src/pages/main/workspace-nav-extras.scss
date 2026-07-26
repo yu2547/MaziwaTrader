@@ -1,0 +1,84 @@
+.workspace-nav-extras {
+    position: absolute;
+    top: 0;
+    inset-inline-end: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    height: 4.8rem;
+    gap: 0.2rem;
+    padding-inline-end: 0.4rem;
+
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        height: 3.6rem;
+        padding: 0 1.2rem;
+        border-radius: 10px;
+        border: none;
+        background: transparent;
+        color: var(--text-general);
+        font-size: 1.3rem;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        text-decoration: none;
+        transition:
+            background 0.2s ease,
+            color 0.2s ease,
+            box-shadow 0.2s ease;
+
+        svg {
+            flex: none;
+        }
+
+        &:hover:not(&--disabled) {
+            background: var(--glass-bg, rgb(47 182 224 / 8%));
+            color: var(--text-prominent);
+            box-shadow: 0 0 0 1px var(--nav-glow, rgb(47 182 224 / 35%)) inset;
+        }
+
+        &:focus-visible {
+            outline: 2px solid #d4af37;
+            outline-offset: 2px;
+        }
+
+        &--disabled {
+            cursor: default;
+            opacity: 0.5;
+        }
+    }
+
+    &__badge {
+        font-size: 1rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        padding: 0.15rem 0.5rem;
+        border-radius: 999px;
+        background: rgb(212 175 55 / 16%);
+        color: #d4af37;
+        white-space: nowrap;
+    }
+}
+
+// WorkspaceNavExtras only mounts at desktop widths (>= 1280px, gated by isDesktop
+// in main.tsx), so the only breakpoint that can ever apply here is this one -
+// collapsing to icon-only between the desktop floor and 1400px.
+@media (width <= 1400px) {
+    .workspace-nav-extras__item {
+        padding: 0 0.8rem;
+    }
+
+    .workspace-nav-extras__label,
+    .workspace-nav-extras__badge {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .workspace-nav-extras__item {
+        transition: none;
+    }
+}

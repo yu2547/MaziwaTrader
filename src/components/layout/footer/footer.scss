@@ -4,28 +4,80 @@
 .app-footer {
     height: 3.6rem;
     display: flex;
-    flex-direction: row-reverse;
-    padding: 0 1rem;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 0 1.2rem;
     align-items: center;
     position: fixed;
     bottom: 0;
     right: 0;
     left: 0;
-    border-top: 1px solid var(--general-section-1);
-    box-shadow: 0 1px 0 0 var(--general-section-1) inset;
-    background: var(--general-main-1);
+    border-top: 1px solid var(--glass-border, var(--general-section-1));
+    background: var(--glass-bg-solid, var(--general-main-1));
+    backdrop-filter: blur(16px);
+    box-shadow: 0 -4px 20px 0 var(--glass-shadow, rgb(0 0 0 / 12%));
     z-index: 2;
+
+    &__group {
+        display: flex;
+        align-items: center;
+        gap: 0.2rem;
+        min-width: 0;
+
+        @include mobile-or-tablet-screen {
+            gap: 0;
+        }
+    }
+
+    &__gmt-clock {
+        font-variant-numeric: tabular-nums;
+
+        &-label {
+            color: var(--text-general);
+            font-weight: 600;
+        }
+    }
+
+    &__server-status {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+
+        @include mobile-or-tablet-screen {
+            display: none;
+        }
+    }
+
+    &__server-status-dot {
+        width: 0.8rem;
+        height: 0.8rem;
+        border-radius: 100%;
+        background-color: $color-red;
+        flex: none;
+
+        &--operational {
+            background-color: $color-green-1;
+        }
+    }
 
     &__icon {
         padding: 0.8rem;
+        border-radius: 8px;
+        transition:
+            background 0.2s ease,
+            box-shadow 0.2s ease;
 
         svg > g > path,
         svg > path {
             fill: var(--text-prominent);
         }
 
+        &:hover {
+            background: var(--nav-glow, rgb(47 182 224 / 10%));
+        }
+
         @include mobile-or-tablet-screen {
-            padding: 0;
+            padding: 0.6rem;
         }
     }
 

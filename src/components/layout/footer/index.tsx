@@ -10,11 +10,13 @@ import ChangeTheme from './ChangeTheme';
 import Deriv from './Deriv';
 import Endpoint from './Endpoint';
 import FullScreen from './FullScreen';
+import GmtClock from './GmtClock';
 import HelpCentre from './HelpCentre';
 import LanguageSettings from './LanguageSettings';
 import NetworkStatus from './NetworkStatus';
 import ResponsibleTrading from './ResponsibleTrading';
-import ServerTime from './ServerTime';
+import ServerStatus from './ServerStatus';
+import Settings from './Settings';
 import WhatsApp from './WhatsApp';
 import './footer.scss';
 
@@ -29,21 +31,25 @@ const Footer = () => {
 
     return (
         <footer className='app-footer'>
-            <FullScreen />
-            <LanguageSettings openLanguageSettingModal={openLanguageSettingModal} />
-            <HelpCentre />
-            <div className='app-footer__vertical-line' />
-            <ChangeTheme />
-            <AccountLimits />
-            <ResponsibleTrading />
-            <Deriv />
-            <Livechat />
-            {cs_chat_whatsapp && <WhatsApp />}
-            <div className='app-footer__vertical-line' />
-            <ServerTime />
-            <div className='app-footer__vertical-line' />
-            <NetworkStatus />
-            <Endpoint />
+            <div className='app-footer__group app-footer__group--start'>
+                <NetworkStatus />
+                <ServerStatus />
+                <GmtClock />
+                <Endpoint />
+            </div>
+            <div className='app-footer__group app-footer__group--end'>
+                <AccountLimits />
+                <ResponsibleTrading />
+                <Deriv />
+                <Livechat />
+                {cs_chat_whatsapp && <WhatsApp />}
+                <div className='app-footer__vertical-line' />
+                <ChangeTheme />
+                <FullScreen />
+                <LanguageSettings openLanguageSettingModal={openLanguageSettingModal} />
+                <HelpCentre />
+                <Settings />
+            </div>
 
             {isModalOpenFor('DesktopLanguagesModal') && (
                 <DesktopLanguagesModal
