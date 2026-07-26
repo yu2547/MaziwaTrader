@@ -3,17 +3,16 @@ import { observer } from 'mobx-react-lite';
 import ErrorBoundary from '@/components/error-component/error-boundary';
 import ErrorComponent from '@/components/error-component/error-component';
 import ChunkLoader from '@/components/loader/chunk-loader';
+import LoadingScreen from '@/components/loading-screen/loading-screen';
 import { api_base } from '@/external/bot-skeleton';
+import { V2GetActiveToken } from '@/external/bot-skeleton/services/api/appId';
 import { useStore } from '@/hooks/useStore';
 import useTMB from '@/hooks/useTMB';
+import LandingPage from '@/pages/landing/landing-page';
 import { localize } from '@deriv-com/translations';
 import './app-root.scss';
 
 const AppContent = lazy(() => import('./app-content'));
-
-const AppRootLoader = () => {
-    return <ChunkLoader message={localize('Loading...')} />;
-};
 
 const ErrorComponentWrapper = observer(() => {
     const { common } = useStore();
@@ -40,6 +39,7 @@ const AppRoot = () => {
     const [is_api_initialized, setIsApiInitialized] = useState(false);
     const [is_tmb_check_complete, setIsTmbCheckComplete] = useState(false);
     const [, setIsTmbEnabled] = useState(false);
+    const [show_loading_screen, setShowLoadingScreen] = useState(true);
     const { isTmbEnabled } = useTMB();
 
     // Effect to check TMB status - independent of API initialization
@@ -92,15 +92,31 @@ const AppRoot = () => {
         return () => clearTimeout(timeoutId);
     }, [is_tmb_check_complete]);
 
-    if (!store || !is_api_initialized) return <AppRootLoader />;
+    // The destination (landing page or dashboard) mounts underneath as soon as
+    // the real init this file already tracks (TMB check, API init) is done -
+    // LoadingScreen sits on top the whole time and fades itself out once its
+    // own presentation finishes AND the destination is actually ready, so
+    // there's never a blank frame or a flash of unready content.
+    const is_ready = !!store && is_api_initialized;
+    const is_landing_page = !V2GetActiveToken();
 
     return (
-        <Suspense fallback={<AppRootLoader />}>
-            <ErrorBoundary root_store={store}>
-                <ErrorComponentWrapper />
-                <AppContent />
-            </ErrorBoundary>
-        </Suspense>
+        <>
+            {is_ready &&
+                (is_landing_page ? (
+                    <LandingPage />
+                ) : (
+                    <Suspense fallback={<ChunkLoader message={localize('Loading...')} />}>
+                        <ErrorBoundary root_store={store}>
+                            <ErrorComponentWrapper />
+                            <AppContent />
+                        </ErrorBoundary>
+                    </Suspense>
+                ))}
+            {show_loading_screen && (
+                <LoadingScreen ready={is_ready} onExited={() => setShowLoadingScreen(false)} />
+            )}
+        </>
     );
 };
 

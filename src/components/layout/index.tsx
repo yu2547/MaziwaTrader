@@ -5,6 +5,7 @@ import { observer } from 'mobx-react-lite';
 import { Outlet } from 'react-router-dom';
 import PWAUpdateNotification from '@/components/pwa-update-notification';
 import { api_base } from '@/external/bot-skeleton';
+import { V2GetActiveToken } from '@/external/bot-skeleton/services/api/appId';
 import { useOfflineDetection } from '@/hooks/useOfflineDetection';
 import { useStore } from '@/hooks/useStore';
 import useTMB from '@/hooks/useTMB';
@@ -24,6 +25,11 @@ const Layout = observer(() => {
     const is_quick_strategy_active = store?.quick_strategy?.is_open;
 
     const isCallbackPage = window.location.pathname === '/callback';
+    // The pre-auth landing page (index route, logged-out) supplies its own
+    // header/footer for its own visual identity - the dashboard chrome below
+    // is only for the authenticated app and other routes, unchanged for them.
+    const isIndexPage = window.location.pathname === '/' || window.location.pathname === '';
+    const isLandingPage = isIndexPage && !V2GetActiveToken();
     const { onRenderTMBCheck, is_tmb_enabled: tmb_enabled_from_hook, isTmbEnabled } = useTMB();
     const is_tmb_enabled = useMemo(
         () => window.is_tmb_enabled === true || tmb_enabled_from_hook,
@@ -240,11 +246,13 @@ const Layout = observer(() => {
                 'quick-strategy-active': is_quick_strategy_active && !isDesktop,
             })}
         >
-            {!isCallbackPage && <AppHeader isAuthenticating={isAuthenticating || !isInitialAuthCheckComplete} />}
+            {!isCallbackPage && !isLandingPage && (
+                <AppHeader isAuthenticating={isAuthenticating || !isInitialAuthCheckComplete} />
+            )}
             <Body>
                 <Outlet />
             </Body>
-            {!isCallbackPage && isDesktop && <Footer />}
+            {!isCallbackPage && !isLandingPage && isDesktop && <Footer />}
             <PWAUpdateNotification />
         </div>
     );

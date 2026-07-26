@@ -2,15 +2,14 @@ import { initSurvicate } from '../public-path';
 import { lazy, Suspense } from 'react';
 import React from 'react';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } from 'react-router-dom';
-import ChunkLoader from '@/components/loader/chunk-loader';
+import LoadingScreen from '@/components/loading-screen/loading-screen';
 import RoutePromptDialog from '@/components/route-prompt-dialog';
 import { crypto_currencies_display_order, fiat_currencies_display_order } from '@/components/shared';
-import { useOfflineDetection } from '@/hooks/useOfflineDetection';
 import { StoreProvider } from '@/hooks/useStore';
 import CallbackPage from '@/pages/callback';
 import Endpoint from '@/pages/endpoint';
 import { TAuthData } from '@/types/api-types';
-import { initializeI18n, localize, TranslationProvider } from '@deriv-com/translations';
+import { initializeI18n, TranslationProvider } from '@deriv-com/translations';
 import CoreStoreProvider from './CoreStoreProvider';
 import './app-root.scss';
 
@@ -29,16 +28,14 @@ const i18nInstance =
         ? initializeI18n({ cdnUrl: `${TRANSLATIONS_CDN_URL}/${R2_PROJECT_NAME}/${CROWDIN_BRANCH_NAME}` })
         : initializeI18n({ cdnUrl: '' });
 
-// Simple Suspense wrapper without timeout that causes dark landing page
+// Uses the same cinematic LoadingScreen as app-root's real-init loader so a
+// visitor never sees a plain/generic spinner flash before the branded one -
+// this fallback only covers the brief window while route chunks (Layout,
+// AppRoot, etc.) are being fetched, not any real init state, so `ready` is
+// always false here and `onExited` is a no-op: Suspense itself swaps this
+// out for the real children the moment they're available.
 const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => {
-    const { isOnline } = useOfflineDetection();
-
-    const getLoadingMessage = () => {
-        if (!isOnline) return localize('Loading offline dashboard...');
-        return localize('Please wait while we connect to the server...');
-    };
-
-    return <Suspense fallback={<ChunkLoader message={getLoadingMessage()} />}>{children}</Suspense>;
+    return <Suspense fallback={<LoadingScreen ready={false} onExited={() => {}} />}>{children}</Suspense>;
 };
 
 const router = createBrowserRouter(
@@ -46,16 +43,19 @@ const router = createBrowserRouter(
         <Route
             path='/'
             element={
-                <SuspenseWrapper>
-                    <TranslationProvider defaultLang='EN' i18nInstance={i18nInstance}>
+                // TranslationProvider wraps the Suspense boundary (not just its
+                // children) so LoadingScreen - used as the fallback - has the
+                // same translation context as everything it's a placeholder for.
+                <TranslationProvider defaultLang='EN' i18nInstance={i18nInstance}>
+                    <SuspenseWrapper>
                         <StoreProvider>
                             <RoutePromptDialog />
                             <CoreStoreProvider>
                                 <Layout />
                             </CoreStoreProvider>
                         </StoreProvider>
-                    </TranslationProvider>
-                </SuspenseWrapper>
+                    </SuspenseWrapper>
+                </TranslationProvider>
             }
         >
             {/* All child routes will be passed as children to Layout */}
