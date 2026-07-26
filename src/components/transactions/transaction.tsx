@@ -157,7 +157,7 @@ const PopoverContent = ({ contract }: TPopoverContent) => (
     </div>
 );
 
-const Transaction = ({ contract, active_transaction_id, onClickTransaction }: TTransaction) => {
+const Transaction = React.memo(({ contract, active_transaction_id, onClickTransaction }: TTransaction) => {
     return (
         <Popover
             zIndex={popover_zindex.TRANSACTION.toString()}
@@ -231,6 +231,8 @@ const Transaction = ({ contract, active_transaction_id, onClickTransaction }: TT
             </div>
         </Popover>
     );
-};
+});
+
+Transaction.displayName = 'Transaction';
 
 export default Transaction;

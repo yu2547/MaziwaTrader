@@ -86,14 +86,21 @@ const Transactions = observer(({ is_drawer_open }: TTransactions) => {
         }
     };
 
-    const onClickTransaction = (transaction_id: null | number) => {
-        // Toggle transaction popover if passed transaction_id is the same.
-        if (transaction_id && active_transaction_id === transaction_id) {
-            setActiveTransactionId(null);
-        } else {
-            setActiveTransactionId(transaction_id);
-        }
-    };
+    // Memoized so Transaction (wrapped in React.memo) gets a stable callback
+    // reference - otherwise every re-render of Transactions would hand every row
+    // a brand new function, defeating the memoization on every proposal_open_contract
+    // update even for rows whose contract data hasn't changed.
+    const onClickTransaction = React.useCallback(
+        (transaction_id: null | number) => {
+            // Toggle transaction popover if passed transaction_id is the same.
+            if (transaction_id && active_transaction_id === transaction_id) {
+                setActiveTransactionId(null);
+            } else {
+                setActiveTransactionId(transaction_id);
+            }
+        },
+        [active_transaction_id]
+    );
 
     return (
         <div
