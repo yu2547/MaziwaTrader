@@ -36,7 +36,11 @@ const CoreStoreProvider: React.FC<{ children: React.ReactNode }> = observer(({ c
 
     const { currentLang } = useTranslations();
 
-    const { oAuthLogout } = useOauth2({ handleLogout: async () => client.logout(), client });
+    // Stable reference so useOauth2's own useCallback-memoized oAuthLogout is
+    // actually stable across renders - an inline function here would defeat that
+    // memoization, since handleLogout is one of oAuthLogout's own dependencies.
+    const handleLogout = useCallback(async () => client.logout(), [client]);
+    const { oAuthLogout } = useOauth2({ handleLogout, client });
 
     const { is_tmb_enabled: tmb_enabled_from_hook } = useTMB();
 

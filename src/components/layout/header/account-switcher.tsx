@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { lazy, Suspense, useMemo } from 'react';
+import { lazy, Suspense, useCallback, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { CurrencyIcon } from '@/components/currency/currency-icon';
 import { addComma, getDecimalPlaces } from '@/components/shared';
@@ -34,7 +34,11 @@ const RenderAccountItems = ({
     activeLoginId,
     client,
 }: TAccountSwitcherProps) => {
-    const { oAuthLogout } = useOauth2({ handleLogout: async () => client.logout(), client });
+    // Stable reference so useOauth2's own useCallback-memoized oAuthLogout is
+    // actually stable across renders - an inline function here would defeat that
+    // memoization, since handleLogout is one of oAuthLogout's own dependencies.
+    const handleLogout = useCallback(async () => client.logout(), [client]);
+    const { oAuthLogout } = useOauth2({ handleLogout, client });
     const is_low_risk_country = LOW_RISK_COUNTRIES().includes(client.account_settings?.country_code ?? '');
     const is_virtual = !!isVirtual;
     const residence = client.residence;

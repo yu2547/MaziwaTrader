@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useEffect } from 'react';
 import Cookies from 'js-cookie';
 import RootStore from '@/stores/root-store';
@@ -37,11 +37,20 @@ export const useOauth2 = ({
     const loggedState = Cookies.get('logged_state');
 
     useEffect(() => {
-        window.addEventListener('unhandledrejection', event => {
+        const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
             if (event?.reason?.error?.code === 'InvalidToken') {
                 setIsSingleLoggingIn(false);
             }
-        });
+        };
+        // Every component calling useOauth2() (there are several: CoreStoreProvider,
+        // the account switcher, main.tsx) previously added its own 'unhandledrejection'
+        // listener here with no cleanup - each mount left another one behind on
+        // `window` for the life of the page. Named handler + cleanup so unmounting
+        // actually removes it.
+        window.addEventListener('unhandledrejection', handleUnhandledRejection);
+        return () => {
+            window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+        };
     }, []);
 
     useEffect(() => {
@@ -55,7 +64,13 @@ export const useOauth2 = ({
         }
     }, [isClientAccountsPopulated, loggedState, isSilentLoginExcluded]);
 
-    const logoutHandler = async () => {
+    // useCallback so consumers (e.g. CoreStoreProvider) that depend on this
+    // function reference in their own effects/callbacks don't see a "new" function
+    // every render - previously a fresh reference every time meant any effect
+    // depending on it (directly or transitively) re-ran on every render of
+    // whichever component called useOauth2(), including tearing down and
+    // recreating unrelated WebSocket message subscriptions unnecessarily.
+    const logoutHandler = useCallback(async () => {
         client?.setIsLoggingOut(true);
         try {
             await OAuth2Logout({
@@ -76,8 +91,8 @@ export const useOauth2 = ({
             // eslint-disable-next-line no-console
             console.error(error);
         }
-    };
-    const retriggerOAuth2Login = async () => {
+    }, [client, handleLogout]);
+    const retriggerOAuth2Login = useCallback(async () => {
         try {
             await requestOidcAuthentication({
                 redirectCallbackUri: `${window.location.origin}/callback`,
@@ -88,7 +103,7 @@ export const useOauth2 = ({
         } catch (error) {
             handleOidcAuthFailure(error);
         }
-    };
+    }, []);
 
     return { oAuthLogout: logoutHandler, retriggerOAuth2Login, isSingleLoggingIn };
 };
