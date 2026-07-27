@@ -25,6 +25,10 @@ type TLoginUrl = {
 };
 
 export const loginUrl = ({ language }: TLoginUrl) => {
+    // Falls back the same way @deriv-com/utils' own getOauthURL() does - language
+    // can be undefined this early (e.g. i18n not yet loaded when the button is
+    // clicked), and an `l=undefined` query param is worse than just defaulting.
+    const safe_language = language || 'EN';
     const server_url = LocalStore.get('config.server_url');
     const signup_device_cookie = new (CookieStorage as any)('signup_device');
     const signup_device = signup_device_cookie.get('signup_device');
@@ -43,12 +47,12 @@ export const loginUrl = ({ language }: TLoginUrl) => {
             oauth_domain = domain_suffix;
         }
 
-        const url = `https://oauth.${oauth_domain}/oauth2/authorize?app_id=${getAppId()}&l=${language}${marketing_queries}&brand=${website_name.toLowerCase()}`;
+        const url = `https://oauth.${oauth_domain}/oauth2/authorize?app_id=${getAppId()}&l=${safe_language}${marketing_queries}&brand=${website_name.toLowerCase()}`;
         return url;
     };
 
     if (server_url && /qa/.test(server_url)) {
-        return `https://${server_url}/oauth2/authorize?app_id=${getAppId()}&l=${language}${marketing_queries}&brand=${website_name.toLowerCase()}`;
+        return `https://${server_url}/oauth2/authorize?app_id=${getAppId()}&l=${safe_language}${marketing_queries}&brand=${website_name.toLowerCase()}`;
     }
 
     if (getAppId() === domain_app_ids[window.location.hostname as keyof typeof domain_app_ids]) {
