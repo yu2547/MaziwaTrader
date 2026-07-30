@@ -1,122 +1,106 @@
-import Cookies from 'js-cookie';
+import { useEffect, useRef, useState } from 'react';
 import { crypto_currencies_display_order, fiat_currencies_display_order } from '@/components/shared';
 import { generateDerivApiInstance } from '@/external/bot-skeleton/services/api/appId';
-import { observer as globalObserver } from '@/external/bot-skeleton/utils/observer';
-import useTMB from '@/hooks/useTMB';
-import { clearAuthData } from '@/utils/auth-utils';
-import { Callback } from '@deriv-com/auth-client';
+import { completeDerivLogin, DerivOAuthStateMismatchError } from '@/utils/auth/deriv-oauth';
 import { Button } from '@deriv-com/ui';
 
 /**
  * Gets the selected currency or falls back to appropriate defaults
  */
-const getSelectedCurrency = (
-    tokens: Record<string, string>,
-    clientAccounts: Record<string, any>,
-    state: any
-): string => {
+const getSelectedCurrency = (loginid: string): string => {
     const getQueryParams = new URLSearchParams(window.location.search);
-    const currency =
-        (state && state?.account) ||
-        getQueryParams.get('account') ||
-        sessionStorage.getItem('query_param_currency') ||
-        '';
-    const firstAccountKey = tokens.acct1;
-    const firstAccountCurrency = clientAccounts[firstAccountKey]?.currency;
+    const currency = getQueryParams.get('account') || sessionStorage.getItem('query_param_currency') || '';
 
     const validCurrencies = [...fiat_currencies_display_order, ...crypto_currencies_display_order];
-    if (tokens.acct1?.startsWith('VR') || currency === 'demo') return 'demo';
+    if (loginid?.startsWith('VR') || currency === 'demo') return 'demo';
     if (currency && validCurrencies.includes(currency.toUpperCase())) return currency;
-    return firstAccountCurrency || 'USD';
+    return 'USD';
 };
 
+type TCallbackStatus = 'processing' | 'error';
+
 const CallbackPage = () => {
-    return (
-        <Callback
-            onSignInSuccess={async (tokens: Record<string, string>, rawState: unknown) => {
-                const state = rawState as { account?: string } | null;
-                const accountsList: Record<string, string> = {};
-                const clientAccounts: Record<string, { loginid: string; token: string; currency: string }> = {};
+    const [status, setStatus] = useState<TCallbackStatus>('processing');
+    const [error_message, setErrorMessage] = useState('');
+    const has_run = useRef(false);
 
-                for (const [key, value] of Object.entries(tokens)) {
-                    if (key.startsWith('acct')) {
-                        const tokenKey = key.replace('acct', 'token');
-                        if (tokens[tokenKey]) {
-                            accountsList[value] = tokens[tokenKey];
-                            clientAccounts[value] = {
-                                loginid: value,
-                                token: tokens[tokenKey],
-                                currency: '',
-                            };
-                        }
-                    } else if (key.startsWith('cur')) {
-                        const accKey = key.replace('cur', 'acct');
-                        if (tokens[accKey]) {
-                            clientAccounts[tokens[accKey]].currency = value;
-                        }
-                    }
-                }
+    useEffect(() => {
+        if (has_run.current) return;
+        has_run.current = true;
 
-                localStorage.setItem('accountsList', JSON.stringify(accountsList));
-                localStorage.setItem('clientAccounts', JSON.stringify(clientAccounts));
+        const run = async () => {
+            const query_params = new URLSearchParams(window.location.search);
+            const oauth_error = query_params.get('error');
 
-                let is_token_set = false;
+            if (oauth_error) {
+                setErrorMessage(query_params.get('error_description') || oauth_error);
+                setStatus('error');
+                return;
+            }
+
+            try {
+                const { access_token } = await completeDerivLogin({
+                    code: query_params.get('code'),
+                    state: query_params.get('state'),
+                });
 
                 const api = await generateDerivApiInstance();
-                if (api) {
-                    const { authorize, error } = await api.authorize(tokens.token1);
-                    api.disconnect();
-                    if (error) {
-                        // Check if the error is due to an invalid token
-                        if (error.code === 'InvalidToken') {
-                            // Set is_token_set to true to prevent the app from getting stuck in loading state
-                            is_token_set = true;
-
-                            // Only emit the InvalidToken event if logged_state is true
-                            const { is_tmb_enabled = false } = useTMB();
-                            if (Cookies.get('logged_state') === 'true' && !is_tmb_enabled) {
-                                // Emit an event that can be caught by the application to retrigger OIDC authentication
-                                globalObserver.emit('InvalidToken', { error });
-                            }
-                            if (Cookies.get('logged_state') === 'false') {
-                                // If the user is not logged out, we need to clear the local storage
-                                clearAuthData();
-                            }
-                        }
-                    } else {
-                        const clientAccountsArray = Object.values(clientAccounts);
-                        const firstId = authorize?.account_list[0]?.loginid;
-                        const filteredTokens = clientAccountsArray.filter(account => account.loginid === firstId);
-                        if (filteredTokens.length) {
-                            localStorage.setItem('authToken', filteredTokens[0].token);
-                            localStorage.setItem('active_loginid', filteredTokens[0].loginid);
-                            is_token_set = true;
-                        }
-                    }
+                if (!api) {
+                    throw new Error('Could not open a connection to authorize the account.');
                 }
-                if (!is_token_set) {
-                    localStorage.setItem('authToken', tokens.token1);
-                    localStorage.setItem('active_loginid', tokens.acct1);
-                }
-                // Determine the appropriate currency to use
-                const selected_currency = getSelectedCurrency(tokens, clientAccounts, state);
 
-                window.location.replace(window.location.origin + `bot/?account=${selected_currency}`);
-            }}
-            renderReturnButton={() => {
-                return (
-                    <Button
-                        className='callback-return-button'
-                        onClick={() => {
-                            window.location.href = '/';
-                        }}
-                    >
-                        {'Return to Bot'}
-                    </Button>
+                const { authorize, error } = await api.authorize(access_token);
+                api.disconnect();
+
+                if (error || !authorize) {
+                    throw new Error(error?.message || 'Deriv rejected the access token during authorize.');
+                }
+
+                const loginid = authorize.loginid;
+                localStorage.setItem('authToken', access_token);
+                localStorage.setItem('active_loginid', loginid);
+                localStorage.setItem('accountsList', JSON.stringify({ [loginid]: access_token }));
+                localStorage.setItem(
+                    'clientAccounts',
+                    JSON.stringify({ [loginid]: { loginid, token: access_token, currency: authorize.currency } })
                 );
-            }}
-        />
-    );
+
+                const selected_currency = getSelectedCurrency(loginid);
+                window.location.replace(`${window.location.origin}/?account=${selected_currency}`);
+            } catch (err) {
+                // eslint-disable-next-line no-console
+                console.error('Deriv OAuth callback failed:', err);
+                setErrorMessage(
+                    err instanceof DerivOAuthStateMismatchError
+                        ? err.message
+                        : err instanceof Error
+                          ? err.message
+                          : 'Something went wrong completing sign-in.'
+                );
+                setStatus('error');
+            }
+        };
+
+        run();
+    }, []);
+
+    if (status === 'error') {
+        return (
+            <div className='callback-error'>
+                <p>{error_message}</p>
+                <Button
+                    className='callback-return-button'
+                    onClick={() => {
+                        window.location.href = '/';
+                    }}
+                >
+                    {'Return to Bot'}
+                </Button>
+            </div>
+        );
+    }
+
+    return null;
 };
 
 export default CallbackPage;

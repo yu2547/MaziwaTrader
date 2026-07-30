@@ -1,10 +1,9 @@
-import { LocalStorageConstants, LocalStorageUtils, URLUtils } from '@deriv-com/utils';
 import { isStaging } from '../url/helpers';
 
 // MaziwaTrader's own Deriv App ID (registered on the Deriv Developer Portal).
 // Newer Deriv app registrations issue alphanumeric App IDs rather than the
 // legacy numeric ones - every environment uses this single registered app.
-const MAZIWA_TRADER_APP_ID = '33QWIzORXN45bHMfeUAdw';
+const MAZIWA_TRADER_APP_ID = '33XnPHbQEAalZeY2dq33l';
 
 export const APP_IDS = {
     LOCALHOST: MAZIWA_TRADER_APP_ID,
@@ -86,7 +85,22 @@ export const getDefaultAppIdAndUrl = () => {
 
 export const getAppId = () => {
     let app_id = null;
-    const config_app_id = window.localStorage.getItem('config.app_id');
+    const raw_config_app_id = window.localStorage.getItem('config.app_id');
+    // This key is read two incompatible ways across the codebase: this file and the
+    // /endpoint debug page both read/write it as a raw string, while @deriv-com/utils'
+    // LocalStorageUtils (used internally by @deriv-com/auth-client's OIDC flow) always
+    // JSON.stringifies on write and JSON.parses on read. Accept either on the way in -
+    // try JSON first, fall back to the raw string - so both conventions keep working
+    // no matter which one wrote the value.
+    let config_app_id = raw_config_app_id;
+    if (raw_config_app_id) {
+        try {
+            const parsed = JSON.parse(raw_config_app_id);
+            if (typeof parsed === 'string') config_app_id = parsed;
+        } catch {
+            // Not JSON - it's a plain string written by this file's own convention.
+        }
+    }
     const current_domain = getCurrentProductionDomain() ?? '';
 
     if (config_app_id) {
@@ -97,6 +111,17 @@ export const getAppId = () => {
         app_id = APP_IDS.LOCALHOST;
     } else {
         app_id = domain_app_ids[current_domain as keyof typeof domain_app_ids] ?? APP_IDS.PRODUCTION;
+    }
+
+    // @deriv-com/auth-client's OIDC flow (requestOidcAuthentication) resolves its own
+    // client_id independently of this function - via a copy of @deriv-com/utils it
+    // bundles itself, keyed off a hostname map that only knows Deriv's own domains,
+    // falling back to a hardcoded Deriv App ID (36300) if the domain isn't in it. It
+    // reads this exact same 'config.app_id' localStorage key first, via getValue()
+    // (JSON.parse) - so the value must be JSON-encoded here for that lookup to
+    // actually find it, otherwise it silently falls back to Deriv's own App ID.
+    if (!raw_config_app_id) {
+        window.localStorage.setItem('config.app_id', JSON.stringify(app_id));
     }
 
     return app_id;
@@ -146,41 +171,4 @@ export const getDebugServiceWorker = () => {
     if (debug_service_worker_flag) return !!parseInt(debug_service_worker_flag);
 
     return false;
-};
-
-export const generateOAuthURL = () => {
-    const { getOauthURL } = URLUtils;
-    const oauth_url = getOauthURL();
-    const original_url = new URL(oauth_url);
-    const hostname = window.location.hostname;
-
-    // First priority: Check for configured server URLs (for QA/testing environments)
-    const configured_server_url = (LocalStorageUtils.getValue(LocalStorageConstants.configServerURL) ||
-        localStorage.getItem('config.server_url')) as string;
-
-    const valid_server_urls = ['green.derivws.com', 'red.derivws.com', 'blue.derivws.com', 'canary.derivws.com'];
-
-    if (
-        configured_server_url &&
-        (typeof configured_server_url === 'string'
-            ? !valid_server_urls.includes(configured_server_url)
-            : !valid_server_urls.includes(JSON.stringify(configured_server_url)))
-    ) {
-        original_url.hostname = configured_server_url;
-    } else if (original_url.hostname.includes('oauth.deriv.')) {
-        // Second priority: Domain-based OAuth URL setting for .me and .be domains
-        if (hostname.includes('.deriv.me')) {
-            original_url.hostname = 'oauth.deriv.me';
-        } else if (hostname.includes('.deriv.be')) {
-            original_url.hostname = 'oauth.deriv.be';
-        } else {
-            // Fallback to original logic for other domains
-            const current_domain = getCurrentProductionDomain();
-            if (current_domain) {
-                const domain_suffix = current_domain.replace(/^[^.]+\./, '');
-                original_url.hostname = `oauth.${domain_suffix}`;
-            }
-        }
-    }
-    return original_url.toString() || oauth_url;
 };
