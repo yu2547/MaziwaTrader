@@ -39,7 +39,14 @@ import { generateCodeChallenge, generateCodeVerifier, generateState } from './pk
  */
 
 const DERIV_OAUTH_HOST = 'https://auth.deriv.com';
-const DERIV_OAUTH_SCOPE = 'trade account_manage';
+// 'account_manage' is not granted to this App ID (confirmed live: Deriv's
+// authorization server rejects the whole request with invalid_scope when
+// it's requested, and accepts it when only 'trade' is requested). Until the
+// App ID's registration is updated on Deriv's developer portal, requesting
+// only 'trade' keeps login working; some Options API endpoints that need
+// account_manage (e.g. creating a brand-new Options account) won't be
+// usable until then.
+const DERIV_OAUTH_SCOPE = 'trade';
 const SESSION_KEY_CODE_VERIFIER = 'deriv_oauth_code_verifier';
 const SESSION_KEY_STATE = 'deriv_oauth_state';
 
@@ -75,12 +82,17 @@ export type TDerivTokenResponse = {
 
 export class DerivOAuthStateMismatchError extends Error {
     constructor() {
-        super('OAuth state parameter did not match the value stored before redirecting - possible CSRF, or a stale/reused callback URL.');
+        super(
+            'OAuth state parameter did not match the value stored before redirecting - possible CSRF, or a stale/reused callback URL.'
+        );
         this.name = 'DerivOAuthStateMismatchError';
     }
 }
 
-export const completeDerivLogin = async (params: { code: string | null; state: string | null }): Promise<TDerivTokenResponse> => {
+export const completeDerivLogin = async (params: {
+    code: string | null;
+    state: string | null;
+}): Promise<TDerivTokenResponse> => {
     const stored_state = sessionStorage.getItem(SESSION_KEY_STATE);
     const stored_code_verifier = sessionStorage.getItem(SESSION_KEY_CODE_VERIFIER);
 
