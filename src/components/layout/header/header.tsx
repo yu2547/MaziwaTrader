@@ -39,7 +39,7 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
     const has_wallet = Object.keys(accounts ?? {}).some(id => accounts?.[id].account_category === 'wallet');
 
     const currency = getCurrency?.();
-    const { language, localize } = useTranslations();
+    const { localize } = useTranslations();
     const { isSingleLoggingIn } = useOauth2();
 
     const { hubEnabledCountryList } = useFirebaseCountriesConfig();
@@ -145,7 +145,7 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
                     <Button
                         tertiary
                         onClick={async () => {
-                            redirectToLogin(false, language);
+                            redirectToLogin(false);
                         }}
                     >
                         <Localize i18n_default_text='Log in' />

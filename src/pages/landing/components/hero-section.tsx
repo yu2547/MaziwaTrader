@@ -11,7 +11,7 @@ import './hero-section.scss';
 const HERO_ENERGY = 0.82;
 
 const HeroSection = () => {
-    const { language, localize } = useTranslations();
+    const { localize } = useTranslations();
 
     return (
         <section className='mw-hero' id='hero'>
@@ -41,7 +41,7 @@ const HeroSection = () => {
                         <button
                             type='button'
                             className='mw-hero__btn mw-hero__btn--primary'
-                            onClick={() => redirectToLogin(false, language)}
+                            onClick={() => redirectToLogin(false)}
                         >
                             {localize('Start Trading')}
                         </button>
