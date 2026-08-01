@@ -4,7 +4,10 @@ import { CONNECTION_STATUS } from '@/external/bot-skeleton/services/api/observab
 import { useApiBase } from '@/hooks/useApiBase';
 import { useStore } from '@/hooks/useStore';
 import useUtcClock from '@/hooks/useUtcClock';
-import { StandaloneCircleCheckRegularIcon, StandaloneTriangleExclamationRegularIcon } from '@deriv/quill-icons/Standalone';
+import {
+    StandaloneCircleCheckRegularIcon,
+    StandaloneTriangleExclamationRegularIcon,
+} from '@deriv/quill-icons/Standalone';
 import { Localize, useTranslations } from '@deriv-com/translations';
 import LiveInfoCards from './live-info-cards';
 import './dashboard-hero.scss';
@@ -20,19 +23,29 @@ const getGreeting = (hour: number) => {
 };
 
 const DashboardHero = observer(() => {
-    const { client } = useStore();
+    const { client, oauth_session } = useStore();
     const { connectionStatus } = useApiBase();
     const { localize } = useTranslations();
     const now = useUtcClock();
+
+    // The OAuth + Options API session is the primary source once it's
+    // authenticated; it never overlaps with the legacy client store (that one
+    // is keyed on loginid data this session never has), so this is a plain
+    // either/or rather than a merge.
+    const is_oauth_session = oauth_session.is_authenticated;
+    const display_loginid = is_oauth_session ? oauth_session.account_id : client.loginid;
+    const display_currency = is_oauth_session ? oauth_session.currency : client.currency;
+    const display_balance = is_oauth_session ? oauth_session.balance : Number(client.balance || 0);
+    const is_demo_account = is_oauth_session ? oauth_session.account_type === 'demo' : client.is_virtual;
 
     const greeting = getGreeting(now.getUTCHours());
     const gmt_time = now.toLocaleTimeString('en-GB', { ...TIME_FORMAT, timeZone: 'UTC' });
     const today = now.toLocaleDateString('en-GB', DATE_FORMAT);
 
-    const decimals = getDecimalPlaces(client.currency);
-    const formatted_balance = addComma(Number(client.balance || 0).toFixed(decimals));
-    const account_type = client.is_virtual ? localize('Demo account') : localize('Real account');
-    const is_connected = connectionStatus === CONNECTION_STATUS.OPENED;
+    const decimals = getDecimalPlaces(display_currency);
+    const formatted_balance = addComma(Number(display_balance || 0).toFixed(decimals));
+    const account_type = is_demo_account ? localize('Demo account') : localize('Real account');
+    const is_connected = is_oauth_session ? true : connectionStatus === CONNECTION_STATUS.OPENED;
 
     return (
         <section className='mw-hero' aria-label={localize('Account overview')}>
@@ -41,7 +54,7 @@ const DashboardHero = observer(() => {
                     <h1 className='mw-hero__greeting'>
                         <Localize
                             i18n_default_text='{{greeting}}, {{loginid}} {{wave}}'
-                            values={{ greeting: localize(greeting), loginid: client.loginid || '—', wave: '👋' }}
+                            values={{ greeting: localize(greeting), loginid: display_loginid || '—', wave: '👋' }}
                         />
                     </h1>
                     <p className='mw-hero__subtitle'>
@@ -62,7 +75,7 @@ const DashboardHero = observer(() => {
                         <Localize i18n_default_text='Account balance' />
                     </span>
                     <span className='mw-hero__stat-value'>
-                        {formatted_balance} <span className='mw-hero__stat-currency'>{client.currency}</span>
+                        {formatted_balance} <span className='mw-hero__stat-currency'>{display_currency}</span>
                     </span>
                 </div>
                 <div className='mw-hero__stat'>
@@ -87,6 +100,12 @@ const DashboardHero = observer(() => {
                     </span>
                 </div>
             </div>
+
+            {is_oauth_session && !client.is_logged_in && (
+                <p className='mw-hero__notice'>
+                    <Localize i18n_default_text='Signed in with your Deriv account. Bot Builder and Charts require the classic Deriv connection and are not available on this session yet - Analysis Tool and Free Bots work as usual.' />
+                </p>
+            )}
 
             <LiveInfoCards />
         </section>

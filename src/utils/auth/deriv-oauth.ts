@@ -2,40 +2,14 @@ import { getAppId } from '@/components/shared';
 import { generateCodeChallenge, generateCodeVerifier, generateState } from './pkce';
 
 /**
- * Hand-rolled Authorization Code + PKCE flow against Deriv's documented OAuth
- * endpoints (developers.deriv.com/docs/intro/oauth), replacing
+ * Authorization Code + PKCE flow against Deriv's documented OAuth endpoints
+ * (developers.deriv.com/docs/intro/oauth), replacing
  * @deriv-com/auth-client's requestOidcAuthentication() for the "Start
- * Trading" / header login entry point. This intentionally skips the OIDC
- * discovery step (oauth.deriv.com/.well-known/openid-configuration) that the
- * previous implementation depended on and that was the confirmed root cause
- * of the earlier login failures - this module targets auth.deriv.com
- * directly with static endpoints, exactly as the documentation describes.
+ * Trading" / header login entry point.
  *
- * Scope: the docs list trade / account_manage / application_read / payment
- * and show `trade+account_manage` as their own example - used here as a
- * starting point. Confirm this is actually the right combination for
- * MaziwaTrader's features before relying on it.
- *
- * Token exchange: the documentation says this POST should happen
- * server-side ("never perform the token exchange from the browser"), but
- * this project has no backend today, and @deriv-com/auth-client's own
- * reference implementation performs this same exchange from the browser.
- * Direct curl testing against the token endpoint (with a synthetic,
- * unregistered origin) showed no Access-Control-Allow-Origin header -
- * unlike the discovery/sessions endpoints, which do send one. Whether the
- * real, registered origin gets a CORS-enabled response is unverified and
- * needs a real login to confirm. If it's CORS-blocked in practice, only the
- * fetch() call in completeDerivLogin() below needs to move behind a backend
- * proxy - nothing else here is affected.
- *
- * Not implemented: bridging the resulting access_token into this app's
- * legacy multi-account token format (what @deriv-com/auth-client did
- * internally via an undocumented /oauth2/legacy/tokens call). This module
- * hands the caller a single access_token and lets it call api.authorize()
- * with that token directly, matching the single-account fallback path the
- * existing callback page already had. If that doesn't authorize
- * successfully, the legacy-token bridge is the next thing to investigate -
- * deliberately not guessing at an unverified endpoint here.
+ * This deliberately stops once an access_token has been obtained. Handing
+ * that token to the app's WebSocket authorize() call is a separate,
+ * unapproved decision - see the migration report.
  */
 
 const DERIV_OAUTH_HOST = 'https://auth.deriv.com';
@@ -47,8 +21,45 @@ const DERIV_OAUTH_HOST = 'https://auth.deriv.com';
 // account_manage (e.g. creating a brand-new Options account) won't be
 // usable until then.
 const DERIV_OAUTH_SCOPE = 'trade';
+
 const SESSION_KEY_CODE_VERIFIER = 'deriv_oauth_code_verifier';
 const SESSION_KEY_STATE = 'deriv_oauth_state';
+const SESSION_KEY_ACCESS_TOKEN = 'deriv_oauth_access_token';
+const SESSION_KEY_TOKEN_META = 'deriv_oauth_token_meta';
+
+const log = (stage: string, detail?: unknown) => {
+    // eslint-disable-next-line no-console
+    if (detail === undefined) console.info(`[MW-AUTH] ${stage}`);
+    // eslint-disable-next-line no-console
+    else console.info(`[MW-AUTH] ${stage}`, detail);
+};
+
+const logError = (stage: string, detail?: unknown) => {
+    // eslint-disable-next-line no-console
+    console.error(`[MW-AUTH] ${stage}`, detail);
+};
+
+/** Discriminator so the UI can show a specific message per failure mode. */
+export type TDerivOAuthErrorKind =
+    | 'oauth_server_error'
+    | 'redirect_uri_mismatch'
+    | 'invalid_state'
+    | 'missing_code'
+    | 'missing_verifier'
+    | 'network_failure'
+    | 'token_exchange_failed';
+
+export class DerivOAuthError extends Error {
+    kind: TDerivOAuthErrorKind;
+    detail?: string;
+
+    constructor(kind: TDerivOAuthErrorKind, message: string, detail?: string) {
+        super(message);
+        this.name = 'DerivOAuthError';
+        this.kind = kind;
+        this.detail = detail;
+    }
+}
 
 const getRedirectUri = () => `${window.location.origin}/callback`;
 
@@ -71,7 +82,9 @@ export const beginDerivLogin = async (): Promise<void> => {
         brand: 'deriv',
     });
 
-    window.location.assign(`${DERIV_OAUTH_HOST}/oauth2/auth?${params.toString()}`);
+    const url = `${DERIV_OAUTH_HOST}/oauth2/auth?${params.toString()}`;
+    log('redirect initiated', { client_id: getAppId(), redirect_uri: getRedirectUri(), scope: DERIV_OAUTH_SCOPE });
+    window.location.assign(url);
 };
 
 export type TDerivTokenResponse = {
@@ -80,34 +93,87 @@ export type TDerivTokenResponse = {
     token_type: string;
 };
 
-export class DerivOAuthStateMismatchError extends Error {
-    constructor() {
-        super(
-            'OAuth state parameter did not match the value stored before redirecting - possible CSRF, or a stale/reused callback URL.'
-        );
-        this.name = 'DerivOAuthStateMismatchError';
-    }
-}
-
-export const completeDerivLogin = async (params: {
+export type TCallbackParams = {
     code: string | null;
     state: string | null;
-}): Promise<TDerivTokenResponse> => {
+    error: string | null;
+    error_description: string | null;
+};
+
+/** Reads the four OAuth callback query parameters the documentation defines. */
+export const readCallbackParams = (search: string = window.location.search): TCallbackParams => {
+    const q = new URLSearchParams(search);
+    const params = {
+        code: q.get('code'),
+        state: q.get('state'),
+        error: q.get('error'),
+        error_description: q.get('error_description'),
+    };
+    log('callback received', {
+        has_code: !!params.code,
+        has_state: !!params.state,
+        error: params.error,
+        error_description: params.error_description,
+    });
+    return params;
+};
+
+export const getStoredAccessToken = () => sessionStorage.getItem(SESSION_KEY_ACCESS_TOKEN);
+
+export const getStoredTokenMeta = (): { expires_in: number; token_type: string; obtained_at: number } | null => {
+    const raw = sessionStorage.getItem(SESSION_KEY_TOKEN_META);
+    if (!raw) return null;
+    try {
+        return JSON.parse(raw);
+    } catch {
+        return null;
+    }
+};
+
+export const completeDerivLogin = async (params: TCallbackParams): Promise<TDerivTokenResponse> => {
+    // The OAuth server rejected or the user cancelled - surface its own reason
+    // rather than attempting an exchange that cannot succeed.
+    if (params.error) {
+        const description = params.error_description || params.error;
+        const is_redirect_mismatch = /redirect|uri/i.test(description) || params.error === 'invalid_request';
+        logError('oauth server returned an error', {
+            error: params.error,
+            error_description: params.error_description,
+        });
+        throw new DerivOAuthError(
+            is_redirect_mismatch ? 'redirect_uri_mismatch' : 'oauth_server_error',
+            description,
+            `error=${params.error}`
+        );
+    }
+
     const stored_state = sessionStorage.getItem(SESSION_KEY_STATE);
     const stored_code_verifier = sessionStorage.getItem(SESSION_KEY_CODE_VERIFIER);
 
-    // Single-use - clear immediately regardless of what happens next.
+    // Single-use: clear before any early return so a failed attempt can never
+    // be replayed with the same verifier/state pair.
     sessionStorage.removeItem(SESSION_KEY_STATE);
     sessionStorage.removeItem(SESSION_KEY_CODE_VERIFIER);
 
     if (!params.state || !stored_state || params.state !== stored_state) {
-        throw new DerivOAuthStateMismatchError();
+        logError('state validation failed', { returned: params.state, had_stored_state: !!stored_state });
+        throw new DerivOAuthError(
+            'invalid_state',
+            'The security check on the sign-in response failed.',
+            'The `state` value returned by Deriv did not match the one stored before redirecting. This can happen if the callback URL was reopened, bookmarked, or reloaded.'
+        );
     }
+    log('state validated');
+
     if (!params.code) {
-        throw new Error('No authorization code present in the callback URL.');
+        throw new DerivOAuthError('missing_code', 'Deriv did not return an authorization code.');
     }
     if (!stored_code_verifier) {
-        throw new Error('No code_verifier found in sessionStorage - cannot complete the token exchange.');
+        throw new DerivOAuthError(
+            'missing_verifier',
+            'The sign-in could not be completed in this browser tab.',
+            'No PKCE code_verifier was found in sessionStorage. It is cleared when the tab closes, so sign-in must finish in the tab it started in.'
+        );
     }
 
     const body = new URLSearchParams({
@@ -118,16 +184,56 @@ export const completeDerivLogin = async (params: {
         redirect_uri: getRedirectUri(),
     });
 
-    const response = await fetch(`${DERIV_OAUTH_HOST}/oauth2/token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString(),
-    });
+    log('token exchange started', { endpoint: `${DERIV_OAUTH_HOST}/oauth2/token`, redirect_uri: getRedirectUri() });
 
-    if (!response.ok) {
-        const error_text = await response.text().catch(() => '');
-        throw new Error(`Token exchange failed: ${response.status} ${response.statusText} - ${error_text}`);
+    let response: Response;
+    try {
+        response = await fetch(`${DERIV_OAUTH_HOST}/oauth2/token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString(),
+        });
+    } catch (network_error) {
+        // fetch() only rejects for network-level failures - DNS, offline, or a
+        // CORS policy that blocks the response from being read at all.
+        logError('token exchange network failure', network_error);
+        throw new DerivOAuthError(
+            'network_failure',
+            'Could not reach Deriv to complete sign-in.',
+            'The request to the token endpoint failed before any response was received. This is usually a network problem or a CORS restriction on the token endpoint, which would mean the exchange has to happen server-side.'
+        );
     }
 
-    return response.json();
+    log('token exchange completed', { status: response.status });
+
+    if (!response.ok) {
+        const raw = await response.text().catch(() => '');
+        logError('token exchange rejected', { status: response.status, body: raw });
+        throw new DerivOAuthError(
+            'token_exchange_failed',
+            `Deriv rejected the sign-in (HTTP ${response.status}).`,
+            raw || response.statusText
+        );
+    }
+
+    const token_response: TDerivTokenResponse = await response.json();
+
+    sessionStorage.setItem(SESSION_KEY_ACCESS_TOKEN, token_response.access_token);
+    sessionStorage.setItem(
+        SESSION_KEY_TOKEN_META,
+        JSON.stringify({
+            expires_in: token_response.expires_in,
+            token_type: token_response.token_type,
+            obtained_at: Date.now(),
+        })
+    );
+
+    log('access token received', {
+        prefix: `${token_response.access_token.slice(0, 12)}…`,
+        length: token_response.access_token.length,
+        token_type: token_response.token_type,
+        expires_in: token_response.expires_in,
+    });
+
+    return token_response;
 };

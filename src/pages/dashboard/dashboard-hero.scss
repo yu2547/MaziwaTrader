@@ -108,6 +108,16 @@
         color: var(--text-general);
     }
 
+    &__notice {
+        margin: 0;
+        padding: 0.8rem 1.2rem;
+        border-radius: 10px;
+        font-size: 1.2rem;
+        color: #ff9f43;
+        background: rgb(255 159 67 / 10%);
+        border: 1px solid rgb(255 159 67 / 20%);
+    }
+
     &__status-pill {
         display: inline-flex;
         align-items: center;

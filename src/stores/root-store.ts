@@ -10,6 +10,7 @@ import FlyoutStore from './flyout-store';
 import GoogleDriveStore from './google-drive-store';
 import JournalStore from './journal-store';
 import LoadModalStore from './load-modal-store';
+import OAuthSessionStore from './oauth-session-store';
 import QuickStrategyStore from './quick-strategy-store';
 import RunPanelStore from './run-panel-store';
 import SaveModalStore from './save-modal-store';
@@ -46,6 +47,7 @@ export default class RootStore {
     public ui: UiStore;
     public client: ClientStore;
     public common: CommonStore;
+    public oauth_session: OAuthSessionStore;
 
     core = {
         ui: {},
@@ -60,6 +62,7 @@ export default class RootStore {
         this.ui = new UiStore();
         this.client = new ClientStore();
         this.common = new CommonStore();
+        this.oauth_session = new OAuthSessionStore();
         this.core.ui = this.ui;
         this.core.client = this.client;
         this.core.common = this.common;

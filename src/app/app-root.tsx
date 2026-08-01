@@ -98,7 +98,11 @@ const AppRoot = () => {
     // own presentation finishes AND the destination is actually ready, so
     // there's never a blank frame or a flash of unready content.
     const is_ready = !!store && is_api_initialized;
-    const is_landing_page = !V2GetActiveToken();
+    // Logged in via either path counts: the legacy classic-WS token (V2GetActiveToken)
+    // or the new OAuth + Options API session (oauth_session.is_authenticated) - neither
+    // implies the other, and app-content.jsx/dashboard-hero.tsx handle each on its own
+    // terms rather than one faking the other's data.
+    const is_landing_page = !V2GetActiveToken() && !store?.oauth_session.is_authenticated;
 
     return (
         <>
@@ -113,9 +117,7 @@ const AppRoot = () => {
                         </ErrorBoundary>
                     </Suspense>
                 ))}
-            {show_loading_screen && (
-                <LoadingScreen ready={is_ready} onExited={() => setShowLoadingScreen(false)} />
-            )}
+            {show_loading_screen && <LoadingScreen ready={is_ready} onExited={() => setShowLoadingScreen(false)} />}
         </>
     );
 };

@@ -1,106 +1,108 @@
 import { useEffect, useRef, useState } from 'react';
-import { crypto_currencies_display_order, fiat_currencies_display_order } from '@/components/shared';
-import { generateDerivApiInstance } from '@/external/bot-skeleton/services/api/appId';
-import { completeDerivLogin, DerivOAuthStateMismatchError } from '@/utils/auth/deriv-oauth';
+import { useNavigate } from 'react-router-dom';
+import { useStore } from '@/hooks/useStore';
+import { completeDerivLogin, DerivOAuthError, readCallbackParams } from '@/utils/auth/deriv-oauth';
+import { listOptionsAccounts } from '@/utils/options-trading/options-trading-api';
 import { Button } from '@deriv-com/ui';
 
 /**
- * Gets the selected currency or falls back to appropriate defaults
+ * OAuth callback handler.
+ *
+ * On success: stores the access token and Options account list in
+ * oauth_session (src/stores/oauth-session-store.ts), then redirects into the
+ * dashboard. This is a separate, additive authenticated-state model - it does
+ * not touch AuthWrapper.tsx, legacy tokens, or the classic WebSocket layer.
+ * See app-root.tsx's is_landing_page check for where this session is
+ * recognized as "logged in", and dashboard-hero.tsx for where its account
+ * data is displayed.
  */
-const getSelectedCurrency = (loginid: string): string => {
-    const getQueryParams = new URLSearchParams(window.location.search);
-    const currency = getQueryParams.get('account') || sessionStorage.getItem('query_param_currency') || '';
 
-    const validCurrencies = [...fiat_currencies_display_order, ...crypto_currencies_display_order];
-    if (loginid?.startsWith('VR') || currency === 'demo') return 'demo';
-    if (currency && validCurrencies.includes(currency.toUpperCase())) return currency;
-    return 'USD';
+type TStatus = 'processing' | 'error';
+
+const ERROR_TITLES: Record<string, string> = {
+    oauth_server_error: 'Deriv could not complete sign-in',
+    redirect_uri_mismatch: 'Redirect URL mismatch',
+    invalid_state: 'Security check failed',
+    missing_code: 'No authorization code received',
+    missing_verifier: 'Sign-in could not be completed in this tab',
+    network_failure: 'Could not reach Deriv',
+    token_exchange_failed: 'Token exchange failed',
 };
 
-type TCallbackStatus = 'processing' | 'error';
-
 const CallbackPage = () => {
-    const [status, setStatus] = useState<TCallbackStatus>('processing');
-    const [error_message, setErrorMessage] = useState('');
+    const [status, setStatus] = useState<TStatus>('processing');
+    const [error, setError] = useState<{ title: string; message: string; detail?: string } | null>(null);
     const has_run = useRef(false);
+    const navigate = useNavigate();
+    // RootStore initializes itself inside its own effect (see useStore.tsx's
+    // StoreProvider), so this is null on the very first render - the effect
+    // below waits for it rather than destructuring immediately.
+    const store = useStore();
 
     useEffect(() => {
-        if (has_run.current) return;
+        if (has_run.current || !store) return;
         has_run.current = true;
 
-        const run = async () => {
-            const query_params = new URLSearchParams(window.location.search);
-            const oauth_error = query_params.get('error');
+        completeDerivLogin(readCallbackParams())
+            .then(async token_response => {
+                store.oauth_session.setSession(token_response.access_token, token_response.expires_in);
 
-            if (oauth_error) {
-                setErrorMessage(query_params.get('error_description') || oauth_error);
-                setStatus('error');
-                return;
-            }
-
-            try {
-                const { access_token } = await completeDerivLogin({
-                    code: query_params.get('code'),
-                    state: query_params.get('state'),
-                });
-
-                const api = await generateDerivApiInstance();
-                if (!api) {
-                    throw new Error('Could not open a connection to authorize the account.');
+                try {
+                    const accounts = await listOptionsAccounts(token_response.access_token);
+                    store.oauth_session.setAccounts(accounts);
+                } catch (accounts_error) {
+                    // Non-fatal: the session itself is valid even if the accounts
+                    // list couldn't be fetched (e.g. a transient network error) -
+                    // the dashboard handles an empty account list gracefully, so
+                    // there's no reason to strand the user on this page over it.
+                    // eslint-disable-next-line no-console
+                    console.error('[MW-AUTH] failed to fetch Options accounts after login', accounts_error);
                 }
 
-                const { authorize, error } = await api.authorize(access_token);
-                api.disconnect();
-
-                if (error || !authorize) {
-                    throw new Error(error?.message || 'Deriv rejected the access token during authorize.');
+                navigate('/', { replace: true });
+            })
+            .catch(err => {
+                if (err instanceof DerivOAuthError) {
+                    setError({
+                        title: ERROR_TITLES[err.kind] ?? 'Sign-in failed',
+                        message: err.message,
+                        detail: err.detail,
+                    });
+                } else {
+                    // eslint-disable-next-line no-console
+                    console.error('[MW-AUTH] unexpected callback failure', err);
+                    setError({
+                        title: 'Sign-in failed',
+                        message: err instanceof Error ? err.message : 'An unexpected error occurred.',
+                    });
                 }
-
-                const loginid = authorize.loginid;
-                localStorage.setItem('authToken', access_token);
-                localStorage.setItem('active_loginid', loginid);
-                localStorage.setItem('accountsList', JSON.stringify({ [loginid]: access_token }));
-                localStorage.setItem(
-                    'clientAccounts',
-                    JSON.stringify({ [loginid]: { loginid, token: access_token, currency: authorize.currency } })
-                );
-
-                const selected_currency = getSelectedCurrency(loginid);
-                window.location.replace(`${window.location.origin}/?account=${selected_currency}`);
-            } catch (err) {
-                // eslint-disable-next-line no-console
-                console.error('Deriv OAuth callback failed:', err);
-                setErrorMessage(
-                    err instanceof DerivOAuthStateMismatchError
-                        ? err.message
-                        : err instanceof Error
-                          ? err.message
-                          : 'Something went wrong completing sign-in.'
-                );
                 setStatus('error');
-            }
-        };
+            });
+    }, [store, navigate]);
 
-        run();
-    }, []);
-
-    if (status === 'error') {
+    if (status === 'error' && error) {
         return (
-            <div className='callback-error'>
-                <p>{error_message}</p>
+            <div className='callback-page'>
+                <h2>{error.title}</h2>
+                <p>{error.message}</p>
+                {error.detail && <p className='callback-page__detail'>{error.detail}</p>}
                 <Button
                     className='callback-return-button'
                     onClick={() => {
                         window.location.href = '/';
                     }}
                 >
-                    {'Return to Bot'}
+                    {'Return to MaziwaTrader'}
                 </Button>
             </div>
         );
     }
 
-    return null;
+    return (
+        <div className='callback-page'>
+            <p>Completing sign-in…</p>
+        </div>
+    );
 };
 
 export default CallbackPage;
