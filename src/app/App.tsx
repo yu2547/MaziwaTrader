@@ -17,6 +17,9 @@ const Layout = lazy(() => import('../components/layout'));
 const AppRoot = lazy(() => import('./app-root'));
 const FreeBots = lazy(() => import('../pages/free-bots'));
 const AnalysisTool = lazy(() => import('../pages/analysis-tool'));
+const RiskCalculator = lazy(() => import('../pages/risk-calculator'));
+const BulkTrader = lazy(() => import('../pages/bulk-trader'));
+const CopyTrading = lazy(() => import('../pages/copy-trading'));
 
 const { TRANSLATIONS_CDN_URL, R2_PROJECT_NAME, CROWDIN_BRANCH_NAME } = process.env;
 // These are only set in Deriv's own CI (see .github/workflows/build-and-deploy-production.yml);
@@ -64,6 +67,9 @@ const router = createBrowserRouter(
             <Route path='callback' element={<CallbackPage />} />
             <Route path='free-bots' element={<FreeBots />} />
             <Route path='analysis-tool' element={<AnalysisTool />} />
+            <Route path='risk-calculator' element={<RiskCalculator />} />
+            <Route path='bulk-trader' element={<BulkTrader />} />
+            <Route path='copy-trading' element={<CopyTrading />} />
         </Route>
     )
 );
