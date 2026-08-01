@@ -36,7 +36,7 @@ const AppContent = observer(() => {
     const [is_eu_error_loading, setIsEuErrorLoading] = React.useState(true);
     const [offline_timeout, setOfflineTimeout] = React.useState(null);
     const store = useStore();
-    const { app, transactions, common, client } = store;
+    const { app, transactions, common, client, oauth_session } = store;
     const { showDigitalOptionsMaltainvestError } = app;
     // useThemeSwitcher() used to be called here only to feed @deriv-com/quill-ui's
     // ThemeProvider, removed alongside it (see H1 in the performance review). The
@@ -249,7 +249,18 @@ const AppContent = observer(() => {
             init();
             setIsLoading(true);
             if (!client.is_logged_in) {
-                changeActiveSymbolLoadingState();
+                // An OAuth + Options API session has no legacy token to
+                // authorize the classic socket with, and none of Bot
+                // Builder/Charts (the only consumers of active_symbols) are
+                // available on this session type yet (see
+                // dashboard-hero.tsx) - waiting here for classic-API market
+                // data that nothing will use would just hang forever if that
+                // socket never connects, instead of reaching the dashboard.
+                if (oauth_session.is_authenticated) {
+                    setIsLoading(false);
+                } else {
+                    changeActiveSymbolLoadingState();
+                }
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
