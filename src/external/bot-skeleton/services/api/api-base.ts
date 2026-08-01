@@ -117,17 +117,7 @@ class APIBase {
         },
     });
 
-    // TEMPORARY DEBUG - remove once the connection issue is confirmed resolved.
-    init_call_count = 0;
-
     async init(force_create_connection = false) {
-        this.init_call_count += 1;
-        wsLog('Connection', `api_base.init() call #${this.init_call_count}`, {
-            force_create_connection,
-            existing_readyState: this.api?.connection?.readyState,
-            stack: new Error('init() called here').stack,
-        });
-
         this.toggleRunButton(true);
 
         if (this.api) {

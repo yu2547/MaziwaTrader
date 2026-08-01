@@ -130,6 +130,36 @@ export const getStoredTokenMeta = (): { expires_in: number; token_type: string; 
     }
 };
 
+/** Removes the persisted OAuth session - call this on logout so a stale token can't be silently restored on the next load. */
+export const clearStoredSession = () => {
+    sessionStorage.removeItem(SESSION_KEY_ACCESS_TOKEN);
+    sessionStorage.removeItem(SESSION_KEY_TOKEN_META);
+};
+
+/**
+ * Reads back the access token completeDerivLogin() persisted to sessionStorage,
+ * so a page refresh doesn't lose the session (oauth_session itself is
+ * in-memory only and is rebuilt empty on every load). Returns the remaining
+ * lifetime rather than the original expires_in, and clears + returns null for
+ * a token that's already expired, so callers never restore a dead session.
+ */
+export const restoreStoredSession = (): { access_token: string; expires_in: number } | null => {
+    const access_token = getStoredAccessToken();
+    const meta = getStoredTokenMeta();
+    if (!access_token || !meta) return null;
+
+    const elapsed_seconds = (Date.now() - meta.obtained_at) / 1000;
+    const remaining_seconds = Math.floor(meta.expires_in - elapsed_seconds);
+    if (remaining_seconds <= 0) {
+        log('stored session expired, clearing', { obtained_at: meta.obtained_at, expires_in: meta.expires_in });
+        clearStoredSession();
+        return null;
+    }
+
+    log('stored session restored', { remaining_seconds });
+    return { access_token, expires_in: remaining_seconds };
+};
+
 export const completeDerivLogin = async (params: TCallbackParams): Promise<TDerivTokenResponse> => {
     // The OAuth server rejected or the user cancelled - surface its own reason
     // rather than attempting an exchange that cannot succeed.

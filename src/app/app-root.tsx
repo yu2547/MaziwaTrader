@@ -9,6 +9,8 @@ import { V2GetActiveToken } from '@/external/bot-skeleton/services/api/appId';
 import { useStore } from '@/hooks/useStore';
 import useTMB from '@/hooks/useTMB';
 import LandingPage from '@/pages/landing/landing-page';
+import { restoreStoredSession } from '@/utils/auth/deriv-oauth';
+import { listOptionsAccounts } from '@/utils/options-trading/options-trading-api';
 import { localize } from '@deriv-com/translations';
 import './app-root.scss';
 
@@ -40,7 +42,37 @@ const AppRoot = () => {
     const [is_tmb_check_complete, setIsTmbCheckComplete] = useState(false);
     const [, setIsTmbEnabled] = useState(false);
     const [show_loading_screen, setShowLoadingScreen] = useState(true);
+    const [is_oauth_restore_complete, setIsOauthRestoreComplete] = useState(false);
+    const oauth_restore_started = useRef(false);
     const { isTmbEnabled } = useTMB();
+
+    // oauth_session (src/stores/oauth-session-store.ts) is in-memory only and
+    // is rebuilt empty on every load, but completeDerivLogin() already
+    // persists the access token to sessionStorage - without reading it back
+    // here, a page refresh silently logged an OAuth-only session out (no
+    // legacy token to fall back on, so is_landing_page would go true).
+    useEffect(() => {
+        if (oauth_restore_started.current || !store) return;
+        oauth_restore_started.current = true;
+
+        const restore = async () => {
+            const restored = restoreStoredSession();
+            if (restored && !store.oauth_session.is_authenticated) {
+                store.oauth_session.setSession(restored.access_token, restored.expires_in);
+                try {
+                    const accounts = await listOptionsAccounts(restored.access_token);
+                    store.oauth_session.setAccounts(accounts);
+                } catch (error) {
+                    // Non-fatal: the session itself is still valid even if the
+                    // accounts list couldn't be refreshed right now.
+                    console.error('[MW-AUTH] failed to refresh Options accounts on restore:', error);
+                }
+            }
+            setIsOauthRestoreComplete(true);
+        };
+
+        restore();
+    }, [store]);
 
     // Effect to check TMB status - independent of API initialization
     useEffect(() => {
@@ -97,7 +129,7 @@ const AppRoot = () => {
     // LoadingScreen sits on top the whole time and fades itself out once its
     // own presentation finishes AND the destination is actually ready, so
     // there's never a blank frame or a flash of unready content.
-    const is_ready = !!store && is_api_initialized;
+    const is_ready = !!store && is_api_initialized && is_oauth_restore_complete;
     // Logged in via either path counts: the legacy classic-WS token (V2GetActiveToken)
     // or the new OAuth + Options API session (oauth_session.is_authenticated) - neither
     // implies the other, and app-content.jsx/dashboard-hero.tsx handle each on its own
