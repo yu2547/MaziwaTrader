@@ -1,8 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { api_base } from '@/external/bot-skeleton';
-import { CONNECTION_STATUS } from '@/external/bot-skeleton/services/api/observables/connection-status-stream';
-import { useApiBase } from '@/hooks/useApiBase';
+import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
 import { useStore } from '@/hooks/useStore';
 import {
     StandaloneChartLineRegularIcon,
@@ -14,73 +12,51 @@ import {
 import { useTranslations } from '@deriv-com/translations';
 import './live-info-cards.scss';
 
-const LATENCY_PROBE_INTERVAL = 15000;
-
-const useServerLatency = (is_connected: boolean) => {
-    const [latency, setLatency] = useState<number | null>(null);
-    const [last_sync, setLastSync] = useState<Date | null>(null);
-    const probing = useRef(false);
-
-    useEffect(() => {
-        if (!is_connected) return undefined;
-
-        const probe = async () => {
-            if (probing.current) return;
-            probing.current = true;
-            const start = performance.now();
-            try {
-                await api_base.api?.send({ ping: 1 });
-                setLatency(Math.round(performance.now() - start));
-                setLastSync(new Date());
-            } catch {
-                // Non-critical UI metric - ignore failures silently.
-            } finally {
-                probing.current = false;
-            }
-        };
-
-        probe();
-        const id = setInterval(probe, LATENCY_PROBE_INTERVAL);
-        return () => clearInterval(id);
-    }, [is_connected]);
-
-    return { latency, last_sync };
-};
-
+/**
+ * Backed by Deriv's public Options WebSocket (usePublicMarketFeed), not the
+ * classic socket - this is real for every session type (classic-token or
+ * OAuth), since the public feed needs no auth. See public-market-feed.ts.
+ */
 const LiveInfoCards = observer(() => {
     const { client, oauth_session } = useStore();
-    const { connectionStatus } = useApiBase();
+    const { isConnected, latencyMs, feed } = usePublicMarketFeed();
     const { localize } = useTranslations();
-    // connectionStatus tracks the classic WebSocket specifically - an OAuth
-    // session doesn't use that connection at all, so "Reconnecting" here
-    // would describe a socket this session has no reason to open, not an
-    // actual problem with the session itself.
-    const is_oauth_session = oauth_session.is_authenticated;
-    const is_connected = is_oauth_session || connectionStatus === CONNECTION_STATUS.OPENED;
-    const { latency, last_sync } = useServerLatency(is_connected && !is_oauth_session);
-    const display_currency = is_oauth_session ? oauth_session.currency : client.currency;
+    const [last_sync, setLastSync] = useState<Date | null>(null);
+    const [market_open, setMarketOpen] = useState<boolean | null>(null);
+    const display_currency = oauth_session.is_authenticated ? oauth_session.currency : client.currency;
+
+    useEffect(() => {
+        if (latencyMs !== null) setLastSync(new Date());
+    }, [latencyMs]);
+
+    useEffect(() => {
+        if (!isConnected) return;
+        feed.getActiveSymbols()
+            .then(symbols => setMarketOpen(symbols.some(symbol => symbol.exchange_is_open === 1)))
+            .catch(() => setMarketOpen(null));
+    }, [isConnected, feed]);
 
     const items = [
         {
             id: 'connection',
             icon: <StandaloneWifiRegularIcon height='20px' width='20px' />,
             label: localize('Connection status'),
-            value: is_connected ? localize('Stable') : localize('Reconnecting'),
-            tone: is_connected ? 'good' : 'warn',
+            value: isConnected ? localize('Stable') : localize('Reconnecting'),
+            tone: isConnected ? 'good' : 'warn',
         },
         {
             id: 'market',
             icon: <StandaloneCircleDotRegularIcon height='20px' width='20px' />,
             label: localize('Market status'),
-            value: localize('Open'),
-            tone: 'good',
+            value: market_open === null ? localize('—') : market_open ? localize('Open') : localize('Closed'),
+            tone: market_open ? 'good' : 'neutral',
         },
         {
             id: 'latency',
             icon: <StandaloneChartLineRegularIcon height='20px' width='20px' />,
             label: localize('Server latency'),
-            value: is_oauth_session ? localize('N/A') : latency !== null ? `${latency} ms` : localize('Measuring…'),
-            tone: latency !== null && latency < 300 ? 'good' : 'neutral',
+            value: latencyMs !== null ? `${latencyMs} ms` : localize('Measuring…'),
+            tone: latencyMs !== null && latencyMs < 300 ? 'good' : 'neutral',
         },
         {
             id: 'sync',

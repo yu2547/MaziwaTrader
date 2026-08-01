@@ -1,0 +1,204 @@
+.mw-live-market {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.6rem;
+    border-radius: 16px;
+    background: var(--glass-bg, rgb(10 14 26 / 60%));
+    border: 1px solid var(--glass-border, rgb(255 255 255 / 8%));
+    backdrop-filter: blur(16px);
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    &__symbol-select {
+        flex: 1;
+        min-width: 0;
+        padding: 0.6rem 1rem;
+        border-radius: 10px;
+        background: rgb(255 255 255 / 4%);
+        border: 1px solid var(--glass-border, rgb(255 255 255 / 8%));
+        color: var(--text-prominent);
+        font-size: 1.3rem;
+        font-weight: 600;
+
+        &:disabled {
+            opacity: 0.6;
+        }
+    }
+
+    &__status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 1rem;
+        border-radius: 999px;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #ff9f43;
+        background: rgb(255 159 67 / 12%);
+        white-space: nowrap;
+
+        &--live {
+            color: #2be08e;
+            background: rgb(43 224 142 / 12%);
+        }
+    }
+
+    &__status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentcolor;
+
+        .mw-live-market__status-pill--live & {
+            animation: mw-live-market-pulse 1.6s ease-in-out infinite;
+        }
+    }
+
+    &__price-row {
+        display: flex;
+        align-items: baseline;
+        gap: 1.2rem;
+        flex-wrap: wrap;
+    }
+
+    &__price {
+        font-size: 3rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        background: linear-gradient(120deg, #d4af37, #2fb6e0);
+        background-clip: text;
+        color: transparent;
+    }
+
+    &__change {
+        font-size: 1.4rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+
+        &--up {
+            color: #2be08e;
+        }
+
+        &--down {
+            color: #ff444f;
+        }
+    }
+
+    &__chart {
+        height: 100px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    &__chart-message {
+        font-size: 1.2rem;
+        color: var(--text-general);
+    }
+
+    &__sparkline {
+        width: 100%;
+        height: 100%;
+    }
+
+    &__sparkline-path--up {
+        fill: none;
+        stroke: #2be08e;
+        stroke-width: 1.5;
+        vector-effect: non-scaling-stroke;
+    }
+
+    &__sparkline-path--down {
+        fill: none;
+        stroke: #ff444f;
+        stroke-width: 1.5;
+        vector-effect: non-scaling-stroke;
+    }
+
+    &__quote-row {
+        display: flex;
+        gap: 1.6rem;
+        font-size: 1.2rem;
+        color: var(--text-general);
+
+        strong {
+            color: var(--text-prominent);
+            font-variant-numeric: tabular-nums;
+        }
+    }
+
+    &__activity {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--glass-border, rgb(255 255 255 / 8%));
+    }
+
+    &__activity-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-general);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    &__activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    &__activity-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 1.2rem;
+    }
+
+    &__activity-time {
+        color: var(--text-less-prominent);
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__activity-quote {
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+
+        &--up {
+            color: #2be08e;
+        }
+
+        &--down {
+            color: #ff444f;
+        }
+    }
+}
+
+@keyframes mw-live-market-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mw-live-market__status-dot {
+        animation: none !important;
+    }
+}

@@ -198,6 +198,27 @@
                 padding: 1.6rem;
             }
 
+            .mw-dashboard-grid {
+                display: flex;
+                align-items: flex-start;
+                gap: 2.4rem;
+                width: 100%;
+                flex: 1 1 100%;
+
+                @include mobile-or-tablet-screen {
+                    flex-direction: column;
+                }
+
+                > .quick-panel {
+                    flex: 1 1 55%;
+                }
+
+                > .mw-live-market {
+                    flex: 1 1 40%;
+                    align-self: stretch;
+                }
+            }
+
             .quick-panel {
                 flex: 1 1 44%;
             }

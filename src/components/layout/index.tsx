@@ -29,7 +29,10 @@ const Layout = observer(() => {
     // header/footer for its own visual identity - the dashboard chrome below
     // is only for the authenticated app and other routes, unchanged for them.
     const isIndexPage = window.location.pathname === '/' || window.location.pathname === '';
-    const isLandingPage = isIndexPage && !V2GetActiveToken();
+    // Same OAuth-session gap fixed in app-root.tsx's is_landing_page: this
+    // check only ever recognized the legacy classic-WS token, so the header/
+    // footer chrome below silently never rendered for an OAuth session.
+    const isLandingPage = isIndexPage && !V2GetActiveToken() && !store?.oauth_session?.is_authenticated;
     const { onRenderTMBCheck, is_tmb_enabled: tmb_enabled_from_hook, isTmbEnabled } = useTMB();
     const is_tmb_enabled = useMemo(
         () => window.is_tmb_enabled === true || tmb_enabled_from_hook,

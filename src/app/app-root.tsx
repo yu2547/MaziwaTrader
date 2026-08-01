@@ -10,6 +10,7 @@ import { useStore } from '@/hooks/useStore';
 import useTMB from '@/hooks/useTMB';
 import LandingPage from '@/pages/landing/landing-page';
 import { restoreStoredSession } from '@/utils/auth/deriv-oauth';
+import { public_market_feed } from '@/utils/market-data/public-market-feed';
 import { listOptionsAccounts } from '@/utils/options-trading/options-trading-api';
 import { localize } from '@deriv-com/translations';
 import './app-root.scss';
@@ -73,6 +74,17 @@ const AppRoot = () => {
 
         restore();
     }, [store]);
+
+    // Public market data (public-market-feed.ts) needs no auth and is
+    // independent of the classic socket api_base owns below - pre-warm the
+    // connection here so it's already open by the time the dashboard's own
+    // widgets mount. acquire()/release() are reference-counted (see
+    // usePublicMarketFeed), so this doesn't tear down the connection out
+    // from under standalone routes like Bulk Trader that hold their own ref.
+    useEffect(() => {
+        public_market_feed.acquire();
+        return () => public_market_feed.release();
+    }, []);
 
     // Effect to check TMB status - independent of API initialization
     useEffect(() => {

@@ -11,6 +11,7 @@ import Cards from './cards';
 import DashboardBackground from './dashboard-background';
 import DashboardHero from './dashboard-hero';
 import InfoPanel from './info-panel';
+import LiveMarketWidget from './live-market-widget';
 
 type TMobileIconGuide = {
     handleTabChange: (active_number: number) => void;
@@ -40,37 +41,42 @@ const DashboardComponent = observer(({ handleTabChange }: TMobileIconGuide) => {
                     {client.is_logged_in && (
                         <Announcements is_mobile={!isDesktop} is_tablet={isTablet} handleTabChange={handleTabChange} />
                     )}
-                    <div className='quick-panel'>
-                        <div
-                            className={classNames('tab__dashboard__header', {
-                                'tab__dashboard__header--listed': isDesktop && has_dashboard_strategies,
-                            })}
-                        >
-                            {!has_dashboard_strategies && (
-                                <Text
-                                    className='title'
-                                    as='h2'
-                                    color='prominent'
-                                    size={isDesktop ? 'sm' : 's'}
-                                    lineHeight='xxl'
-                                    weight='bold'
-                                >
-                                    {localize('Load or build your bot')}
-                                </Text>
-                            )}
-                            <Text
-                                as='p'
-                                color='prominent'
-                                lineHeight='s'
-                                size={isDesktop ? 's' : 'xxs'}
-                                className={classNames('subtitle', { 'subtitle__has-list': has_dashboard_strategies })}
+                    <div className='mw-dashboard-grid'>
+                        <div className='quick-panel'>
+                            <div
+                                className={classNames('tab__dashboard__header', {
+                                    'tab__dashboard__header--listed': isDesktop && has_dashboard_strategies,
+                                })}
                             >
-                                {localize(
-                                    'Import a bot from your computer or Google Drive, build it from scratch, or start with a quick strategy.'
+                                {!has_dashboard_strategies && (
+                                    <Text
+                                        className='title'
+                                        as='h2'
+                                        color='prominent'
+                                        size={isDesktop ? 'sm' : 's'}
+                                        lineHeight='xxl'
+                                        weight='bold'
+                                    >
+                                        {localize('Load or build your bot')}
+                                    </Text>
                                 )}
-                            </Text>
+                                <Text
+                                    as='p'
+                                    color='prominent'
+                                    lineHeight='s'
+                                    size={isDesktop ? 's' : 'xxs'}
+                                    className={classNames('subtitle', {
+                                        'subtitle__has-list': has_dashboard_strategies,
+                                    })}
+                                >
+                                    {localize(
+                                        'Import a bot from your computer or Google Drive, build it from scratch, or start with a quick strategy.'
+                                    )}
+                                </Text>
+                            </div>
+                            <Cards has_dashboard_strategies={has_dashboard_strategies} is_mobile={!isDesktop} />
                         </div>
-                        <Cards has_dashboard_strategies={has_dashboard_strategies} is_mobile={!isDesktop} />
+                        <LiveMarketWidget />
                     </div>
                 </div>
             </div>

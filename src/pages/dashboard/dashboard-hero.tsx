@@ -2,8 +2,8 @@ import { observer } from 'mobx-react-lite';
 import { addComma, getDecimalPlaces } from '@/components/shared';
 import { CONNECTION_STATUS } from '@/external/bot-skeleton/services/api/observables/connection-status-stream';
 import { useApiBase } from '@/hooks/useApiBase';
+import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
 import { useStore } from '@/hooks/useStore';
-import useUtcClock from '@/hooks/useUtcClock';
 import {
     StandaloneCircleCheckRegularIcon,
     StandaloneTriangleExclamationRegularIcon,
@@ -11,9 +11,6 @@ import {
 import { Localize, useTranslations } from '@deriv-com/translations';
 import LiveInfoCards from './live-info-cards';
 import './dashboard-hero.scss';
-
-const TIME_FORMAT: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
-const DATE_FORMAT: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
 
 const getGreeting = (hour: number) => {
     if (hour < 5) return 'Good Night';
@@ -25,8 +22,8 @@ const getGreeting = (hour: number) => {
 const DashboardHero = observer(() => {
     const { client, oauth_session } = useStore();
     const { connectionStatus } = useApiBase();
+    const { isConnected: is_feed_connected } = usePublicMarketFeed();
     const { localize } = useTranslations();
-    const now = useUtcClock();
 
     // The OAuth + Options API session is the primary source once it's
     // authenticated; it never overlaps with the legacy client store (that one
@@ -38,14 +35,16 @@ const DashboardHero = observer(() => {
     const display_balance = is_oauth_session ? oauth_session.balance : Number(client.balance || 0);
     const is_demo_account = is_oauth_session ? oauth_session.account_type === 'demo' : client.is_virtual;
 
-    const greeting = getGreeting(now.getUTCHours());
-    const gmt_time = now.toLocaleTimeString('en-GB', { ...TIME_FORMAT, timeZone: 'UTC' });
-    const today = now.toLocaleDateString('en-GB', DATE_FORMAT);
+    const greeting = getGreeting(new Date().getUTCHours());
 
     const decimals = getDecimalPlaces(display_currency);
     const formatted_balance = addComma(Number(display_balance || 0).toFixed(decimals));
     const account_type = is_demo_account ? localize('Demo account') : localize('Real account');
-    const is_connected = is_oauth_session ? true : connectionStatus === CONNECTION_STATUS.OPENED;
+    // The classic connection and the public market feed are two independent
+    // sockets - an OAuth session only ever has the feed, so "Server status"
+    // reflects whichever one this session actually depends on, rather than
+    // always claiming "Live" regardless of what's really connected.
+    const is_connected = is_oauth_session ? is_feed_connected : connectionStatus === CONNECTION_STATUS.OPENED;
 
     return (
         <section className='mw-hero' aria-label={localize('Account overview')}>
@@ -60,12 +59,6 @@ const DashboardHero = observer(() => {
                     <p className='mw-hero__subtitle'>
                         <Localize i18n_default_text='Here is what’s happening with your account today.' />
                     </p>
-                </div>
-                <div className='mw-hero__clock-block'>
-                    <span className='mw-hero__date'>{today}</span>
-                    <span className='mw-hero__gmt'>
-                        {gmt_time} <span className='mw-hero__gmt-label'>GMT</span>
-                    </span>
                 </div>
             </div>
 
