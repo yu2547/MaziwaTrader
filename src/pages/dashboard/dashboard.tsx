@@ -17,16 +17,20 @@ type TMobileIconGuide = {
 };
 
 const DashboardComponent = observer(({ handleTabChange }: TMobileIconGuide) => {
-    const { load_modal, dashboard, client } = useStore();
+    const { load_modal, dashboard, client, oauth_session } = useStore();
     const { dashboard_strategies } = load_modal;
     const { active_tab, active_tour } = dashboard;
     const has_dashboard_strategies = !!dashboard_strategies?.length;
     const { isDesktop, isTablet } = useDevice();
+    // client.is_logged_in only ever reflects the legacy classic-WS session -
+    // an OAuth + Options API session never sets it, so it needs its own check
+    // here too (see header.tsx for the same pattern).
+    const is_logged_in = client.is_logged_in || oauth_session.is_authenticated;
 
     return (
         <div className='mw-dashboard-shell'>
             <DashboardBackground />
-            {client.is_logged_in && <DashboardHero />}
+            {is_logged_in && <DashboardHero />}
             <div
                 className={classNames('tab__dashboard', {
                     'tab__dashboard--tour-active': active_tour,

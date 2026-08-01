@@ -32,7 +32,8 @@ type TAppHeaderProps = {
 const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
     const { isDesktop } = useDevice();
     const { isAuthorizing, activeLoginid } = useApiBase();
-    const { client } = useStore() ?? {};
+    const { client, oauth_session } = useStore() ?? {};
+    const is_oauth_only_session = !activeLoginid && !!oauth_session?.is_authenticated;
 
     const { data: activeAccount } = useActiveAccount({ allBalanceData: client?.all_accounts_balance });
     const { accounts, getCurrency, is_virtual } = client ?? {};
@@ -51,6 +52,29 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
         // Show loader during authentication processes
         if (isAuthenticating || isAuthorizing || (isSingleLoggingIn && !is_tmb_enabled)) {
             return <AccountsInfoLoader isLoggedIn isMobile={!isDesktop} speed={3} />;
+        } else if (is_oauth_only_session) {
+            // A session authenticated via the new OAuth + Options API flow has
+            // no legacy loginid, so it never satisfies the activeLoginid branch
+            // below - without this, the header showed "Log in / Sign up" even
+            // though the user was already signed in, with no way to log out.
+            return (
+                <div className='auth-actions'>
+                    <HeaderClock />
+                    <span className='app-header__oauth-account-pill'>
+                        {oauth_session?.account_id || localize('Options account')}
+                        {oauth_session?.currency ? ` · ${oauth_session.currency}` : ''}
+                    </span>
+                    <Button
+                        tertiary
+                        onClick={() => {
+                            oauth_session?.clear();
+                            window.location.href = '/';
+                        }}
+                    >
+                        <Localize i18n_default_text='Log out' />
+                    </Button>
+                </div>
+            );
         } else if (activeLoginid) {
             return (
                 <>
@@ -167,6 +191,8 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
         isSingleLoggingIn,
         isDesktop,
         activeLoginid,
+        is_oauth_only_session,
+        oauth_session,
         standalone_routes,
         client,
         has_wallet,

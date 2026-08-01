@@ -48,11 +48,17 @@ const useServerLatency = (is_connected: boolean) => {
 };
 
 const LiveInfoCards = observer(() => {
-    const { client } = useStore();
+    const { client, oauth_session } = useStore();
     const { connectionStatus } = useApiBase();
     const { localize } = useTranslations();
-    const is_connected = connectionStatus === CONNECTION_STATUS.OPENED;
-    const { latency, last_sync } = useServerLatency(is_connected);
+    // connectionStatus tracks the classic WebSocket specifically - an OAuth
+    // session doesn't use that connection at all, so "Reconnecting" here
+    // would describe a socket this session has no reason to open, not an
+    // actual problem with the session itself.
+    const is_oauth_session = oauth_session.is_authenticated;
+    const is_connected = is_oauth_session || connectionStatus === CONNECTION_STATUS.OPENED;
+    const { latency, last_sync } = useServerLatency(is_connected && !is_oauth_session);
+    const display_currency = is_oauth_session ? oauth_session.currency : client.currency;
 
     const items = [
         {
@@ -73,7 +79,7 @@ const LiveInfoCards = observer(() => {
             id: 'latency',
             icon: <StandaloneChartLineRegularIcon height='20px' width='20px' />,
             label: localize('Server latency'),
-            value: latency !== null ? `${latency} ms` : localize('Measuring…'),
+            value: is_oauth_session ? localize('N/A') : latency !== null ? `${latency} ms` : localize('Measuring…'),
             tone: latency !== null && latency < 300 ? 'good' : 'neutral',
         },
         {
@@ -87,7 +93,7 @@ const LiveInfoCards = observer(() => {
             id: 'currency',
             icon: <StandaloneCircleDollarRegularIcon height='20px' width='20px' />,
             label: localize('Account currency'),
-            value: client.currency || '—',
+            value: display_currency || '—',
             tone: 'neutral',
         },
     ] as const;

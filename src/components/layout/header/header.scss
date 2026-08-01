@@ -366,6 +366,14 @@
     display: flex;
     padding-block: 8px;
     align-items: center;
+    gap: 0.8rem;
+
+    .app-header__oauth-account-pill {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-general);
+        white-space: nowrap;
+    }
 
     .signup-message {
         font-size: 1.1rem;
