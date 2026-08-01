@@ -80,8 +80,18 @@ const AppContent = observer(() => {
             }
         } else if (connectionStatus !== CONNECTION_STATUS.OPENED) {
             common.setSocketOpened(false);
+            // An OAuth + Options API session has no legacy token to authorize
+            // the classic socket with, so it has no reason to wait on
+            // connectionStatus reaching OPENED at all - unlike a legacy-token
+            // session, there's no fallback timeout for this state otherwise,
+            // so this would hang here forever if that socket never connects
+            // (which it currently doesn't - see app-content.jsx's sibling
+            // fix and its commit message for the confirmed classic-WS outage).
+            if (oauth_session.is_authenticated) {
+                setIsApiInitialized(true);
+            }
         }
-    }, [common, connectionStatus, offline_timeout]);
+    }, [common, connectionStatus, offline_timeout, oauth_session.is_authenticated]);
 
     // Handle offline scenarios - don't wait indefinitely for API
     useEffect(() => {
