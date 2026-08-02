@@ -15,6 +15,7 @@ import HelpCentre from './HelpCentre';
 import LanguageSettings from './LanguageSettings';
 import NetworkStatus from './NetworkStatus';
 import ResponsibleTrading from './ResponsibleTrading';
+import RiskDisclaimer from './RiskDisclaimer';
 import ServerStatus from './ServerStatus';
 import Settings from './Settings';
 import WhatsApp from './WhatsApp';
@@ -32,6 +33,7 @@ const Footer = () => {
     return (
         <footer className='app-footer'>
             <div className='app-footer__group app-footer__group--start'>
+                <RiskDisclaimer />
                 <NetworkStatus />
                 <ServerStatus />
                 <GmtClock />
