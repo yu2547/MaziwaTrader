@@ -32,15 +32,23 @@ export const MenuItems = observer(() => {
     if (!store) return null;
 
     const client = store.client ?? {};
-    const is_logged_in = client.is_logged_in ?? false;
+    const oauth_session = store.oauth_session;
+    // An OAuth + Options API session has no legacy client.is_logged_in flag -
+    // without checking is_authenticated too, Reports/Cashier/Free Bots/
+    // Analysis Tool silently never render for that session type (the same
+    // gap fixed elsewhere in app-root.tsx, dashboard.tsx, header.tsx).
+    const is_oauth_session = !!oauth_session?.is_authenticated;
+    const is_logged_in = (client.is_logged_in ?? false) || is_oauth_session;
     const getCurrency = client.getCurrency;
-    const currency = getCurrency?.();
+    const currency = is_oauth_session ? oauth_session?.currency : getCurrency?.();
 
     // Check if the account is a demo account
     // Use the URL parameter to determine if it's a demo account, as this will update when the account changes
     const urlParams = new URLSearchParams(window.location.search);
     const account_param = urlParams.get('account');
-    const is_virtual = client.is_virtual || account_param === 'demo' || false;
+    const is_virtual = is_oauth_session
+        ? oauth_session?.account_type === 'demo'
+        : client.is_virtual || account_param === 'demo' || false;
 
     // Use handleTraderHubRedirect for all links
     const getModifiedHref = (originalHref: string) => {
