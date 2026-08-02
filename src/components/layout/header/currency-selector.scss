@@ -1,0 +1,25 @@
+.mw-currency-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+
+    &__balance {
+        display: inline-flex;
+        align-items: center;
+        min-width: 8rem;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #2be08e;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+
+        &--stale {
+            color: #ff9f43;
+            font-weight: 600;
+        }
+
+        @media (width <= 1024px) {
+            display: none;
+        }
+    }
+}

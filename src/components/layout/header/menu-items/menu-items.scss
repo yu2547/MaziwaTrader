@@ -1,13 +1,16 @@
 .app-header__menu {
     gap: 0.8rem;
     padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+    border-radius: 10px;
     position: relative;
     transition:
         color 0.2s ease,
-        transform 0.2s ease;
+        transform 0.2s ease,
+        background 0.25s ease;
 
     &:hover {
         transform: translateY(-1px);
+        background: radial-gradient(circle at 50% 0%, rgb(47 182 224 / 8%) 0%, transparent 70%);
 
         .app-header__menu-underline {
             transform: scaleX(1);

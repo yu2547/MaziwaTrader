@@ -1,0 +1,159 @@
+.mw-segmented {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgb(22 29 50 / 75%) 0%, rgb(9 13 24 / 85%) 100%);
+    border: 1px solid rgb(255 255 255 / 11%);
+    backdrop-filter: blur(18px) saturate(150%);
+    box-shadow:
+        0 1px 0 0 rgb(255 255 255 / 8%) inset,
+        0 -1px 5px 0 rgb(0 0 0 / 45%) inset,
+        0 6px 20px 0 rgb(0 0 0 / 40%),
+        0 0 0 1px rgb(47 182 224 / 10%),
+        0 0 24px -8px rgb(47 182 224 / 25%);
+
+    &:before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: linear-gradient(115deg, rgb(255 255 255 / 7%) 0%, transparent 30%);
+        pointer-events: none;
+    }
+
+    // Ambient "breathing" glow as a separate layer animated on opacity only
+    // (not box-shadow) so it composites on the GPU instead of repainting
+    // the whole pill every frame.
+    &:after {
+        content: '';
+        position: absolute;
+        inset: -10px;
+        z-index: -1;
+        border-radius: inherit;
+        background: radial-gradient(ellipse, rgb(47 182 224 / 35%) 0%, transparent 70%);
+        opacity: 0;
+        animation: mw-segmented-ambient 6s ease-in-out infinite;
+        will-change: opacity;
+        pointer-events: none;
+    }
+
+    &__option {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 60px;
+        min-height: 44px;
+        padding: 0.7rem 1.3rem;
+        border: none;
+        border-radius: 999px;
+        background: transparent;
+        cursor: pointer;
+        transition:
+            transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
+            color 220ms cubic-bezier(0.4, 0, 0.2, 1);
+
+        &:focus-visible {
+            outline: 2px solid #4fd8ff;
+            outline-offset: 2px;
+        }
+
+        &:hover:not(&--active) {
+            transform: translateY(-0.5px);
+            background: rgb(255 255 255 / 4%);
+
+            .mw-segmented__label {
+                color: var(--text-prominent);
+            }
+        }
+
+        &--active {
+            transform: translateY(-1.5px) scale(1.05);
+
+            .mw-segmented__label {
+                color: #0a0e1a;
+                font-weight: 700;
+                text-shadow: 0 1px 0 rgb(255 255 255 / 30%);
+            }
+        }
+    }
+
+    &__label {
+        position: relative;
+        z-index: 2;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-less-prominent);
+        white-space: nowrap;
+        letter-spacing: 0.01em;
+        transition: color 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    &__indicator {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        border-radius: 999px;
+        background: linear-gradient(150deg, #5fe0ff 0%, #2fb6e0 45%, #1877a3 100%);
+        box-shadow:
+            0 2px 0 0 rgb(255 255 255 / 40%) inset,
+            0 -4px 8px 0 rgb(0 0 0 / 30%) inset,
+            0 1px 0 0 rgb(212 175 55 / 55%) inset,
+            0 6px 18px 0 rgb(47 182 224 / 55%),
+            0 2px 6px 0 rgb(0 0 0 / 35%),
+            0 0 0 1px rgb(212 175 55 / 40%);
+
+        &:after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(120deg, rgb(255 255 255 / 45%) 0%, rgb(255 255 255 / 0%) 50%);
+            pointer-events: none;
+        }
+
+        &:before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 10%;
+            right: 10%;
+            height: 8px;
+            border-radius: 999px;
+            background: radial-gradient(ellipse, rgb(47 182 224 / 45%) 0%, transparent 75%);
+            filter: blur(3px);
+            pointer-events: none;
+        }
+    }
+}
+
+@keyframes mw-segmented-ambient {
+    0%,
+    100% {
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+@media (width <= 480px) {
+    .mw-segmented__option {
+        min-width: 52px;
+        padding: 0.7rem 1rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mw-segmented:after {
+        animation: none;
+        opacity: 0.4;
+    }
+
+    .mw-segmented__option {
+        transition: none;
+    }
+}

@@ -18,6 +18,8 @@ import { AppLogo } from '../app-logo';
 import CustomNotifications from './custom-notifications/custom-notifications';
 import AccountsInfoLoader from './account-info-loader';
 import AccountSwitcher from './account-switcher';
+import AccountTypeSelector from './account-type-selector';
+import CurrencySelector from './currency-selector';
 import HeaderClock from './HeaderClock';
 import MenuItems from './menu-items';
 import MobileMenu from './mobile-menu';
@@ -61,7 +63,10 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
             // though the user was already signed in, with no way to log out.
             return (
                 <div className='auth-actions'>
+                    <CustomNotifications />
                     {isDesktop && <RegionBadge />}
+                    <CurrencySelector />
+                    <AccountTypeSelector />
                     {isDesktop && (
                         <Button
                             primary

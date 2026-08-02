@@ -4,15 +4,23 @@ import { CurrencyIcon } from '@/components/currency/currency-icon';
 import { addComma, getDecimalPlaces } from '@/components/shared';
 import { useStore } from '@/hooks/useStore';
 import { clearStoredSession } from '@/utils/auth/deriv-oauth';
-import { StandaloneChevronDownRegularIcon, StandaloneRightFromBracketRegularIcon } from '@deriv/quill-icons/Standalone';
+import {
+    StandaloneChevronDownRegularIcon,
+    StandaloneCircleUserRegularIcon,
+    StandaloneRightFromBracketRegularIcon,
+} from '@deriv/quill-icons/Standalone';
 import { useTranslations } from '@deriv-com/translations';
 import './oauth-account-switcher.scss';
 
 /**
- * Real account switcher for the OAuth + Options API session - oauth_session.accounts
- * is the actual list of Options accounts linked to this Deriv login (both real and
- * demo), so Real/Demo tabs and balances here are genuine data, and selecting an
- * account calls the store's existing selectAccount() rather than simulating a switch.
+ * Profile/account dropdown for the OAuth + Options API session -
+ * oauth_session.accounts is the actual list of Options accounts linked to
+ * this Deriv login (both real and demo), so Real/Demo tabs and balances
+ * here are genuine data, and selecting an account calls the store's
+ * existing selectAccount() rather than simulating a switch. Quick real/demo
+ * switching now also lives in the always-visible account-type-selector -
+ * this dropdown is the detailed "which specific account" + logout affordance,
+ * so its trigger is a compact avatar rather than a balance pill.
  */
 const OAuthAccountSwitcher = observer(() => {
     const { oauth_session } = useStore() ?? {};
@@ -29,8 +37,15 @@ const OAuthAccountSwitcher = observer(() => {
                 setIsOpen(false);
             }
         };
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setIsOpen(false);
+        };
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleEscape);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEscape);
+        };
     }, []);
 
     if (!oauth_session) return null;
@@ -40,7 +55,6 @@ const OAuthAccountSwitcher = observer(() => {
     const demo_accounts = accounts.filter(account => account.account_type === 'demo');
     const tab_accounts = active_tab === 'real' ? real_accounts : demo_accounts;
     const selected = oauth_session.selected_account;
-    const decimals = getDecimalPlaces(oauth_session.currency || 'USD');
 
     const handleLogout = () => {
         clearStoredSession();
@@ -55,13 +69,10 @@ const OAuthAccountSwitcher = observer(() => {
                 className='oauth-account-switcher__trigger'
                 onClick={() => setIsOpen(prev => !prev)}
                 aria-expanded={is_open}
+                aria-label={localize('Account profile')}
             >
-                <CurrencyIcon
-                    currency={oauth_session.currency?.toLowerCase()}
-                    isVirtual={oauth_session.account_type === 'demo'}
-                />
-                <span className='oauth-account-switcher__balance'>
-                    {addComma(Number(oauth_session.balance || 0).toFixed(decimals))} {oauth_session.currency || '—'}
+                <span className='oauth-account-switcher__avatar'>
+                    <StandaloneCircleUserRegularIcon height={20} width={20} />
                 </span>
                 <StandaloneChevronDownRegularIcon
                     height={14}

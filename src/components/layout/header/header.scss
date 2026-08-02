@@ -8,11 +8,13 @@
         position: sticky;
         top: 0;
         z-index: 100;
-        background: var(--glass-bg) !important;
-        backdrop-filter: blur(20px) saturate(160%);
+        background: linear-gradient(180deg, rgb(47 182 224 / 4%) 0%, transparent 60%), var(--glass-bg) !important;
         backdrop-filter: blur(20px) saturate(160%);
         border-bottom: 1px solid var(--glass-border);
-        box-shadow: 0 4px 24px 0 var(--glass-shadow);
+        box-shadow:
+            0 1px 0 0 rgb(212 175 55 / 12%),
+            0 4px 24px 0 var(--glass-shadow),
+            0 8px 32px -8px rgb(47 182 224 / 10%);
         transition: box-shadow 0.25s ease;
 
         @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -396,6 +398,14 @@
 .withdraw-button {
     background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%) !important;
     border: none !important;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease !important;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px 0 rgb(139 92 246 / 40%) !important;
+    }
 }
 
 .deriv-accordion--underline {

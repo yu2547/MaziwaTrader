@@ -4,8 +4,11 @@
     &__trigger {
         display: flex;
         align-items: center;
-        gap: 0.6rem;
-        padding: 0.6rem 1.2rem;
+        justify-content: center;
+        gap: 0.4rem;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.5rem 0.9rem;
         border-radius: 999px;
         background: var(--glass-bg);
         border: 1px solid var(--glass-border);
@@ -13,20 +16,26 @@
         cursor: pointer;
         transition:
             border-color 0.2s ease,
-            box-shadow 0.2s ease;
+            box-shadow 0.2s ease,
+            transform 0.2s ease;
 
         &:hover {
             border-color: var(--nav-glow);
             box-shadow: 0 0 14px 0 var(--nav-glow);
+            transform: translateY(-1px);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #4fd8ff;
+            outline-offset: 2px;
         }
     }
 
-    &__balance {
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: #2be08e;
-        font-variant-numeric: tabular-nums;
-        white-space: nowrap;
+    &__avatar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-prominent);
     }
 
     &__chevron {
@@ -71,6 +80,11 @@
             color: #ff444f;
             border-bottom-color: #ff444f;
         }
+
+        &:focus-visible {
+            outline: 2px solid #4fd8ff;
+            outline-offset: -2px;
+        }
     }
 
     &__list-header {
@@ -114,6 +128,11 @@
 
         &--active {
             background: rgb(255 255 255 / 6%);
+        }
+
+        &:focus-visible {
+            outline: 2px solid #4fd8ff;
+            outline-offset: -2px;
         }
     }
 
@@ -162,6 +181,11 @@
 
         &:hover {
             color: #ff444f;
+        }
+
+        &:focus-visible {
+            outline: 2px solid #4fd8ff;
+            outline-offset: -2px;
         }
     }
 }
