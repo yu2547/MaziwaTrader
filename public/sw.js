@@ -110,6 +110,15 @@ self.addEventListener('fetch', event => {
         return;
     }
 
+    // Skip the public exchange-rate API used by the header's currency
+    // selector - letting the SW "handle" it here means any transient
+    // network hiccup gets silently replaced with a synthetic offline
+    // response instead of a real failure the app can react to.
+    if (url.hostname === 'open.er-api.com') {
+        console.log('[SW] Skipping exchange-rate request:', url.pathname);
+        return;
+    }
+
     // Skip requests with no-cache headers
     if (request.headers.get('cache-control') === 'no-cache') {
         return;
