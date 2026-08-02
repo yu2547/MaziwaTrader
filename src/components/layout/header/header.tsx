@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import clsx from 'clsx';
 import { observer } from 'mobx-react-lite';
 import PWAInstallButton from '@/components/pwa-install-button';
-import { redirectToLogin, standalone_routes } from '@/components/shared';
+import { redirectToLogin, redirectToSignUp, standalone_routes } from '@/components/shared';
 import Button from '@/components/shared_ui/button';
 import useActiveAccount from '@/hooks/api/account/useActiveAccount';
 import { useOauth2 } from '@/hooks/auth/useOauth2';
@@ -10,7 +10,6 @@ import { useFirebaseCountriesConfig } from '@/hooks/firebase/useFirebaseCountrie
 import { useApiBase } from '@/hooks/useApiBase';
 import { useStore } from '@/hooks/useStore';
 import useTMB from '@/hooks/useTMB';
-import { clearStoredSession } from '@/utils/auth/deriv-oauth';
 import { StandaloneCircleUserRegularIcon } from '@deriv/quill-icons/Standalone';
 import { Localize, useTranslations } from '@deriv-com/translations';
 import { Header, useDevice, Wrapper } from '@deriv-com/ui';
@@ -22,6 +21,8 @@ import AccountSwitcher from './account-switcher';
 import HeaderClock from './HeaderClock';
 import MenuItems from './menu-items';
 import MobileMenu from './mobile-menu';
+import OAuthAccountSwitcher from './oauth-account-switcher';
+import RegionBadge from './region-badge';
 import TelegramLink from './TelegramLink';
 import YouTubeLink from './YouTubeLink';
 import './header.scss';
@@ -60,21 +61,25 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
             // though the user was already signed in, with no way to log out.
             return (
                 <div className='auth-actions'>
+                    {isDesktop && <RegionBadge />}
+                    {isDesktop && (
+                        <Button
+                            primary
+                            onClick={() => {
+                                const redirect_url = new URL(standalone_routes.cashier);
+                                redirect_url.searchParams.set(
+                                    'account',
+                                    oauth_session?.account_type === 'demo' ? 'demo' : oauth_session?.currency || ''
+                                );
+                                window.location.assign(redirect_url.toString());
+                            }}
+                            className='withdraw-button'
+                        >
+                            {localize('Withdraw')}
+                        </Button>
+                    )}
+                    <OAuthAccountSwitcher />
                     <HeaderClock />
-                    <span className='app-header__oauth-account-pill'>
-                        {oauth_session?.account_id || localize('Options account')}
-                        {oauth_session?.currency ? ` · ${oauth_session.currency}` : ''}
-                    </span>
-                    <Button
-                        tertiary
-                        onClick={() => {
-                            clearStoredSession();
-                            oauth_session?.clear();
-                            window.location.href = '/';
-                        }}
-                    >
-                        <Localize i18n_default_text='Log out' />
-                    </Button>
                 </div>
             );
         } else if (activeLoginid) {

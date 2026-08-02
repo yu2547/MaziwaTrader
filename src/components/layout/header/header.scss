@@ -368,13 +368,6 @@
     align-items: center;
     gap: 0.8rem;
 
-    .app-header__oauth-account-pill {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: var(--text-general);
-        white-space: nowrap;
-    }
-
     .signup-message {
         font-size: 1.1rem;
         color: var(--text-general);
@@ -395,8 +388,14 @@
 }
 
 .deposit-button,
-.manage-funds-button {
+.manage-funds-button,
+.withdraw-button {
     margin-inline-end: 1.6rem;
+}
+
+.withdraw-button {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%) !important;
+    border: none !important;
 }
 
 .deriv-accordion--underline {

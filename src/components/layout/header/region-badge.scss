@@ -1,0 +1,40 @@
+.region-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+
+    &__currency {
+        display: flex;
+        border-radius: 6px;
+        overflow: hidden;
+        font-size: 1.1rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    &__currency-segment {
+        padding: 0.6rem 0.8rem;
+
+        &--local {
+            background: rgb(255 255 255 / 8%);
+            color: var(--text-general);
+        }
+
+        &--usd {
+            background: #ff444f;
+            color: #fff;
+        }
+    }
+
+    &__phone {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-general);
+        transition: color 0.2s ease;
+
+        &:hover {
+            color: #2fb6e0;
+        }
+    }
+}
