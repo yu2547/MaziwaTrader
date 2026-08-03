@@ -94,27 +94,31 @@
         }
     }
 
-    // The one filled surface in the bar - a plain flat call-to-action, not
-    // a material. Its color communicates "primary action," nothing else.
+    // Same purple gradient as the real app's own withdraw-button
+    // (header.scss) - reused rather than invented, so this reads as the
+    // same product, not a different color language bolted on.
     &__deposit-button {
         align-self: center;
         border: none;
         border-radius: 999px;
-        background: #2fb6e0;
-        color: #06131b;
+        background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        color: #fff;
         font-size: 1.1rem;
         font-weight: 700;
         padding: 0.6rem 1.4rem;
         white-space: nowrap;
         cursor: pointer;
-        transition: background 150ms ease;
+        transition:
+            transform 150ms ease,
+            box-shadow 150ms ease;
 
         &:hover {
-            background: #4fd8ff;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px 0 rgb(139 92 246 / 40%);
         }
 
         &:focus-visible {
-            outline: 2px solid #4fd8ff;
+            outline: 2px solid #8b5cf6;
             outline-offset: 2px;
         }
     }
@@ -126,24 +130,25 @@
         overflow: hidden;
     }
 
-    // The one place allowed to be the loudest thing on the line - and only
-    // because of scale and weight, not a box or a color no one else uses.
+    // Deriv's own brand teal ($color-green-3 in _constants.scss) - a real
+    // color already used across the app for balances/positive values, not
+    // a new one.
     &__balance-number {
         display: inline-block;
-        font-family: 'IBM Plex Mono', 'SFMono-Regular', "Consolas", monospace;
+        font-family: 'IBM Plex Mono', 'SFMono-Regular', 'Consolas', monospace;
         font-size: 2rem;
         font-weight: 700;
-        color: #fff;
+        color: #00a79e;
         font-variant-numeric: tabular-nums;
         white-space: nowrap;
         line-height: 1;
     }
 
     &__balance-currency {
-        font-family: 'IBM Plex Mono', 'SFMono-Regular', "Consolas", monospace;
+        font-family: 'IBM Plex Mono', 'SFMono-Regular', 'Consolas', monospace;
         font-size: 1.1rem;
         font-weight: 600;
-        color: #6b7280;
+        color: #00a79e;
         white-space: nowrap;
     }
 
@@ -191,23 +196,41 @@
         }
     }
 
+    // A light surface, deliberately - this is a popover menu, not part of
+    // the dark bar's own material. It reads as a distinct layer floating
+    // above the page, the same way any dropdown menu does.
     &__panel {
         position: absolute;
         top: calc(100% + 10px);
         right: 0;
         width: 280px;
         border-radius: 12px;
-        background: #0d1220;
-        border: 1px solid rgb(255 255 255 / 10%);
-        box-shadow: 0 16px 40px rgb(0 0 0 / 50%);
+        background: #fff;
+        border: 1px solid rgb(0 0 0 / 8%);
+        box-shadow: 0 16px 40px rgb(0 0 0 / 18%);
         z-index: 200;
         overflow: hidden;
 
         // The Real/Demo switch belongs to the panel's own layout, not the
         // shared control's styling - margin lives here, not in
         // segmented-control.scss, so the control stays context-free.
+        // Colors are overridden too: this control also lives in the dark
+        // bar (as the currency block's sibling), but here on a white
+        // surface it needs the light-theme half of the same component.
         .mw-dial {
             margin: 1rem 1.2rem 0.6rem;
+
+            .mw-dial__label {
+                color: #8a95ab;
+            }
+
+            .mw-dial__option--active .mw-dial__label {
+                color: #1a1f2c;
+            }
+
+            .mw-dial__underline {
+                background: #ff444f;
+            }
         }
     }
 
@@ -240,44 +263,36 @@
         text-align: left;
 
         &:hover {
-            background: rgb(255 255 255 / 5%);
+            background: rgb(0 0 0 / 4%);
         }
 
         &--active {
-            background: rgb(47 182 224 / 8%);
+            background: rgb(255 68 79 / 6%);
         }
     }
 
-    &__panel-account-type {
-        padding: 0.2rem 0.6rem;
-        border-radius: 999px;
-        font-size: 1rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        background: rgb(47 182 224 / 15%);
-        color: #6fe3ff;
-        flex-shrink: 0;
-    }
-
+    // No separate "REAL"/"DEMO" badge per row - the tab above the list
+    // already says which type these rows are, so repeating it here would
+    // just be the same fact printed twice.
     &__panel-account-info {
         flex: 1;
         display: flex;
         flex-direction: column;
         font-size: 1.2rem;
-        color: #eef3fb;
+        color: #1a1f2c;
         font-weight: 600;
     }
 
     &__panel-account-id {
         font-size: 1.05rem;
-        color: #5a6478;
+        color: #8a95ab;
         font-weight: 500;
     }
 
     &__panel-account-balance {
         font-size: 1.15rem;
         font-weight: 600;
-        color: #eef3fb;
+        color: #1a1f2c;
         font-variant-numeric: tabular-nums;
         white-space: nowrap;
     }
@@ -286,10 +301,10 @@
     // type, so this stays disabled rather than pretending to work.
     &__panel-reset {
         flex-shrink: 0;
-        border: 1px solid rgb(255 255 255 / 12%);
+        border: 1px solid rgb(0 0 0 / 12%);
         border-radius: 999px;
         background: transparent;
-        color: #5a6478;
+        color: #8a95ab;
         font-size: 0.95rem;
         font-weight: 600;
         padding: 0.35rem 0.7rem;
@@ -299,7 +314,7 @@
 
     &__panel-divider {
         height: 1px;
-        background: rgb(255 255 255 / 8%);
+        background: rgb(0 0 0 / 8%);
     }
 
     &__panel-logout {

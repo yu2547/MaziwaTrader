@@ -241,9 +241,10 @@ const OAuthFlatNav = observer(() => {
                                             }
                                         }}
                                     >
-                                        <span className='mw-premium-nav__panel-account-type'>
-                                            {account.account_type === 'demo' ? localize('Demo') : localize('Real')}
-                                        </span>
+                                        <CurrencyIcon
+                                            currency={account.currency}
+                                            isVirtual={account.account_type === 'demo'}
+                                        />
                                         <span className='mw-premium-nav__panel-account-info'>
                                             <span>{account.currency}</span>
                                             <span className='mw-premium-nav__panel-account-id'>
