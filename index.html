@@ -15,6 +15,10 @@
             rel="stylesheet"
             href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:300,400,500,700&display=swap&subset=cyrillic,cyrillic-ext,latin-ext,vietnamese"
         />
+        <!-- IBM Plex Mono: the account console's balance/figures were declared in this
+             typeface but it was never actually loaded, so every number has silently been
+             rendering in the system fallback (Consolas/SFMono) instead. -->
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=IBM+Plex+Mono:600,700&display=swap" />
 
         <!-- PWA Manifest -->
         <link rel="manifest" href="/manifest.json" />
@@ -147,10 +151,11 @@
             // Surface CSP violations to the console with enough detail to fix them -
             // the browser's own network-panel reporting is easy to miss.
             document.addEventListener('securitypolicyviolation', event => {
-                console.error(
-                    `[CSP] Blocked: ${event.violatedDirective} - ${event.blockedURI}`,
-                    { sourceFile: event.sourceFile, lineNumber: event.lineNumber, originalPolicy: event.originalPolicy }
-                );
+                console.error(`[CSP] Blocked: ${event.violatedDirective} - ${event.blockedURI}`, {
+                    sourceFile: event.sourceFile,
+                    lineNumber: event.lineNumber,
+                    originalPolicy: event.originalPolicy,
+                });
             });
         </script>
     </body>

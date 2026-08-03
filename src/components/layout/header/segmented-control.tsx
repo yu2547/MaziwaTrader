@@ -16,25 +16,22 @@ type TSegmentedControlProps = {
 };
 
 /**
- * Shared premium segmented-control primitive (glassmorphism, sliding
- * spring-physics indicator) used by both the currency and account-type
- * selectors in the header - kept generic/reusable rather than duplicating
- * the same animation logic twice.
- *
- * Implements the WAI-ARIA tablist roving-tabindex pattern: only the active
- * segment sits in the natural Tab order, and Left/Right/Home/End move focus
- * (and selection - a segmented control is a single-choice input, so
- * automatic activation on arrow press matches how a native radio group
- * behaves) between segments without a Tab keypress per segment.
+ * A compact text toggle, not an instrument - two labels and a thin indicator
+ * line that slides to whichever is active. No background, no elevation.
  */
 const SegmentedControl = ({ id, options, value, onChange, ariaLabel }: TSegmentedControlProps) => {
     const button_refs = useRef<Array<HTMLButtonElement | null>>([]);
+
+    const selectOption = (option: TSegmentOption) => {
+        if (option.value === value) return;
+        onChange(option.value);
+    };
 
     const focusAndSelect = (index: number) => {
         const option = options[index];
         if (!option) return;
         button_refs.current[index]?.focus();
-        onChange(option.value);
+        selectOption(option);
     };
 
     const handleKeyDown = (event: React.KeyboardEvent, current_index: number) => {
@@ -63,7 +60,7 @@ const SegmentedControl = ({ id, options, value, onChange, ariaLabel }: TSegmente
     };
 
     return (
-        <div className='mw-segmented' role='tablist' aria-label={ariaLabel}>
+        <div className='mw-dial' role='tablist' aria-label={ariaLabel}>
             {options.map((option, index) => {
                 const is_active = option.value === value;
                 return (
@@ -76,18 +73,18 @@ const SegmentedControl = ({ id, options, value, onChange, ariaLabel }: TSegmente
                         role='tab'
                         aria-selected={is_active}
                         tabIndex={is_active ? 0 : -1}
-                        className={`mw-segmented__option ${is_active ? 'mw-segmented__option--active' : ''}`}
-                        onClick={() => onChange(option.value)}
+                        className={`mw-dial__option ${is_active ? 'mw-dial__option--active' : ''}`}
+                        onClick={() => selectOption(option)}
                         onKeyDown={event => handleKeyDown(event, index)}
                     >
+                        <span className='mw-dial__label'>{option.label}</span>
                         {is_active && (
                             <motion.span
-                                layoutId={`mw-segmented-indicator-${id}`}
-                                className='mw-segmented__indicator'
-                                transition={{ type: 'spring', stiffness: 460, damping: 24, mass: 0.85 }}
+                                layoutId={`mw-dial-underline-${id}`}
+                                className='mw-dial__underline'
+                                transition={{ type: 'spring', stiffness: 500, damping: 40 }}
                             />
                         )}
-                        <span className='mw-segmented__label'>{option.label}</span>
                     </button>
                 );
             })}

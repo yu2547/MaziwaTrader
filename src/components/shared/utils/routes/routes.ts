@@ -73,6 +73,7 @@ export const standalone_routes = {
     cashier: `${getDerivDomain('derivApp')}/cashier/`,
     cashier_deposit: `${getDerivDomain('derivApp')}/cashier/deposit`,
     cashier_p2p: `${getDerivDomain('derivApp')}/cashier/p2p`,
+    cashier_withdrawal: `${getDerivDomain('derivApp')}/cashier/withdrawal`,
     contract: `${getDerivDomain('derivApp')}/contract/:contract_id`,
     personal_details: `${getDerivDomain('derivApp')}/account/personal-details`,
     positions: `${getDerivDomain('derivApp')}/reports/positions`,

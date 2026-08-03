@@ -18,13 +18,10 @@ import { AppLogo } from '../app-logo';
 import CustomNotifications from './custom-notifications/custom-notifications';
 import AccountsInfoLoader from './account-info-loader';
 import AccountSwitcher from './account-switcher';
-import AccountTypeSelector from './account-type-selector';
-import CurrencySelector from './currency-selector';
 import HeaderClock from './HeaderClock';
 import MenuItems from './menu-items';
 import MobileMenu from './mobile-menu';
-import OAuthAccountSwitcher from './oauth-account-switcher';
-import RegionBadge from './region-badge';
+import OAuthFlatNav from './oauth-flat-nav';
 import TelegramLink from './TelegramLink';
 import YouTubeLink from './YouTubeLink';
 import './header.scss';
@@ -56,37 +53,6 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
         // Show loader during authentication processes
         if (isAuthenticating || isAuthorizing || (isSingleLoggingIn && !is_tmb_enabled)) {
             return <AccountsInfoLoader isLoggedIn isMobile={!isDesktop} speed={3} />;
-        } else if (is_oauth_only_session) {
-            // A session authenticated via the new OAuth + Options API flow has
-            // no legacy loginid, so it never satisfies the activeLoginid branch
-            // below - without this, the header showed "Log in / Sign up" even
-            // though the user was already signed in, with no way to log out.
-            return (
-                <div className='auth-actions'>
-                    <CustomNotifications />
-                    {isDesktop && <RegionBadge />}
-                    <CurrencySelector />
-                    <AccountTypeSelector />
-                    {isDesktop && (
-                        <Button
-                            primary
-                            onClick={() => {
-                                const redirect_url = new URL(standalone_routes.cashier);
-                                redirect_url.searchParams.set(
-                                    'account',
-                                    oauth_session?.account_type === 'demo' ? 'demo' : oauth_session?.currency || ''
-                                );
-                                window.location.assign(redirect_url.toString());
-                            }}
-                            className='withdraw-button'
-                        >
-                            {localize('Withdraw')}
-                        </Button>
-                    )}
-                    <OAuthAccountSwitcher />
-                    <HeaderClock />
-                </div>
-            );
         } else if (activeLoginid) {
             return (
                 <>
@@ -203,9 +169,6 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
         isSingleLoggingIn,
         isDesktop,
         activeLoginid,
-        is_oauth_only_session,
-        oauth_session,
-        standalone_routes,
         client,
         has_wallet,
         currency,
@@ -217,6 +180,14 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
     ]);
 
     if (client?.should_hide_header) return null;
+
+    // A session authenticated via the new OAuth + Options API flow gets its
+    // own purpose-built flat nav (Reports/Cashier, currency toggle, deposit,
+    // account balance) instead of the classic Header/Wrapper shell below -
+    // that shell's logo, Trader's Hub link, MenuItems, and social links are
+    // all classic-session concepts this session type was never meant to show.
+    if (is_oauth_only_session) return <OAuthFlatNav />;
+
     return (
         <Header
             className={clsx('app-header', {
