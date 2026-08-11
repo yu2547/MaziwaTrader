@@ -155,9 +155,14 @@ const FreeBots = observer(({ allowed_categories, subtitle, title }: TFreeBotsPro
         try {
             setLoadingBotId(bot.id);
 
-            const response = await fetch(`/bots/${bot.fileName}`);
+            // These filenames contain '@', '&', '+', parentheses and emoji.
+            // Unencoded they survive the dev server but not every static host:
+            // '+' in particular is commonly decoded back to a space, which
+            // turns into a 404 that reads as "this bot is broken". Encoding
+            // the segment makes the request unambiguous everywhere.
+            const response = await fetch(`/bots/${encodeURIComponent(bot.fileName)}`);
             if (!response.ok) {
-                throw new Error('Failed to fetch bot file');
+                throw new Error(`Failed to fetch bot file (HTTP ${response.status})`);
             }
 
             const xmlContent = await response.text();
