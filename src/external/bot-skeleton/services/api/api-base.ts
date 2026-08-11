@@ -183,7 +183,25 @@ class APIBase {
 
         if (V2GetActiveToken()) {
             setIsAuthorizing(true);
-            await this.authorizeAndSubscribe();
+            const classic_auth_error = await this.authorizeAndSubscribe();
+
+            // A classic token that no longer authorizes must not strand an
+            // OAuth session on a dead connection. Previously the OTP branch
+            // above was skipped whenever *any* authToken existed, so a single
+            // stale/revoked value - or anything that writes one, such as
+            // useTMB's session detection - silently disabled live trading
+            // with no visible error, leaving only an endless reconnect loop.
+            // Classic sessions that authorize normally never reach this, so
+            // a working classic session is still never intercepted, and OTP
+            // is still never preferred over one.
+            if ((classic_auth_error || !this.is_authorized) && getStoredAccessToken()) {
+                wsLog('Connection', 'classic authorize failed - falling back to the OTP transport');
+                const otp_connected = await this.initOtpConnection();
+                if (otp_connected) {
+                    chart_api.init(force_create_connection);
+                    return;
+                }
+            }
         }
 
         chart_api.init(force_create_connection);
