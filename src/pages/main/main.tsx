@@ -35,7 +35,7 @@ import './main.scss';
 
 const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
 const Tutorial = lazy(() => import('../tutorials'));
-const FreeBots = lazy(() => import('../free-bots'));
+const TradingBots = lazy(() => import('../trading-bots'));
 const AnalysisTool = lazy(() => import('../analysis-tool'));
 
 const AppWrapper = observer(() => {
@@ -363,7 +363,7 @@ const AppWrapper = observer(() => {
                                             width='24px'
                                             fill='var(--text-general)'
                                         />
-                                        <Localize i18n_default_text='Free Bots' />
+                                        <Localize i18n_default_text='Trading Bots' />
                                     </>
                                 }
                                 id='id-free-bots'
@@ -371,10 +371,10 @@ const AppWrapper = observer(() => {
                                 <div className='free-bots-wrapper'>
                                     <Suspense
                                         fallback={
-                                            <ChunkLoader message={localize('Please wait, loading free bots...')} />
+                                            <ChunkLoader message={localize('Please wait, loading trading bots...')} />
                                         }
                                     >
-                                        <FreeBots />
+                                        <TradingBots />
                                     </Suspense>
                                 </div>
                             </div>

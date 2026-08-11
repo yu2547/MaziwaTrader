@@ -1,0 +1,77 @@
+// The sub-navigation is a sibling of the panel, never a child of it, so
+// changing panels can't unmount the navigation along with the old view -
+// that was the bug this replaces.
+.mw-trading-bots {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+
+    &__nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        flex-shrink: 0;
+        padding: 1.2rem 1.6rem;
+        border-bottom: 1px solid var(--general-section-1, rgb(0 0 0 / 8%));
+        background: var(--general-main-1, #fff);
+    }
+
+    &__tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.8rem 1.6rem;
+        border: 1px solid var(--general-section-1, rgb(0 0 0 / 12%));
+        border-radius: 999px;
+        background: transparent;
+        color: var(--text-general, #333);
+        font-size: 1.4rem;
+        font-weight: 500;
+        white-space: nowrap;
+        cursor: pointer;
+        transition:
+            border-color 150ms ease,
+            background 150ms ease,
+            color 150ms ease;
+
+        &:hover {
+            border-color: var(--brand-blue, #1a5cff);
+            color: var(--brand-blue, #1a5cff);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--brand-blue, #1a5cff);
+            outline-offset: 2px;
+        }
+
+        &--active {
+            border-color: var(--brand-blue, #1a5cff);
+            color: var(--brand-blue, #1a5cff);
+            background: rgb(26 92 255 / 8%);
+            font-weight: 700;
+        }
+    }
+
+    // Only the panel scrolls, so the navigation above stays put while the
+    // catalogue below it is scrolled.
+    &__panel {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+    }
+}
+
+@media (width <= 600px) {
+    .mw-trading-bots {
+        &__nav {
+            gap: 0.6rem;
+            padding: 1rem;
+        }
+
+        &__tab {
+            padding: 0.6rem 1.2rem;
+            font-size: 1.2rem;
+        }
+    }
+}

@@ -112,7 +112,18 @@ const BOTS: Bot[] = [
     },
 ];
 
-const FreeBots = observer(() => {
+export type TFreeBotsProps = {
+    /**
+     * Restricts the catalogue to these categories. Used by the Trading Bots
+     * sub-tabs (Scalper/Speed/Strategies), each of which is a scoped view of
+     * this same catalogue rather than a separate list to keep in sync.
+     */
+    allowed_categories?: string[];
+    subtitle?: string;
+    title?: string;
+};
+
+const FreeBots = observer(({ allowed_categories, subtitle, title }: TFreeBotsProps = {}) => {
     // useStore() is null for one render on a hard/direct load of this
     // standalone route - StoreProvider's init effect hasn't committed yet -
     // and an unguarded destructure here throws during render, which React
@@ -122,11 +133,15 @@ const FreeBots = observer(() => {
     const [selectedCategory, setSelectedCategory] = useState<string>('All');
     const [search_term, setSearchTerm] = useState<string>('');
 
-    const categories = ['All', ...Array.from(new Set(BOTS.map(bot => bot.category)))];
+    const bots_in_scope = allowed_categories?.length
+        ? BOTS.filter(bot => allowed_categories.includes(bot.category))
+        : BOTS;
+
+    const categories = ['All', ...Array.from(new Set(bots_in_scope.map(bot => bot.category)))];
 
     const normalized_search = search_term.trim().toLowerCase();
 
-    const filteredBots = BOTS.filter(bot => {
+    const filteredBots = bots_in_scope.filter(bot => {
         const matches_category = selectedCategory === 'All' || bot.category === selectedCategory;
         const matches_search =
             !normalized_search ||
@@ -191,9 +206,10 @@ const FreeBots = observer(() => {
     return (
         <div className='free-bots'>
             <div className='free-bots__header'>
-                <h1 className='free-bots__title'>Free Trading Bots</h1>
+                <h1 className='free-bots__title'>{title ?? 'Free Trading Bots'}</h1>
                 <p className='free-bots__subtitle'>
-                    Explore our collection of pre-built trading bots. Click on any bot to load it into the Bot Builder.
+                    {subtitle ??
+                        'Explore our collection of pre-built trading bots. Click on any bot to load it into the Bot Builder.'}
                 </p>
             </div>
 
