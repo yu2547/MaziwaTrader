@@ -408,15 +408,34 @@ class APIBase {
     getActiveSymbols = async () => {
         await doUntilDone(() => this.api?.send({ active_symbols: 'brief' }), [], this).then(
             ({ active_symbols = [], error = {} }) => {
+                // The OTP transport labels every instrument `underlying_symbol`
+                // rather than `symbol` (confirmed live - see
+                // docs/DERIV_OAUTH_LEGACY_TOKEN_BRIDGE_REPORT.md section 8.4).
+                // Everything downstream - pip sizes, ApiHelpers' symbol tree,
+                // and the Blockly Market/Trade Type dropdowns - reads `symbol`,
+                // so without this every instrument arrives nameless and the
+                // market dropdowns render "undefined", leaving the bot with no
+                // market to trade. Normalised here, at the single point the
+                // list enters the app, so no consumer needs to know which
+                // transport produced it. Only fills a missing `symbol`, so a
+                // classic response is passed through untouched.
+                const normalized_symbols = (active_symbols as Array<Record<string, unknown>>).map(active_symbol =>
+                    !active_symbol.symbol && active_symbol.underlying_symbol
+                        ? { ...active_symbol, symbol: active_symbol.underlying_symbol }
+                        : active_symbol
+                );
+
                 const pip_sizes = {};
-                if (active_symbols.length) this.has_active_symbols = true;
-                active_symbols.forEach(({ symbol, pip }: { symbol: string; pip: string }) => {
-                    (pip_sizes as Record<string, number>)[symbol] = +(+pip).toExponential().substring(3);
+                if (normalized_symbols.length) this.has_active_symbols = true;
+                normalized_symbols.forEach(({ symbol, pip }: { symbol?: unknown; pip?: unknown }) => {
+                    (pip_sizes as Record<string, number>)[symbol as string] = +(+(pip as string))
+                        .toExponential()
+                        .substring(3);
                 });
                 this.pip_sizes = pip_sizes as Record<string, number>;
                 this.toggleRunButton(false);
-                this.active_symbols = active_symbols;
-                return active_symbols || error;
+                this.active_symbols = normalized_symbols as never;
+                return normalized_symbols || error;
             }
         );
     };
