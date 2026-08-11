@@ -14,7 +14,11 @@ export default Engine =>
             // This will ensure the bot doesn't mistakenly purchase the wrong proposal.
             this.regeneratePurchaseReference();
             this.trade_option = trade_option;
-            this.proposal_templates = tradeOptionToProposal(trade_option, this.getPurchaseReference());
+            this.proposal_templates = tradeOptionToProposal(
+                trade_option,
+                this.getPurchaseReference(),
+                api_base.is_otp_transport
+            );
             this.renewProposalsOnPurchase();
         }
 

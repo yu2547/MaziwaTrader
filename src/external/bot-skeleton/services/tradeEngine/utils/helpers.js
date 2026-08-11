@@ -4,7 +4,17 @@ import { localize } from '@deriv-com/translations';
 import { observer as globalObserver } from '../../../utils/observer';
 import { error as logError } from './broadcast';
 
-export const tradeOptionToProposal = (trade_option, purchase_reference) =>
+// use_underlying_symbol_field: true only for the OTP transport
+// (src/external/bot-skeleton/services/api/otp-connection.ts), which rejects
+// the classic `symbol` field on a proposal request and requires
+// `underlying_symbol` instead - confirmed live against a demo Options
+// account (docs/DERIV_OAUTH_LEGACY_TOKEN_BRIDGE_REPORT.md section 8.4).
+// Passed in explicitly by the caller (Proposal.js reads api_base.is_otp_transport)
+// rather than this file importing api_base itself, which would create a
+// circular import (api-base.ts already imports doUntilDone/socket_state from
+// this same file). Classic callers never pass true, so their request is
+// byte-for-byte unchanged.
+export const tradeOptionToProposal = (trade_option, purchase_reference, use_underlying_symbol_field = false) =>
     trade_option.contractTypes.map(type => {
         const proposal = {
             amount: trade_option.amount,
@@ -19,7 +29,9 @@ export const tradeOptionToProposal = (trade_option, purchase_reference) =>
                 purchase_reference,
             },
             proposal: 1,
-            symbol: trade_option.symbol,
+            ...(use_underlying_symbol_field
+                ? { underlying_symbol: trade_option.symbol }
+                : { symbol: trade_option.symbol }),
         };
         if (trade_option.prediction !== undefined) {
             proposal.selected_tick = trade_option.prediction;

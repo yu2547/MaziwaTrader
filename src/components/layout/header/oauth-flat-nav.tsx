@@ -8,9 +8,8 @@ import { clearStoredSession } from '@/utils/auth/deriv-oauth';
 import { convertFromUsd, useExchangeRates } from '@/utils/currency/exchange-rate';
 import {
     StandaloneCashRegisterRegularIcon,
-    StandaloneChevronDownRegularIcon,
+    StandaloneCircleUserRegularIcon,
     StandaloneFileLinesRegularIcon,
-    StandalonePhoneRegularIcon,
     StandaloneRightFromBracketRegularIcon,
 } from '@deriv/quill-icons/Standalone';
 import { useTranslations } from '@deriv-com/translations';
@@ -19,15 +18,6 @@ import './oauth-flat-nav.scss';
 
 const CURRENCY_OPTIONS = ['USD', 'KSH'] as const;
 type TDisplayCurrency = (typeof CURRENCY_OPTIONS)[number];
-
-// Real MaziwaTrader support line (also used in the deleted region-badge.tsx
-// from an earlier design pass) - not a placeholder.
-const SUPPORT_PHONE_NUMBER = '0712094877';
-
-// Purely a "live" visual rhythm for the deposit/withdraw shortcut, not tied
-// to account state - both labels are always valid actions on the same
-// account, so the button just alternates which one it's offering.
-const DEPOSIT_WITHDRAW_INTERVAL_MS = 4000;
 
 /**
  * The account only ever has one real currency (oauth_session.currency) -
@@ -39,7 +29,6 @@ const OAuthFlatNav = observer(() => {
     const { localize } = useTranslations();
     const [display_currency, setDisplayCurrency] = useState<TDisplayCurrency>('USD');
     const [is_profile_open, setIsProfileOpen] = useState(false);
-    const [is_showing_withdraw, setIsShowingWithdraw] = useState(false);
     const { rates } = useExchangeRates();
     const profile_ref = useRef<HTMLDivElement | null>(null);
 
@@ -58,13 +47,6 @@ const OAuthFlatNav = observer(() => {
             document.removeEventListener('mousedown', handleClickOutside);
             document.removeEventListener('keydown', handleEscape);
         };
-    }, []);
-
-    useEffect(() => {
-        const interval_id = setInterval(() => {
-            setIsShowingWithdraw(prev => !prev);
-        }, DEPOSIT_WITHDRAW_INTERVAL_MS);
-        return () => clearInterval(interval_id);
     }, []);
 
     if (!oauth_session?.is_authenticated) return null;
@@ -106,14 +88,6 @@ const OAuthFlatNav = observer(() => {
         window.location.href = '/';
     };
 
-    const handleDepositWithdrawClick = () => {
-        const redirect_url = new URL(
-            is_showing_withdraw ? standalone_routes.cashier_withdrawal : standalone_routes.cashier_deposit
-        );
-        if (account_currency) redirect_url.searchParams.set('account', account_currency);
-        window.open(redirect_url.toString(), '_blank', 'noopener,noreferrer');
-    };
-
     return (
         <header className='mw-premium-nav'>
             <div className='mw-premium-nav__left'>
@@ -138,85 +112,56 @@ const OAuthFlatNav = observer(() => {
             </div>
 
             <div className='mw-premium-nav__right'>
-                <div
-                    className='mw-premium-nav__currency-block'
-                    role='tablist'
-                    aria-label={localize('Display currency')}
-                >
-                    {CURRENCY_OPTIONS.map(option => {
-                        const is_active = option === display_currency;
-                        const label = option === 'USD' ? 'USD' : 'KSh';
-                        return (
-                            <button
-                                type='button'
-                                key={option}
-                                role='tab'
-                                aria-selected={is_active}
-                                className={`mw-premium-nav__currency-segment ${is_active ? 'mw-premium-nav__currency-segment--active' : ''}`}
-                                onClick={() => setDisplayCurrency(option)}
-                            >
-                                {label}
-                            </button>
-                        );
-                    })}
-                </div>
+                <SegmentedControl
+                    id='account-type'
+                    ariaLabel={localize('Account type')}
+                    options={[
+                        { value: 'real', label: localize('Real') },
+                        { value: 'demo', label: localize('Demo') },
+                    ]}
+                    value={active_type}
+                    onChange={handleAccountTypeChange}
+                />
+                <SegmentedControl
+                    id='currency'
+                    ariaLabel={localize('Display currency')}
+                    options={CURRENCY_OPTIONS.map(option => ({
+                        value: option,
+                        label: option === 'USD' ? 'USD' : 'KSh',
+                    }))}
+                    value={display_currency}
+                    onChange={value => setDisplayCurrency(value as TDisplayCurrency)}
+                />
 
-                <a
-                    className='mw-premium-nav__phone'
-                    href={`tel:${SUPPORT_PHONE_NUMBER}`}
-                    title={localize('Call support: {{number}}', { number: SUPPORT_PHONE_NUMBER })}
-                    aria-label={localize('Call support: {{number}}', { number: SUPPORT_PHONE_NUMBER })}
-                >
-                    <StandalonePhoneRegularIcon height={16} width={16} />
-                </a>
-
-                <button type='button' className='mw-premium-nav__deposit-button' onClick={handleDepositWithdrawClick}>
-                    {is_showing_withdraw ? localize('Withdraw') : localize('Deposit')}
-                </button>
+                <span className='mw-premium-nav__balance'>
+                    <span className='mw-premium-nav__balance-icon'>
+                        <CurrencyIcon currency={account_currency} isVirtual={is_demo} />
+                    </span>
+                    <motion.span
+                        key={`${balance_number}-${balance_currency}`}
+                        className='mw-premium-nav__balance-number'
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.15, ease: 'easeOut' }}
+                    >
+                        {balance_number}
+                    </motion.span>
+                    <span className='mw-premium-nav__balance-currency'>{balance_currency}</span>
+                </span>
 
                 <div className='mw-premium-nav__profile' ref={profile_ref}>
                     <button
                         type='button'
-                        className='mw-premium-nav__trigger'
+                        className='mw-premium-nav__avatar'
                         onClick={() => setIsProfileOpen(prev => !prev)}
                         aria-expanded={is_profile_open}
                         aria-label={localize('Account menu')}
                     >
-                        <span className='mw-premium-nav__trigger-icon'>
-                            <CurrencyIcon currency={account_currency} isVirtual={is_demo} />
-                        </span>
-                        <span className='mw-premium-nav__balance'>
-                            <motion.span
-                                key={`${balance_number}-${balance_currency}`}
-                                className='mw-premium-nav__balance-number'
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.15, ease: 'easeOut' }}
-                            >
-                                {balance_number}
-                            </motion.span>
-                            <span className='mw-premium-nav__balance-currency'>{balance_currency}</span>
-                        </span>
-                        <StandaloneChevronDownRegularIcon
-                            height={12}
-                            width={12}
-                            className={`mw-premium-nav__trigger-chevron ${is_profile_open ? 'mw-premium-nav__trigger-chevron--open' : ''}`}
-                        />
+                        <StandaloneCircleUserRegularIcon height={18} width={18} />
                     </button>
 
                     {is_profile_open && (
                         <div className='mw-premium-nav__panel'>
-                            <SegmentedControl
-                                id='account-type'
-                                ariaLabel={localize('Account type')}
-                                options={[
-                                    { value: 'real', label: localize('Real') },
-                                    { value: 'demo', label: localize('Demo') },
-                                ]}
-                                value={active_type}
-                                onChange={handleAccountTypeChange}
-                            />
-
                             <div className='mw-premium-nav__panel-header'>
                                 {accounts_of_active_type.length === 1
                                     ? localize('Deriv account')

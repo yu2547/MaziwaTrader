@@ -1,7 +1,9 @@
 import Cookies from 'js-cookie';
 import CommonStore from '@/stores/common-store';
 import { TAuthData } from '@/types/api-types';
+import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
 import { clearAuthData } from '@/utils/auth-utils';
+import type { TOptionsAccount } from '@/utils/options-trading/options-trading-api';
 import { observer as globalObserver } from '../../utils/observer';
 import { doUntilDone, socket_state } from '../tradeEngine/utils/helpers';
 import {
@@ -16,6 +18,7 @@ import ApiHelpers from './api-helpers';
 import { generateDerivApiInstance, V2GetActiveClientId, V2GetActiveToken } from './appId';
 import chart_api from './chart-api';
 import ConnectionManager, { CONNECTION_STATE } from './connection-manager';
+import { createOtpConnection } from './otp-connection';
 import SubscriptionManager from './subscription-manager';
 import { wsLog } from './ws-logger';
 
@@ -62,6 +65,18 @@ class APIBase {
     active_symbols_promise: Promise<void> | null = null;
     common_store: CommonStore | undefined;
     landing_company: string | null = null;
+
+    // Set only by initOtpConnection() below, never by the classic
+    // authorizeAndSubscribe() path. This is the "preserve the distinction
+    // internally" seam: is_authorized (above) is a generic internal
+    // readiness flag safe to set from either transport, but nothing here
+    // mirrors classic authorize()-response data (account_list/country/
+    // scopes/etc via setAccountList/setAuthData) - that stays exclusively
+    // classic-sourced, since an OTP connection never receives an authorize
+    // response to source it from. Code that needs to tell which transport
+    // is live reads this flag, not isAuthorized$.
+    is_otp_transport = false;
+    otp_account: TOptionsAccount | null = null;
 
     // Single mutable slot (not an accumulating event list) for "something wants to
     // know when subscriptions have just been restored after a reconnect". Kept as
@@ -122,6 +137,30 @@ class APIBase {
 
         if (this.api) {
             this.unsubscribeAllSubscriptions();
+        }
+
+        // OTP branch - only attempted when there is no classic token at all.
+        // A classic token always takes the untouched path below, unchanged,
+        // so this can never intercept a classic session. Structured as an
+        // early return (rather than wrapping the classic branch in a
+        // condition) so the classic code beneath this block stays a literal,
+        // line-for-line no-diff - easiest to verify that nothing about it
+        // changed.
+        if (!V2GetActiveToken() && getStoredAccessToken()) {
+            const otp_connected = await this.initOtpConnection();
+            if (otp_connected) {
+                this.initEventListeners();
+                if (this.time_interval) clearInterval(this.time_interval);
+                this.time_interval = null;
+                chart_api.init(force_create_connection);
+                return;
+            }
+            // No demo Options account yet (or the OTP request failed) - fall
+            // through to the classic/anonymous connection below, exactly
+            // what an unauthenticated session gets today. Does not retry
+            // here; the next init() call (e.g. next page load, or a
+            // reconnect) will attempt OTP again.
+            wsLog('Connection', 'api_base.init(): OTP connection unavailable, falling back to anonymous connection');
         }
 
         const created_new_connection = this.connection_manager.connect(force_create_connection);
@@ -252,6 +291,66 @@ class APIBase {
         }
     }
 
+    /**
+     * OTP counterpart of authorizeAndSubscribe() - called only from init(),
+     * only when there is no classic token but a completed OAuth session
+     * exists. Returns true once the OTP connection is fully ready (mirrors
+     * authorizeAndSubscribe() reaching CONNECTION_STATE.READY); returns
+     * false (never throws) if it could not connect, so init() can fall back
+     * to the classic/anonymous path the same way an unauthenticated session
+     * is handled today.
+     *
+     * Deliberately does NOT call setIsAuthorized/setAccountList/setAuthData
+     * - see the is_otp_transport field comment above. Fields other code
+     * actually depends on that classic authorize() would normally populate
+     * are set here from their real OAuth/REST source instead:
+     *   - account_info.loginid / .currency (OpenContract.js reads
+     *     account_info.loginid) <- the real Options account_id/currency
+     *     from the OTP connection result, not fabricated.
+     *   - is_authorized / account_id <- same real source.
+     * account_list/country/scopes have no OAuth/REST equivalent available
+     * yet and are intentionally left unset rather than guessed at.
+     */
+    async initOtpConnection(): Promise<boolean> {
+        try {
+            const result = await createOtpConnection();
+            this.connection_manager.attach(result.api);
+            this.api = this.connection_manager.api;
+            this.token = '';
+            this.account_id = result.account.account_id;
+            this.account_info = {
+                loginid: result.account.account_id,
+                currency: result.account.currency,
+                is_virtual: result.account.account_type === 'demo' ? 1 : 0,
+            };
+            this.is_otp_transport = true;
+            this.otp_account = result.account;
+            this.is_authorized = true;
+            this.connection_manager.setState(CONNECTION_STATE.AUTHORIZED);
+
+            if (this.has_active_symbols) {
+                this.toggleRunButton(false);
+            } else {
+                this.active_symbols_promise = this.getActiveSymbols();
+            }
+
+            await this.subscribe();
+            this.connection_manager.setState(CONNECTION_STATE.READY);
+            this.reconnected_callback?.();
+            wsLog('Connection', 'initOtpConnection() ready', {
+                account_id: result.account.account_id,
+                currency: result.account.currency,
+            });
+            return true;
+        } catch (e) {
+            wsLog('Connection', 'initOtpConnection() failed', e);
+            this.is_otp_transport = false;
+            this.otp_account = null;
+            this.is_authorized = false;
+            return false;
+        }
+    }
+
     async getSelfExclusion() {
         if (!this.api || !this.is_authorized) return;
         await this.api.getSelfExclusion();
@@ -269,8 +368,18 @@ class APIBase {
         }
 
         // First-connect path: register each stream for the first time.
+        // 'account: all' asks the classic API to aggregate every login the
+        // token covers - meaningless for an OTP connection, which is already
+        // scoped to exactly one Options account by construction, and
+        // untested whether the OTP socket even accepts it. Omitted only for
+        // the OTP transport; the classic request is byte-for-byte unchanged.
         const streams: Array<{ key: string; request: Record<string, unknown> }> = [
-            { key: 'balance', request: { balance: 1, subscribe: 1, account: 'all' } },
+            {
+                key: 'balance',
+                request: this.is_otp_transport
+                    ? { balance: 1, subscribe: 1 }
+                    : { balance: 1, subscribe: 1, account: 'all' },
+            },
             { key: 'transaction', request: { transaction: 1, subscribe: 1 } },
             { key: 'proposal_open_contract', request: { proposal_open_contract: 1, subscribe: 1 } },
         ];

@@ -44,90 +44,17 @@
         }
     }
 
-    // A small filled block, not an instrument - two segments, the active
-    // one carries a flat fill, the other stays transparent. No gradient, no
-    // shadow, no border.
-    &__currency-block {
-        display: inline-flex;
-        align-self: center;
-        border-radius: 6px;
-        overflow: hidden;
-        background: rgb(255 255 255 / 4%);
-    }
-
-    &__currency-segment {
-        border: none;
-        background: transparent;
-        color: #7d8499;
-        font-size: 1.05rem;
-        font-weight: 600;
-        padding: 0.5rem 0.8rem;
-        cursor: pointer;
-        transition:
-            color 150ms ease,
-            background 150ms ease;
-
-        &--active {
-            color: #eef3fb;
-            background: rgb(47 182 224 / 18%);
-        }
-
-        &:focus-visible {
-            outline: 2px solid #4fd8ff;
-            outline-offset: -2px;
-        }
-    }
-
-    &__phone {
-        display: inline-flex;
-        align-self: center;
-        color: #565c6e;
-        transition: color 150ms ease;
-
-        &:hover {
-            color: #4fd8ff;
-        }
-
-        &:focus-visible {
-            outline: 2px solid #4fd8ff;
-            outline-offset: 2px;
-        }
-    }
-
-    // Same purple gradient as the real app's own withdraw-button
-    // (header.scss) - reused rather than invented, so this reads as the
-    // same product, not a different color language bolted on.
-    &__deposit-button {
-        align-self: center;
-        border: none;
-        border-radius: 999px;
-        background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
-        color: #fff;
-        font-size: 1.1rem;
-        font-weight: 700;
-        padding: 0.6rem 1.4rem;
-        white-space: nowrap;
-        cursor: pointer;
-        transition:
-            transform 150ms ease,
-            box-shadow 150ms ease;
-
-        &:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px 0 rgb(139 92 246 / 40%);
-        }
-
-        &:focus-visible {
-            outline: 2px solid #8b5cf6;
-            outline-offset: 2px;
-        }
-    }
-
     &__balance {
         display: inline-flex;
         align-items: baseline;
         gap: 0.4rem;
         overflow: hidden;
+    }
+
+    &__balance-icon {
+        display: inline-flex;
+        align-items: center;
+        align-self: center;
     }
 
     // Deriv's own brand teal ($color-green-3 in _constants.scss) - a real
@@ -157,42 +84,32 @@
         align-self: center;
     }
 
-    // The whole account menu trigger - icon, balance, chevron, one button.
-    // Flat at rest; a background only appears on interaction, as a
-    // click-target cue, never as a permanent material.
-    &__trigger {
-        display: inline-flex;
+    // Plain icon, quiet at rest - a flat background only appears on
+    // interaction, purely as a click-target cue, never a permanent material.
+    &__avatar {
+        display: flex;
         align-items: center;
-        gap: 0.6rem;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
         border: none;
-        border-radius: 8px;
         background: transparent;
-        padding: 0.4rem 0.6rem;
+        color: #6b7280;
         cursor: pointer;
-        transition: background 150ms ease;
+        transition:
+            color 150ms ease,
+            background 150ms ease;
 
         &:hover,
         &[aria-expanded='true'] {
-            background: rgb(255 255 255 / 6%);
+            color: #eef3fb;
+            background: rgb(255 255 255 / 8%);
         }
 
         &:focus-visible {
             outline: 2px solid #4fd8ff;
             outline-offset: 2px;
-        }
-    }
-
-    &__trigger-icon {
-        display: inline-flex;
-        align-items: center;
-    }
-
-    &__trigger-chevron {
-        color: #6b7280;
-        transition: transform 150ms ease;
-
-        &--open {
-            transform: rotate(180deg);
         }
     }
 
@@ -210,32 +127,10 @@
         box-shadow: 0 16px 40px rgb(0 0 0 / 18%);
         z-index: 200;
         overflow: hidden;
-
-        // The Real/Demo switch belongs to the panel's own layout, not the
-        // shared control's styling - margin lives here, not in
-        // segmented-control.scss, so the control stays context-free.
-        // Colors are overridden too: this control also lives in the dark
-        // bar (as the currency block's sibling), but here on a white
-        // surface it needs the light-theme half of the same component.
-        .mw-dial {
-            margin: 1rem 1.2rem 0.6rem;
-
-            .mw-dial__label {
-                color: #8a95ab;
-            }
-
-            .mw-dial__option--active .mw-dial__label {
-                color: #1a1f2c;
-            }
-
-            .mw-dial__underline {
-                background: #ff444f;
-            }
-        }
     }
 
     &__panel-header {
-        padding: 0.4rem 1.2rem 0.5rem;
+        padding: 0.9rem 1.2rem 0.5rem;
         font-size: 1.05rem;
         font-weight: 600;
         letter-spacing: 0.06em;

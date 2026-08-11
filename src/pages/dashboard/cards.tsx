@@ -10,6 +10,7 @@ import { DBOT_TABS } from '@/constants/bot-contents';
 import { useStore } from '@/hooks/useStore';
 import {
     DerivLightBotBuilderIcon,
+    DerivLightDerivBotIcon,
     DerivLightGoogleDriveIcon,
     DerivLightLocalDeviceIcon,
     DerivLightMyComputerIcon,
@@ -68,6 +69,18 @@ const Cards = observer(({ is_mobile, has_dashboard_strategies }: TCardProps) => 
                     subform_source: 'dashboard',
                     subform_name: 'load_strategy',
                     load_strategy_tab: 'local',
+                });
+            },
+        },
+        {
+            id: 'free-bots',
+            icon: <DerivLightDerivBotIcon height='48px' width='48px' />,
+            content: <Localize i18n_default_text='Free bots' />,
+            callback: () => {
+                setActiveTab(DBOT_TABS.FREE_BOTS);
+                rudderStackSendDashboardClickEvent({
+                    dashboard_click_name: 'free_bots',
+                    subpage_name: 'free_bots',
                 });
             },
         },

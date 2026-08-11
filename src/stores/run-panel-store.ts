@@ -5,7 +5,7 @@ import { isSafari, mobileOSDetect, standalone_routes } from '@/components/shared
 import { redirectToSignUp } from '@/components/shared';
 import { contract_stages, TContractStage } from '@/constants/contract-stage';
 import { run_panel } from '@/constants/run-panel';
-import { ErrorTypes, MessageTypes, observer, unrecoverable_errors } from '@/external/bot-skeleton';
+import { api_base, ErrorTypes, MessageTypes, observer, unrecoverable_errors } from '@/external/bot-skeleton';
 import { getSelectedTradeType } from '@/external/bot-skeleton/scratch/utils';
 // import { journalError, switch_account_notification } from '@/utils/bot-notifications';
 import GTM from '@/utils/gtm';
@@ -189,7 +189,15 @@ export default class RunPanelStore {
         const is_ios = mobileOSDetect() === 'iOS';
         this.dbot.saveRecentWorkspace();
         this.dbot.unHighlightAllBlocks();
-        if (!client.is_logged_in) {
+        // client.is_logged_in only ever reflects the classic AuthWrapper flow
+        // (ClientStore) - it stays false for an OAuth session even once the
+        // OTP transport (api_base.is_otp_transport) is fully connected and
+        // ready to trade, since that path never touches ClientStore. Without
+        // this, every OTP-authenticated user would hit the login dialog here
+        // regardless of how ready the transport actually is. Classic
+        // sessions are unaffected: client.is_logged_in true short-circuits
+        // this exactly as it did before.
+        if (!client.is_logged_in && !api_base.is_otp_transport) {
             this.showLoginDialog();
             return;
         }

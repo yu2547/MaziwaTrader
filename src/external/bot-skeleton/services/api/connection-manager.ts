@@ -139,6 +139,26 @@ export default class ConnectionManager {
     }
 
     /**
+     * OTP counterpart of connect() - not a replacement or modification of it.
+     * connect() always builds its own instance synchronously via
+     * generateDerivApiInstance(); the OTP path (otp-connection.ts's
+     * createOtpConnection()) needs an async REST round-trip - list accounts,
+     * then request a one-time OTP - before it has anything to hand over, so
+     * the api_base caller does that async work itself and hands the
+     * already-built instance to this method, which wires it up exactly the
+     * way connect() wires up its own: same teardown-first, same state
+     * transition, same open/close listener attachment. Nothing here reads
+     * or changes connect()'s own behavior.
+     */
+    attach(api: TDerivApiInstance) {
+        this.teardown();
+        this.setState(CONNECTION_STATE.CONNECTING);
+        this.api = api;
+        this.api?.connection.addEventListener('open', this.handleOpen);
+        this.api?.connection.addEventListener('close', this.handleClose);
+    }
+
+    /**
      * Tears down the current socket. `intentional` marks this as a deliberate
      * disconnect (logout, bot terminate) so scheduleReconnect() won't fire for it -
      * pass true from any caller that means "stop trying to stay connected".

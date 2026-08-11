@@ -38,7 +38,17 @@ export default defineConfig({
             sassLoaderOptions: {
                 sourceMap: true,
                 sassOptions: {
-                    // includePaths: [path.resolve(__dirname, 'src')],
+                    // Every `@use 'components/shared/styles/...'` in the app is
+                    // written relative to src/, so sass needs src/ on its load
+                    // path to resolve them. Without this the build depends on
+                    // SASS_PATH being set in the environment, which silently
+                    // fails ("Can't find stylesheet to import") wherever it
+                    // isn't - additive, so it cannot change how any import that
+                    // already resolves is resolved. `loadPaths`, not the legacy
+                    // `includePaths`: this plugin uses sass's modern JS API,
+                    // where the old name is silently ignored (which is why the
+                    // previously commented-out line here would not have worked).
+                    loadPaths: [path.resolve(__dirname, 'src')],
                 },
                 // additionalData: `@use "${path.resolve(__dirname, 'src/components/shared/styles')}" as *;`,
             },

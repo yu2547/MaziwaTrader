@@ -30,6 +30,12 @@ import './app.scss';
 import 'react-toastify/dist/ReactToastify.css';
 import '../components/bot-notification/bot-notification.scss';
 
+// Upper bound on how long an OAuth session waits for active_symbols before the
+// dashboard is shown anyway - long enough for the REST + OTP handshake and the
+// symbol fetch it precedes, short enough that a dead transport doesn't read as
+// a hung app.
+const ACTIVE_SYMBOLS_TIMEOUT_MS = 8000;
+
 const AppContent = observer(() => {
     const [is_api_initialized, setIsApiInitialized] = React.useState(false);
     const [is_loading, setIsLoading] = React.useState(true);
@@ -259,17 +265,23 @@ const AppContent = observer(() => {
             init();
             setIsLoading(true);
             if (!client.is_logged_in) {
-                // An OAuth + Options API session has no legacy token to
-                // authorize the classic socket with, and none of Bot
-                // Builder/Charts (the only consumers of active_symbols) are
-                // available on this session type yet (see
-                // dashboard-hero.tsx) - waiting here for classic-API market
-                // data that nothing will use would just hang forever if that
-                // socket never connects, instead of reaching the dashboard.
+                // An OAuth session now has a live transport too (the OTP
+                // connection - api_base.ts's initOtpConnection()), which
+                // fetches active_symbols the same way the classic connection
+                // always did, so Bot Builder/Charts get their symbol list.
+                changeActiveSymbolLoadingState();
+
+                // active-symbols.js awaits api_base.active_symbols_promise,
+                // which only settles once some transport actually answers
+                // {active_symbols:'brief'}. If neither OTP nor the classic
+                // fallback connects, it never settles and the app sits on the
+                // loading screen forever - OAuth sessions previously skipped
+                // the call entirely, so this bound is what replaces that
+                // unconditional skip rather than reintroducing the hang.
+                // Anonymous sessions keep their existing behaviour untouched.
                 if (oauth_session.is_authenticated) {
-                    setIsLoading(false);
-                } else {
-                    changeActiveSymbolLoadingState();
+                    const loading_screen_bound = setTimeout(() => setIsLoading(false), ACTIVE_SYMBOLS_TIMEOUT_MS);
+                    return () => clearTimeout(loading_screen_bound);
                 }
             }
         }

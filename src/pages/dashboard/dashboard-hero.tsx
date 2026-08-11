@@ -35,7 +35,12 @@ const DashboardHero = observer(() => {
     const display_balance = is_oauth_session ? oauth_session.balance : Number(client.balance || 0);
     const is_demo_account = is_oauth_session ? oauth_session.account_type === 'demo' : client.is_virtual;
 
-    const greeting = getGreeting(new Date().getUTCHours());
+    // The visitor's own device clock, not UTC - MaziwaTrader's Kenya-based
+    // audience is UTC+3, so using getUTCHours() here shifted every boundary
+    // by 3 hours (e.g. 6pm local read as "Good Afternoon" instead of
+    // "Good Evening"). This should reflect whatever time it actually is
+    // for the person looking at the screen.
+    const greeting = getGreeting(new Date().getHours());
 
     const decimals = getDecimalPlaces(display_currency);
     const formatted_balance = addComma(Number(display_balance || 0).toFixed(decimals));
@@ -94,9 +99,9 @@ const DashboardHero = observer(() => {
                 </div>
             </div>
 
-            {is_oauth_session && !client.is_logged_in && (
+            {is_oauth_session && !client.is_logged_in && connectionStatus !== CONNECTION_STATUS.OPENED && (
                 <p className='mw-hero__notice'>
-                    <Localize i18n_default_text='Signed in with your Deriv account. Bot Builder and Charts require the classic Deriv connection and are not available on this session yet - Analysis Tool and Free Bots work as usual.' />
+                    <Localize i18n_default_text='Signed in with your Deriv account. Connecting Bot Builder and Charts to your session...' />
                 </p>
             )}
 

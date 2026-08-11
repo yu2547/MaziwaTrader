@@ -18,6 +18,26 @@ export const generateDerivApiInstance = () => {
     });
 };
 
+// OTP counterpart of generateDerivApiInstance() - same DerivAPIBasic +
+// APIMiddleware wrapping, but around a pre-built, already-OTP-authenticated
+// WebSocket URL (from requestOptionsOtp in options-trading-api.ts) instead of
+// the classic app_id-based endpoint. Kept in this untyped .js file rather
+// than a .ts one for the same reason generateDerivApiInstance() already is:
+// @deriv/deriv-api ships no type declarations, and TypeScript's "bundler"
+// module resolution resolves it to a real on-disk file (not a missing one),
+// so an ambient `declare module` shim for it is never actually consulted -
+// only the allowJs (uncheckJs) boundary a .js file gives it actually avoids
+// the TS7016 error. otp-connection.ts (a .ts file) calls this instead of
+// constructing DerivAPIBasic itself.
+export const generateOtpApiInstance = websocket_url => {
+    const deriv_socket = new WebSocket(websocket_url);
+
+    return new DerivAPIBasic({
+        connection: deriv_socket,
+        middleware: new APIMiddleware({}),
+    });
+};
+
 export const getLoginId = () => {
     const login_id = localStorage.getItem('active_loginid');
     if (login_id && login_id !== 'null') return login_id;

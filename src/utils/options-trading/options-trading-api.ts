@@ -1,4 +1,5 @@
 import { getAppId } from '@/components/shared';
+import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
 
 /**
  * Deriv's documented "Options Setup" REST API + OTP-authenticated WebSocket
@@ -34,7 +35,8 @@ export type TOptionsApiErrorKind =
     | 'otp_request_failed'
     | 'websocket_connect_failed'
     | 'network_failure'
-    | 'invalid_response';
+    | 'invalid_response'
+    | 'no_demo_account';
 
 export class OptionsApiError extends Error {
     kind: TOptionsApiErrorKind;
@@ -282,4 +284,167 @@ export const establishOptionsTradingChannel = async (access_token: string): Prom
     const websocket = await connectOptionsWebSocket(websocket_url);
 
     return { account, was_created, websocket };
+};
+
+/**
+ * DIAGNOSTIC ONLY - not called from anywhere in the app, not wired to any
+ * button or page. Confirms or refutes a specific hypothesis before any real
+ * trading logic gets built: does this OTP-authenticated Options WebSocket
+ * speak the same classic-API message protocol (`{balance:1,...}`,
+ * `{proposal:1,...}`, and by extension `buy`/`sell`) that
+ * public-market-feed.ts already confirmed live for the *public* Options
+ * WebSocket? Deriv's own docs for this endpoint are currently broken
+ * ("Failed to load schema" on every /docs/options/ws-* page, and the linked
+ * raw schema JSON 404s), so this sends only read-only, well-known classic
+ * messages and returns exactly what comes back - no assumption, no trade
+ * risk.
+ *
+ * `proposal`, `contracts_for`, and `active_symbols` are all reads/quotes,
+ * not commitments - none creates a contract or moves any funds, which is
+ * why they're all safe to include here alongside `balance`. `buy`/`sell`
+ * are deliberately NOT sent by this probe - those do commit funds/create a
+ * contract, so their compatibility stays inferred from the shared envelope
+ * shape until a human explicitly approves testing them.
+ *
+ * Safety properties, by construction:
+ * - Reads the access_token itself from sessionStorage (the same key
+ *   deriv-oauth.ts already stores it under after a real login) - the token
+ *   never has to be copied, pasted, or printed anywhere to run this.
+ * - Only ever requests the DEMO Options account (finds one, or creates one
+ *   via the documented create-account endpoint; never touches a real-money
+ *   account).
+ * - Sends only `balance`, `contracts_for`, `active_symbols`, and `proposal`
+ *   - all read-only quotes/reads, never `buy`, `sell`, or anything else
+ *   that mutates account state.
+ * - Closes the socket the instant every response has arrived (or on
+ *   error/timeout) - never stays open, never becomes a standing connection.
+ *
+ * Logs each layer separately (STEP 1 token, STEP 2 REST accounts call,
+ * STEP 3 OTP call, STEP 4 WebSocket open, STEP 5/7/9/11 send, STEP 6/8/10/12
+ * receive, STEP 13 close) so a failure is localized to a specific layer
+ * instead of only ever showing a final success/failure. Each receive also
+ * prints `msg_type` and `error` on their own line first, ahead of the full
+ * body, so a scan of the console output doesn't require expanding every
+ * object to see whether that step succeeded.
+ *
+ * Run from the browser console after logging in for real:
+ *   import('/src/utils/options-trading/options-trading-api.ts').then(m => m.probeProtocolCompatibility())
+ */
+export const probeProtocolCompatibility = async (): Promise<Record<string, unknown>[]> => {
+    log('STEP 1: checking for a stored OAuth token');
+    const access_token = getStoredAccessToken();
+    if (!access_token) {
+        logError('STEP 1 failed: no stored OAuth session - log in for real first, then run this from the console.');
+        throw new OptionsApiError('accounts_fetch_failed', 'No stored OAuth session found.');
+    }
+    log('STEP 1: OAuth token found');
+
+    log('STEP 2: GET /trading/v1/options/accounts');
+    const accounts = await listOptionsAccounts(access_token);
+    log('STEP 2: accounts received', accounts);
+    let account = accounts.find(a => a.account_type === 'demo');
+
+    if (!account) {
+        log('STEP 2: no demo account yet, creating one');
+        account = await createOptionsAccount(access_token, { currency: 'USD', group: 'row', account_type: 'demo' });
+        log('STEP 2: demo account created', account);
+    }
+
+    log('STEP 3: POST .../otp', { account_id: account.account_id });
+    const websocket_url = await requestOptionsOtp(access_token, account.account_id);
+    log('STEP 3: OTP url received');
+
+    log('STEP 4: opening WebSocket');
+    const websocket = await connectOptionsWebSocket(websocket_url);
+    log('STEP 4: WebSocket opened');
+
+    // Four read-only messages, ordered to answer one question at a time
+    // before attempting the one that already failed:
+    //   can I talk to the socket? (balance)
+    //   -> can it describe contracts for a given market? (contracts_for -
+    //      this is the classic API's own answer to "what identifier does a
+    //      proposal need", so it's the most directly relevant discovery call
+    //      to the `symbol` rejection, not a generic fallback)
+    //   -> can it describe markets in general? (active_symbols)
+    //   -> can I request a proposal? (proposal - already known to fail with
+    //      `symbol`; kept in the sequence so its result sits alongside
+    //      whatever the discovery calls reveal, in one run)
+    // None of the four creates a contract or moves funds.
+    //
+    // Both `contracts_for` and `proposal` are already known (from a prior
+    // run) to reject part of the classic request shape - `currency` on
+    // contracts_for, `symbol` on proposal. This round tests the corrected
+    // fields, derived from what active_symbols itself reported back rather
+    // than guessed: it labels every instrument with `underlying_symbol`,
+    // and "1HZ100V" is a value it confirmed is real and currently open.
+    const requests: Array<{ label: string; body: Record<string, unknown> }> = [
+        { label: 'balance', body: { balance: 1, req_id: 1 } },
+        { label: 'contracts_for', body: { contracts_for: 'R_100', req_id: 2 } },
+        { label: 'active_symbols', body: { active_symbols: 'brief', req_id: 3 } },
+        {
+            label: 'proposal',
+            body: {
+                proposal: 1,
+                req_id: 4,
+                amount: 10,
+                basis: 'stake',
+                contract_type: 'CALL',
+                currency: account.currency,
+                duration: 5,
+                duration_unit: 't',
+                underlying_symbol: '1HZ100V',
+            },
+        },
+    ];
+
+    const responses: Record<string, unknown>[] = [];
+    let step = 5;
+
+    return new Promise((resolve, reject) => {
+        const sendNext = () => {
+            const next = requests[responses.length];
+            if (!next) {
+                websocket.close(1000, 'probe complete');
+                return;
+            }
+            log(`STEP ${step}: SEND (${next.label})`, next.body);
+            step += 1;
+            websocket.send(JSON.stringify(next.body));
+        };
+
+        const timeout = setTimeout(() => {
+            websocket.close();
+            reject(new OptionsApiError('network_failure', 'No response to the protocol probe within 10s.'));
+        }, 10000);
+
+        websocket.onmessage = event => {
+            log(`STEP ${step}: RECEIVE`);
+            step += 1;
+            let parsed: Record<string, unknown>;
+            try {
+                parsed = JSON.parse(event.data);
+            } catch {
+                clearTimeout(timeout);
+                logError('probe: response was not valid JSON', event.data);
+                websocket.close();
+                reject(new OptionsApiError('invalid_response', 'Probe response was not valid JSON.', event.data));
+                return;
+            }
+            log('msg_type:', parsed.msg_type);
+            log('error:', parsed.error ?? null);
+            log('full response:', parsed);
+            responses.push(parsed);
+            if (responses.length >= requests.length) clearTimeout(timeout);
+            // sendNext() finds no request left once responses.length reaches
+            // requests.length, and closes the socket itself in that case.
+            sendNext();
+        };
+
+        websocket.onclose = event => {
+            log(`STEP ${step}: WebSocket closed`, { code: event.code, reason: event.reason || '(none)' });
+            resolve(responses);
+        };
+
+        sendNext();
+    });
 };
