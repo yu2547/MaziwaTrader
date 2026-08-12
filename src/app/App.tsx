@@ -2,6 +2,7 @@ import { initSurvicate } from '../public-path';
 import { lazy, Suspense } from 'react';
 import React from 'react';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } from 'react-router-dom';
+import RouteErrorBoundary from '@/components/layout/route-error-boundary';
 import LoadingScreen from '@/components/loading-screen/loading-screen';
 import RoutePromptDialog from '@/components/route-prompt-dialog';
 import { crypto_currencies_display_order, fiat_currencies_display_order } from '@/components/shared';
@@ -61,15 +62,20 @@ const router = createBrowserRouter(
                 </TranslationProvider>
             }
         >
-            {/* All child routes will be passed as children to Layout */}
-            <Route index element={<AppRoot />} />
-            <Route path='endpoint' element={<Endpoint />} />
-            <Route path='callback' element={<CallbackPage />} />
-            <Route path='free-bots' element={<FreeBots />} />
-            <Route path='analysis-tool' element={<AnalysisTool />} />
-            <Route path='risk-calculator' element={<RiskCalculator />} />
-            <Route path='bulk-trader' element={<BulkTrader />} />
-            <Route path='copy-trading' element={<CopyTrading />} />
+            {/* All child routes will be passed as children to Layout.
+                Each carries its own errorElement so a page that throws is
+                contained to the content area - without one, React Router
+                falls back to the '/' boundary, whose element is the entire
+                Layout, and the header and navigation disappear along with
+                the failing page. */}
+            <Route index element={<AppRoot />} errorElement={<RouteErrorBoundary />} />
+            <Route path='endpoint' element={<Endpoint />} errorElement={<RouteErrorBoundary />} />
+            <Route path='callback' element={<CallbackPage />} errorElement={<RouteErrorBoundary />} />
+            <Route path='free-bots' element={<FreeBots />} errorElement={<RouteErrorBoundary />} />
+            <Route path='analysis-tool' element={<AnalysisTool />} errorElement={<RouteErrorBoundary />} />
+            <Route path='risk-calculator' element={<RiskCalculator />} errorElement={<RouteErrorBoundary />} />
+            <Route path='bulk-trader' element={<BulkTrader />} errorElement={<RouteErrorBoundary />} />
+            <Route path='copy-trading' element={<CopyTrading />} errorElement={<RouteErrorBoundary />} />
         </Route>
     )
 );

@@ -91,7 +91,15 @@ const Chart = observer(({ show_digits_stats }: { show_digits_stats: boolean }) =
         setIsSafari(isSafariBrowser());
 
         return () => {
-            chart_api.api.forgetAll('ticks');
+            // chart_api.api is undefined whenever the chart connection never
+            // established - which an OAuth session reaches by design, since
+            // chart-api.ts disables chart data rather than retrying an
+            // endpoint that cannot answer. Unguarded, this cleanup threw while
+            // navigating away from Charts, and the router's error boundary
+            // then replaced the whole route subtree - Layout, header and
+            // navigation included. ticks_service.js already guards the same
+            // call the same way.
+            chart_api.api?.forgetAll('ticks');
         };
     }, []);
 

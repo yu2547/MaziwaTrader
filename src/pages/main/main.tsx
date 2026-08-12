@@ -30,7 +30,6 @@ import RunPanel from '../../components/run-panel';
 import ChartModal from '../chart/chart-modal';
 import Dashboard from '../dashboard';
 import RunStrategy from '../dashboard/run-strategy';
-import WorkspaceNavExtras from './workspace-nav-extras';
 import './main.scss';
 
 const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
@@ -116,8 +115,21 @@ const AppWrapper = observer(() => {
                 threshold: 0.5, // set offset 0.1 means trigger if atleast 10% of element in viewport
             }
         );
-        observer_dashboard.observe(el_dashboard);
-        observer_tutorial.observe(el_tutorial);
+        // These elements are the first/last items of the tab strip, which the
+        // app shell now owns (components/layout/shell-nav) - so they are absent
+        // here, and observe(null) throws, taking the whole content area down
+        // with it. Guarded rather than removed so the shadows still work if the
+        // strip is ever rendered locally again.
+        if (el_dashboard) observer_dashboard.observe(el_dashboard);
+        if (el_tutorial) observer_tutorial.observe(el_tutorial);
+
+        // Previously never disconnected, and with no dependency array this
+        // effect runs on every render - so it leaked a new pair of observers
+        // each time.
+        return () => {
+            observer_dashboard.disconnect();
+            observer_tutorial.disconnect();
+        };
     });
 
     React.useEffect(() => {
@@ -278,8 +290,18 @@ const AppWrapper = observer(() => {
                 >
                     <div className='main__tabs-row'>
                         {!isDesktop && left_tab_shadow && <span className='tabs-shadow tabs-shadow--left' />}{' '}
-                        {isDesktop && <WorkspaceNavExtras />}
-                        <Tabs active_index={active_tab} className='main__tabs' onTabItemClick={handleTabChange} top>
+                        {/* WorkspaceNavExtras moved to the shell (components/layout/shell-nav):
+                            rendered here it was unmounted by its own navigate() calls. */}
+                        {/* hide_header: the shell's ShellNav owns these
+                            destinations now, so drawing the tab strip here too
+                            would show the same six items twice. */}
+                        <Tabs
+                            active_index={active_tab}
+                            className='main__tabs'
+                            onTabItemClick={handleTabChange}
+                            hide_header
+                            top
+                        >
                             <div
                                 label={
                                     <>

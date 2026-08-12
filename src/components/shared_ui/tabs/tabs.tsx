@@ -24,6 +24,12 @@ type TTabsProps = {
     has_active_line?: boolean;
     has_bottom_line?: boolean;
     header_fit_content?: boolean;
+    /**
+     * Renders the panels without the tab strip, for when something else owns
+     * the navigation - the app shell's ShellNav does, and drawing the strip
+     * here too would put the same destinations on screen twice.
+     */
+    hide_header?: boolean;
     history: History;
     icon_color?: string;
     icon_size?: number;
@@ -49,6 +55,7 @@ const Tabs = ({
     has_active_line = true,
     has_bottom_line = true,
     header_fit_content = false,
+    hide_header = false,
     history,
     icon_color = '',
     icon_size = 0,
@@ -151,70 +158,73 @@ const Tabs = ({
             })}
             style={{ '--tab-width': `${tab_width}`, background: background_color } as React.CSSProperties}
         >
-            <div className={classNames({ [`dc-tabs__list--header--${className}`]: className })}>
-                <ul
-                    className={classNames('dc-tabs__list', {
-                        'dc-tabs__list--top': top,
-                        'dc-tabs__list--border-bottom': has_bottom_line,
-                        'dc-tabs__list--bottom': bottom,
-                        'dc-tabs__list--center': center,
-                        'dc-tabs__list--header-fit-content': header_fit_content,
-                        'dc-tabs__list--full-width': is_full_width,
-                        [`dc-tabs__list--${className}`]: className,
-                        'dc-tabs__list--overflow-hidden': is_overflow_hidden,
-                    })}
-                    ref={tabs_wrapper_ref}
-                >
-                    <ThemedScrollbars
-                        className='dc-themed-scrollbars-wrapper'
-                        is_only_horizontal
-                        is_scrollbar_hidden
-                        is_bypassed={!is_scrollable}
-                    >
-                        {React.Children.map(children, (child, index) => {
-                            if (!child) return null;
-                            const { icon, label, id } = child.props;
-                            const header_content = child.props['data-header-content'];
-                            const count = child.props['data-count'];
-                            return (
-                                <Tab
-                                    active_icon_color={active_icon_color}
-                                    className={className}
-                                    count={count}
-                                    icon={icon}
-                                    icon_color={icon_color}
-                                    icon_size={icon_size}
-                                    is_active={index === active_tab_index}
-                                    key={label}
-                                    is_label_hidden={children.length === 1 && single_tab_has_no_label}
-                                    label={label}
-                                    id={id}
-                                    is_scrollable={is_scrollable}
-                                    top={top}
-                                    bottom={bottom}
-                                    header_fit_content={header_fit_content}
-                                    active_tab_ref={index === active_tab_index ? active_tab_ref : null}
-                                    header_content={header_content}
-                                    onClick={() => onClickTabItem(index)}
-                                    setActiveLineStyle={setActiveLineStyle}
-                                />
-                            );
+            {!hide_header && (
+                <div className={classNames({ [`dc-tabs__list--header--${className}`]: className })}>
+                    <ul
+                        className={classNames('dc-tabs__list', {
+                            'dc-tabs__list--top': top,
+                            'dc-tabs__list--border-bottom': has_bottom_line,
+                            'dc-tabs__list--bottom': bottom,
+                            'dc-tabs__list--center': center,
+                            'dc-tabs__list--header-fit-content': header_fit_content,
+                            'dc-tabs__list--full-width': is_full_width,
+                            [`dc-tabs__list--${className}`]: className,
+                            'dc-tabs__list--overflow-hidden': is_overflow_hidden,
                         })}
-                        {has_active_line && !is_scrollable && (
-                            <span
-                                className={classNames('dc-tabs__active-line', {
-                                    'dc-tabs__active-line--top': top,
-                                    'dc-tabs__active-line--bottom': bottom,
-                                    'dc-tabs__active-line--fit-content': fit_content,
-                                    'dc-tabs__active-line--header-fit-content': header_fit_content,
-                                    'dc-tabs__active-line--is-hidden': children.length === 1 && single_tab_has_no_label,
-                                })}
-                                style={active_line_style}
-                            />
-                        )}
-                    </ThemedScrollbars>
-                </ul>
-            </div>
+                        ref={tabs_wrapper_ref}
+                    >
+                        <ThemedScrollbars
+                            className='dc-themed-scrollbars-wrapper'
+                            is_only_horizontal
+                            is_scrollbar_hidden
+                            is_bypassed={!is_scrollable}
+                        >
+                            {React.Children.map(children, (child, index) => {
+                                if (!child) return null;
+                                const { icon, label, id } = child.props;
+                                const header_content = child.props['data-header-content'];
+                                const count = child.props['data-count'];
+                                return (
+                                    <Tab
+                                        active_icon_color={active_icon_color}
+                                        className={className}
+                                        count={count}
+                                        icon={icon}
+                                        icon_color={icon_color}
+                                        icon_size={icon_size}
+                                        is_active={index === active_tab_index}
+                                        key={label}
+                                        is_label_hidden={children.length === 1 && single_tab_has_no_label}
+                                        label={label}
+                                        id={id}
+                                        is_scrollable={is_scrollable}
+                                        top={top}
+                                        bottom={bottom}
+                                        header_fit_content={header_fit_content}
+                                        active_tab_ref={index === active_tab_index ? active_tab_ref : null}
+                                        header_content={header_content}
+                                        onClick={() => onClickTabItem(index)}
+                                        setActiveLineStyle={setActiveLineStyle}
+                                    />
+                                );
+                            })}
+                            {has_active_line && !is_scrollable && (
+                                <span
+                                    className={classNames('dc-tabs__active-line', {
+                                        'dc-tabs__active-line--top': top,
+                                        'dc-tabs__active-line--bottom': bottom,
+                                        'dc-tabs__active-line--fit-content': fit_content,
+                                        'dc-tabs__active-line--header-fit-content': header_fit_content,
+                                        'dc-tabs__active-line--is-hidden':
+                                            children.length === 1 && single_tab_has_no_label,
+                                    })}
+                                    style={active_line_style}
+                                />
+                            )}
+                        </ThemedScrollbars>
+                    </ul>
+                </div>
+            )}
             <div
                 className={classNames('dc-tabs__content', {
                     [`dc-tabs__content--${className}`]: className,

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import Cookies from 'js-cookie';
 import { observer } from 'mobx-react-lite';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import PWAUpdateNotification from '@/components/pwa-update-notification';
 import { api_base } from '@/external/bot-skeleton';
 import { V2GetActiveToken } from '@/external/bot-skeleton/services/api/appId';
@@ -16,6 +16,7 @@ import { crypto_currencies_display_order, fiat_currencies_display_order } from '
 import Footer from './footer';
 import AppHeader from './header';
 import Body from './main-body';
+import ShellNav from './shell-nav';
 import './layout.scss';
 
 const Layout = observer(() => {
@@ -24,11 +25,16 @@ const Layout = observer(() => {
     const store = useStore();
     const is_quick_strategy_active = store?.quick_strategy?.is_open;
 
-    const isCallbackPage = window.location.pathname === '/callback';
+    // useLocation, not window.location: read directly, these were computed
+    // once and never recomputed on navigation, because nothing here was
+    // subscribed to the router. The values happened to be right on first
+    // paint and could go stale afterwards.
+    const { pathname } = useLocation();
+    const isCallbackPage = pathname === '/callback';
     // The pre-auth landing page (index route, logged-out) supplies its own
     // header/footer for its own visual identity - the dashboard chrome below
     // is only for the authenticated app and other routes, unchanged for them.
-    const isIndexPage = window.location.pathname === '/' || window.location.pathname === '';
+    const isIndexPage = pathname === '/' || pathname === '';
     // Same OAuth-session gap fixed in app-root.tsx's is_landing_page: this
     // check only ever recognized the legacy classic-WS token, so the header/
     // footer chrome below silently never rendered for an OAuth session.
@@ -40,7 +46,7 @@ const Layout = observer(() => {
     );
 
     const isLoggedInCookie = Cookies.get('logged_state') === 'true';
-    const isEndpointPage = window.location.pathname.includes('endpoint');
+    const isEndpointPage = pathname.includes('endpoint');
     const checkClientAccount = JSON.parse(localStorage.getItem('clientAccounts') ?? '{}');
     const getQueryParams = new URLSearchParams(window.location.search);
     const currency = getQueryParams.get('account') ?? '';
@@ -252,6 +258,11 @@ const Layout = observer(() => {
             {!isCallbackPage && !isLandingPage && (
                 <AppHeader isAuthenticating={isAuthenticating || !isInitialAuthCheckComplete} />
             )}
+            {/* Sibling of the Outlet, never a descendant - that is what keeps
+                the navigation mounted across route changes. It used to live
+                inside pages/main, so navigating to Bulk Trader (or any other
+                route) unmounted it along with the page. */}
+            {!isCallbackPage && !isLandingPage && <ShellNav />}
             <Body>
                 <Outlet />
             </Body>
