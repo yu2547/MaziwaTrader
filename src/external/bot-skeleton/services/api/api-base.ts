@@ -408,22 +408,44 @@ class APIBase {
     getActiveSymbols = async () => {
         await doUntilDone(() => this.api?.send({ active_symbols: 'brief' }), [], this).then(
             ({ active_symbols = [], error = {} }) => {
-                // The OTP transport labels every instrument `underlying_symbol`
-                // rather than `symbol` (confirmed live - see
-                // docs/DERIV_OAUTH_LEGACY_TOKEN_BRIDGE_REPORT.md section 8.4).
-                // Everything downstream - pip sizes, ApiHelpers' symbol tree,
-                // and the Blockly Market/Trade Type dropdowns - reads `symbol`,
-                // so without this every instrument arrives nameless and the
-                // market dropdowns render "undefined", leaving the bot with no
-                // market to trade. Normalised here, at the single point the
-                // list enters the app, so no consumer needs to know which
-                // transport produced it. Only fills a missing `symbol`, so a
-                // classic response is passed through untouched.
-                const normalized_symbols = (active_symbols as Array<Record<string, unknown>>).map(active_symbol =>
-                    !active_symbol.symbol && active_symbol.underlying_symbol
-                        ? { ...active_symbol, symbol: active_symbol.underlying_symbol }
-                        : active_symbol
-                );
+                // The OTP transport describes instruments differently from the
+                // classic API: it labels them `underlying_symbol` rather than
+                // `symbol` (confirmed live - see
+                // docs/DERIV_OAUTH_LEGACY_TOKEN_BRIDGE_REPORT.md section 8.4),
+                // and it omits the *_display_name fields entirely.
+                //
+                // active-symbols.js builds the Market > Submarket > Symbol tree
+                // behind the Blockly dropdowns straight from these fields, so a
+                // missing `symbol` leaves the bot with no market to trade, and
+                // missing display names render every option as "undefined"
+                // (which is what the market dropdown showed: several distinct
+                // entries, all unlabelled - the keys were there, the labels
+                // were not).
+                //
+                // Each field is only filled when absent, so a classic response
+                // passes through untouched. Labels fall back to a humanised
+                // form of the key the API did send, which is worse-looking than
+                // Deriv's own copy but is accurate and, unlike "undefined",
+                // selectable.
+                const humanize = (value: unknown) =>
+                    typeof value === 'string' && value
+                        ? value.replace(/_/g, ' ').replace(/\b\w/g, character => character.toUpperCase())
+                        : undefined;
+
+                const normalized_symbols = (active_symbols as Array<Record<string, unknown>>).map(active_symbol => {
+                    const symbol = active_symbol.symbol ?? active_symbol.underlying_symbol;
+                    return {
+                        ...active_symbol,
+                        symbol,
+                        display_name: active_symbol.display_name ?? humanize(symbol) ?? symbol,
+                        market_display_name:
+                            active_symbol.market_display_name ?? humanize(active_symbol.market) ?? active_symbol.market,
+                        submarket_display_name:
+                            active_symbol.submarket_display_name ??
+                            humanize(active_symbol.submarket) ??
+                            active_symbol.submarket,
+                    };
+                });
 
                 const pip_sizes = {};
                 if (normalized_symbols.length) this.has_active_symbols = true;
