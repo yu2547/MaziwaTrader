@@ -207,6 +207,14 @@ export default class ContractsFor {
                 contracts_for: { available: contracts },
             } = response;
 
+            // TEMPORARY - remove once the OTP contracts_for schema is mapped.
+            // The Trade Type / Contract Type / Duration dropdowns all read
+            // fields off these entries, and on the OTP transport they come
+            // back empty; this prints what the API actually sends so the
+            // mapping is written from real data instead of guesswork.
+            // eslint-disable-next-line no-console
+            console.info('[MW-CONTRACTS] symbol:', symbol, 'count:', contracts?.length, 'first entry:', contracts?.[0]);
+
             // We don't offer forward-starting contracts in bot.
             const filtered_contracts = contracts.filter(c => c.start_type !== 'forward');
 
