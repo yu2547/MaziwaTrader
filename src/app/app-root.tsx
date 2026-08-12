@@ -40,7 +40,11 @@ const AppRoot = () => {
     const store = useStore();
     const api_base_initialized = useRef(false);
     const [is_api_initialized, setIsApiInitialized] = useState(false);
-    const [is_tmb_check_complete, setIsTmbCheckComplete] = useState(false);
+    // Write-only now: nothing gates on the TMB check finishing since API init
+    // no longer waits for it, and is_ready never included it. Kept as state so
+    // the effect below still records completion in one place if something needs
+    // to read it again.
+    const [, setIsTmbCheckComplete] = useState(false);
     const [, setIsTmbEnabled] = useState(false);
     const [show_loading_screen, setShowLoadingScreen] = useState(true);
     const [is_oauth_restore_complete, setIsOauthRestoreComplete] = useState(false);
@@ -105,12 +109,17 @@ const AppRoot = () => {
         checkTmbStatus();
     }, []);
 
-    // Initialize API when TMB check is complete with timeout fallback
+    // Starts immediately rather than waiting for the TMB check above, which is
+    // a separate network round-trip that the effect above already describes as
+    // "independent of API initialization" - yet this used to block on it, so
+    // the connection (and for an OAuth session, the REST + OTP handshake)
+    // could not even begin until it returned. Both now run in parallel, which
+    // is the single biggest startup saving available here.
+    //
+    // The one thing that reads TMB state is authorizeAndSubscribe's
+    // InvalidToken branch (window.is_tmb_enabled), and only on that error - so
+    // this does not race anything on the success path.
     useEffect(() => {
-        if (!is_tmb_check_complete) {
-            return; // Wait until TMB check is complete
-        }
-
         const timeoutId = setTimeout(() => {
             if (!is_api_initialized) {
                 setIsApiInitialized(true);
@@ -134,7 +143,10 @@ const AppRoot = () => {
 
         initializeApi();
         return () => clearTimeout(timeoutId);
-    }, [is_tmb_check_complete]);
+        // Runs once on mount - api_base_initialized guards against a second
+        // init, so there is nothing to re-run when other state changes.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // The destination (landing page or dashboard) mounts underneath as soon as
     // the real init this file already tracks (TMB check, API init) is done -

@@ -2,6 +2,7 @@ import { getCurrencyDisplayCode, getDecimalPlaces } from '@/components/shared';
 import { isAuthorizing$ } from '@/external/bot-skeleton/services/api/observables/connection-status-stream';
 import { localize } from '@deriv-com/translations';
 import { config } from '../../../../constants/config';
+import { api_base } from '../../../../services/api/api-base';
 import ApiHelpers from '../../../../services/api/api-helpers';
 import DBotStore from '../../../dbot-store';
 import {
@@ -612,7 +613,13 @@ window.Blockly.JavaScript.javascriptGenerator.forBlock.trade_definition_tradeopt
             'AMOUNT',
             window.Blockly.JavaScript.javascriptGenerator.ORDER_ATOMIC
         ) || '0';
-    const { currency } = DBotStore.instance.client;
+    // DBotStore.instance.client is the legacy ClientStore, which an OAuth/OTP
+    // session never populates - so this was empty and the block fell back to
+    // its default currency (AUD) while the account was actually USD. That is
+    // not cosmetic: the value goes straight into the proposal request, so a
+    // mismatched currency makes the quote fail. api_base.account_info carries
+    // the real currency of whichever transport is connected.
+    const currency = DBotStore.instance.client?.currency || api_base.account_info?.currency || 'USD';
     const duration_type = block.getFieldValue('DURATIONTYPE_LIST') || '0';
     const duration_value =
         window.Blockly.JavaScript.javascriptGenerator.valueToCode(

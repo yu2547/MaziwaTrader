@@ -28,6 +28,13 @@ const STAGES = [
 ];
 const READY_STAGE = { pct: 100, message: 'Ready' };
 const STAGE_INTERVAL_MS = 350;
+// Once real init has finished there is nothing left to wait for, so the
+// remaining stages catch up at this pace instead of the full interval. Every
+// stage is still shown, in order, with the same visuals - the sequence just
+// stops padding time the app no longer needs. Previously the screen always sat
+// through the whole scripted run (5 x 350ms) before it was even allowed to
+// reach "Ready", however fast the app had actually started.
+const STAGE_INTERVAL_CATCHUP_MS = 90;
 const READY_HOLD_MS = 550;
 const EXIT_DURATION_MS = 600; // keep in sync with $exit-duration in loading-screen.scss
 
@@ -88,9 +95,10 @@ const LoadingScreen = ({ ready, onExited }: TLoadingScreenProps) => {
     // Advance through the staged sequence, capped at the last pre-ready stage.
     useEffect(() => {
         if (phase !== 'loading' || stage_index >= STAGES.length - 1) return undefined;
-        const timer = setTimeout(() => setStageIndex(i => i + 1), reduced_motion ? 0 : STAGE_INTERVAL_MS);
+        const interval = ready ? STAGE_INTERVAL_CATCHUP_MS : STAGE_INTERVAL_MS;
+        const timer = setTimeout(() => setStageIndex(i => i + 1), reduced_motion ? 0 : interval);
         return () => clearTimeout(timer);
-    }, [phase, stage_index, reduced_motion]);
+    }, [phase, stage_index, reduced_motion, ready]);
 
     // Only move to the "Ready" phase once the app is genuinely ready.
     useEffect(() => {

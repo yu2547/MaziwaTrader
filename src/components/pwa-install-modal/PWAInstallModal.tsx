@@ -94,7 +94,7 @@ const PWAInstallModal: React.FC = () => {
             <div className='pwa-install-modal__description'>
                 <Text size='xs' color='prominent'>
                     {isPWALaunch
-                        ? localize("Welcome to Deriv Bot! You're using the mobile app version.")
+                        ? localize("Welcome to MaziwaTrader! You're using the mobile app version.")
                         : isDesktop
                           ? localize('Install Deriv Bot as a desktop app for faster access and a native experience!')
                           : localize(
