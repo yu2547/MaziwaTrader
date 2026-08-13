@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
+import RunPanel from '@/components/run-panel';
 import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
 import { useStore } from '@/hooks/useStore';
 import { TActiveSymbol, TTick } from '@/utils/market-data/public-market-feed';
@@ -243,8 +244,8 @@ const BulkTraderPage = observer(() => {
     // The OAuth account is the one that actually gets debited, so its currency
     // wins. ClientStore.currency is only consulted for classic sessions, and
     // is deliberately last - it holds a leftover value when nobody is logged
-    // in, which would otherwise label an empty summary in a currency this
-    // session has nothing to do with.
+    // in, which would otherwise label the risk line in a currency this session
+    // has nothing to do with.
     const currency = oauth_session?.currency || (is_logged_in && (client?.currency as string)) || 'USD';
 
     return (
@@ -368,80 +369,18 @@ const BulkTraderPage = observer(() => {
                               stake: stake.toFixed(2),
                           })
                         : localize('Log in to place trades. The statistics above are live either way.')}
+                    {trade.pending_count > 0 &&
+                        ` ${localize('{{count}} still running.', { count: trade.pending_count })}`}
                 </div>
 
                 {trade.error_message && <div className='mw-bulk-trader__error'>{trade.error_message}</div>}
             </div>
 
-            <aside className='mw-bulk-trader__panel'>
-                <div className='mw-bulk-trader__panel-head'>{localize('Summary')}</div>
-                <div className='mw-bulk-trader__summary'>
-                    <div>
-                        <span>{localize('Total stake')}</span>
-                        <strong>
-                            {trade.stats.total_stake.toFixed(2)} {currency}
-                        </strong>
-                    </div>
-                    <div>
-                        <span>{localize('Total payout')}</span>
-                        <strong>
-                            {trade.stats.total_payout.toFixed(2)} {currency}
-                        </strong>
-                    </div>
-                    <div>
-                        <span>{localize('No. of runs')}</span>
-                        <strong>{trade.stats.runs}</strong>
-                    </div>
-                    <div>
-                        <span>{localize('Contracts lost')}</span>
-                        <strong>{trade.stats.lost}</strong>
-                    </div>
-                    <div>
-                        <span>{localize('Contracts won')}</span>
-                        <strong>{trade.stats.won}</strong>
-                    </div>
-                    <div>
-                        <span>{localize('Total profit/loss')}</span>
-                        <strong
-                            className={
-                                trade.stats.profit >= 0 ? 'mw-bulk-trader__profit' : 'mw-bulk-trader__profit--loss'
-                            }
-                        >
-                            {trade.stats.profit.toFixed(2)} {currency}
-                        </strong>
-                    </div>
-                </div>
-
-                {trade.pending_count > 0 && (
-                    <div className='mw-bulk-trader__pending'>
-                        {localize('{{count}} contract(s) still running…', { count: trade.pending_count })}
-                    </div>
-                )}
-
-                <button type='button' className='mw-bulk-trader__reset' onClick={trade.reset}>
-                    {localize('Reset')}
-                </button>
-
-                <div className='mw-bulk-trader__panel-head'>{localize('Journal')}</div>
-                <div className='mw-bulk-trader__journal'>
-                    {trade.journal.length === 0 && (
-                        <p className='mw-bulk-trader__journal-empty'>
-                            {localize('Placed contracts and their results appear here.')}
-                        </p>
-                    )}
-                    {trade.journal.map(entry => (
-                        <div
-                            key={entry.id}
-                            className={`mw-bulk-trader__journal-row mw-bulk-trader__journal-row--${entry.kind}`}
-                        >
-                            <span className='mw-bulk-trader__journal-time'>
-                                {new Date(entry.at).toLocaleTimeString('en-GB', { hour12: false })}
-                            </span>
-                            <span>{entry.message}</span>
-                        </div>
-                    ))}
-                </div>
-            </aside>
+            {/* The app's own Summary/Transactions/Journal panel, not a copy of
+                it. Contracts bought here are broadcast on the same
+                globalObserver events the bot engine broadcasts, so they land
+                in the same record the bot's own runs do. */}
+            <RunPanel />
         </div>
     );
 });

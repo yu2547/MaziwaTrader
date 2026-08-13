@@ -5,6 +5,7 @@ import { ProposalOpenContract } from '@deriv/api-types';
 import { TPortfolioPosition, TStores } from '@deriv/stores/types';
 import { TContractInfo } from '../components/summary/summary-card.types';
 import { transaction_elements } from '../constants/transactions';
+import { getActiveAccountId } from '../utils/active-account-id';
 import { getStoredItemsByKey, getStoredItemsByUser, setStoredItemsByKey } from '../utils/session-storage';
 import RootStore from './root-store';
 
@@ -48,7 +49,7 @@ export default class TransactionsStore {
     }
     TRANSACTION_CACHE = 'transaction_cache';
 
-    elements: TElement = getStoredItemsByUser(this.TRANSACTION_CACHE, this.core?.client?.loginid, []);
+    elements: TElement = getStoredItemsByUser(this.TRANSACTION_CACHE, getActiveAccountId(this.core?.client), []);
     active_transaction_id: null | number = null;
     recovered_completed_transactions: number[] = [];
     recovered_transactions: number[] = [];
@@ -56,7 +57,8 @@ export default class TransactionsStore {
     is_transaction_details_modal_open = false;
 
     get transactions(): TTransaction[] {
-        if (this.core?.client?.loginid) return this.elements[this.core?.client?.loginid] ?? [];
+        const account_id = getActiveAccountId(this.core?.client);
+        if (account_id) return this.elements[account_id] ?? [];
         return [];
     }
 
@@ -106,7 +108,7 @@ export default class TransactionsStore {
     pushTransaction(data: TContractInfo) {
         const is_completed = isEnded(data as ProposalOpenContract);
         const { run_id } = this.root_store.run_panel;
-        const current_account = this.core?.client?.loginid as string;
+        const current_account = getActiveAccountId(this.core?.client);
 
         const contract: TContractInfo = {
             ...data,
@@ -170,8 +172,9 @@ export default class TransactionsStore {
     }
 
     clear() {
-        if (this.elements && this.elements[this.core?.client?.loginid as string]?.length > 0) {
-            this.elements[this.core?.client?.loginid as string] = [];
+        const account_id = getActiveAccountId(this.core?.client);
+        if (this.elements && this.elements[account_id]?.length > 0) {
+            this.elements[account_id] = [];
         }
         this.recovered_completed_transactions = this.recovered_completed_transactions?.slice(0, 0);
         this.recovered_transactions = this.recovered_transactions?.slice(0, 0);
@@ -183,10 +186,10 @@ export default class TransactionsStore {
 
         // Write transactions to session storage on each change in transaction elements.
         const disposeTransactionElementsListener = reaction(
-            () => this.elements[client?.loginid as string],
+            () => this.elements[getActiveAccountId(client)],
             elements => {
                 const stored_transactions = getStoredItemsByKey(this.TRANSACTION_CACHE, {});
-                stored_transactions[client.loginid as string] = elements?.slice(0, 5000) ?? [];
+                stored_transactions[getActiveAccountId(client)] = elements?.slice(0, 5000) ?? [];
                 setStoredItemsByKey(this.TRANSACTION_CACHE, stored_transactions);
             }
         );
@@ -266,8 +269,8 @@ export default class TransactionsStore {
         }
 
         if (!this.is_called_proposal_open_contract) {
-            if (this.core?.client?.loginid) {
-                const current_account = this.core?.client?.loginid;
+            const current_account = getActiveAccountId(this.core?.client);
+            if (current_account) {
                 if (!this.elements[current_account]?.length) {
                     this.sortOutPositionsBeforeAction(positions);
                 }

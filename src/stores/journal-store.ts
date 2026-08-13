@@ -4,6 +4,7 @@ import { formatDate } from '@/components/shared';
 import { LogTypes, MessageTypes } from '@/external/bot-skeleton';
 import { config } from '@/external/bot-skeleton/constants/config';
 import { localize } from '@deriv-com/translations';
+import { getActiveAccountId } from '../utils/active-account-id';
 import { isCustomJournalMessage } from '../utils/journal-notifications';
 import { getStoredItemsByKey, getStoredItemsByUser, setStoredItemsByKey } from '../utils/session-storage';
 import { getSetting, storeSetting } from '../utils/settings';
@@ -105,9 +106,8 @@ export default class JournalStore {
 
     restoreStoredJournals() {
         const client = this.core.client as RootStore['client'];
-        const { loginid } = client;
         this.journal_filters = getSetting('journal_filter') ?? this.filters.map(filter => filter.id);
-        this.unfiltered_messages = getStoredItemsByUser(this.JOURNAL_CACHE, loginid, []);
+        this.unfiltered_messages = getStoredItemsByUser(this.JOURNAL_CACHE, getActiveAccountId(client), []);
     }
 
     getServerTime() {
@@ -216,7 +216,7 @@ export default class JournalStore {
             () => this.unfiltered_messages,
             unfiltered_messages => {
                 const stored_journals = getStoredItemsByKey(this.JOURNAL_CACHE, {});
-                stored_journals[client.loginid as string] = unfiltered_messages?.slice(0, 5000);
+                stored_journals[getActiveAccountId(client)] = unfiltered_messages?.slice(0, 5000);
                 setStoredItemsByKey(this.JOURNAL_CACHE, stored_journals);
             }
         );

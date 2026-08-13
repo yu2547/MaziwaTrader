@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api_base } from '@/external/bot-skeleton';
+import { api_base, LogTypes, observer as globalObserver } from '@/external/bot-skeleton';
+import { useStore } from '@/hooks/useStore';
 
 /**
  * Places real contracts on whatever connection api_base currently holds, for
- * the one-click Even/Odd buttons on this page.
+ * the one-click buttons on this page.
  *
  * This is not a second trading engine. It is the same three messages the bot
  * engine sends for a single contract - proposal, buy, then read the outcome
@@ -12,30 +13,16 @@ import { api_base } from '@/external/bot-skeleton';
  * interpreter, or the run/stop state machine in between. Nothing here is
  * simulated: a click spends real money on the connected account.
  *
+ * Every contract is broadcast on the same globalObserver events the engine
+ * broadcasts (`bot.contract`, `ui.log.success`), so it lands in the app's
+ * real Summary/Transactions/Journal panel rather than a private copy of it -
+ * a click here and a bot run write to the same record.
+ *
  * The OTP transport names the instrument `underlying_symbol` on a proposal
  * where the classic API names it `symbol` (confirmed live - see
  * docs/DERIV_OAUTH_LEGACY_TOKEN_BRIDGE_REPORT.md section 8.4), the same
  * substitution tradeOptionToProposal() makes for the engine.
  */
-
-export type TSettledTrade = {
-    contract_id: number;
-    transaction_id: number;
-    contract_type: string;
-    buy_price: number;
-    sell_price: number;
-    profit: number;
-    is_win: boolean;
-    longcode: string;
-    settled_at: number;
-};
-
-export type TJournalEntry = {
-    id: string;
-    at: number;
-    kind: 'info' | 'win' | 'loss' | 'error';
-    message: string;
-};
 
 export type TPlaceTradeParams = {
     contract_type: string;
@@ -60,60 +47,57 @@ const readError = (thrown: unknown): string | null => {
 // subscription drops an update rather than the contract never settling.
 const SETTLEMENT_GRACE_MS = 15000;
 
-let journal_seq = 0;
-
 const useManualTrade = () => {
+    const { run_panel } = useStore() ?? {};
     const [is_placing, setIsPlacing] = useState(false);
     const [pending_count, setPendingCount] = useState(0);
-    const [trades, setTrades] = useState<TSettledTrade[]>([]);
-    const [journal, setJournal] = useState<TJournalEntry[]>([]);
     const [error_message, setErrorMessage] = useState<string | null>(null);
 
-    // Contracts bought but not yet settled. Kept in a ref because the
+    // Contracts bought here and not yet settled. Kept in a ref because the
     // onMessage subscription below is registered once and must see the
     // current set, not the set that existed when it was registered.
-    const open_contracts = useRef(new Map<number, { contract_type: string; timeout: ReturnType<typeof setTimeout> }>());
+    const open_contracts = useRef(new Map<number, ReturnType<typeof setTimeout>>());
     const is_mounted = useRef(true);
 
-    const addJournal = useCallback((kind: TJournalEntry['kind'], message: string) => {
-        journal_seq += 1;
-        setJournal(prev => [{ id: `${journal_seq}`, at: Date.now(), kind, message }, ...prev].slice(0, 100));
+    // The run panel only listens for bot events while a bot is running, so
+    // this page registers them for as long as it is on screen. Deliberately
+    // does not unregister while a bot is running - those listeners would be
+    // the bot's, and tearing them down would blank its panel mid-run.
+    useEffect(() => {
+        run_panel?.registerBotListeners();
+        return () => {
+            if (!run_panel?.is_running) run_panel?.unregisterBotListeners();
+        };
+    }, [run_panel]);
+
+    const broadcast = useCallback((contract: Record<string, unknown>) => {
+        globalObserver.emit('bot.contract', {
+            accountID: (api_base.account_info as { loginid?: string })?.loginid,
+            ...contract,
+        });
     }, []);
 
     const settle = useCallback(
         (contract: Record<string, unknown>) => {
             const contract_id = Number(contract.contract_id);
-            const entry = open_contracts.current.get(contract_id);
-            if (!entry) return;
+            const timeout = open_contracts.current.get(contract_id);
+            if (timeout === undefined) return;
 
-            clearTimeout(entry.timeout);
+            clearTimeout(timeout);
             open_contracts.current.delete(contract_id);
-            setPendingCount(open_contracts.current.size);
+            if (is_mounted.current) setPendingCount(open_contracts.current.size);
 
-            const buy_price = Number(contract.buy_price ?? 0);
-            const sell_price = Number(contract.sell_price ?? 0);
-            const profit = Number((sell_price - buy_price).toFixed(2));
-
-            setTrades(prev => [
-                {
-                    contract_id,
-                    transaction_id: Number((contract.transaction_ids as { sell?: number })?.sell ?? contract_id),
-                    contract_type: String(contract.contract_type ?? entry.contract_type),
-                    buy_price,
-                    sell_price,
-                    profit,
-                    is_win: profit >= 0,
-                    longcode: String(contract.longcode ?? ''),
-                    settled_at: Date.now(),
-                },
-                ...prev,
-            ]);
-            addJournal(
-                profit >= 0 ? 'win' : 'loss',
-                `${entry.contract_type} settled: ${profit >= 0 ? '+' : ''}${profit.toFixed(2)}`
-            );
+            broadcast(contract);
+            // Same pair of journal lines Total.js writes when the engine
+            // closes a contract, so a manual trade reads identically to a bot
+            // one in the Journal.
+            const profit = Number(contract.profit ?? 0);
+            globalObserver.emit('ui.log.success', {
+                log_type: profit >= 0 ? LogTypes.PROFIT : LogTypes.LOST,
+                extra: { currency: contract.currency, profit },
+            });
         },
-        [addJournal]
+        [broadcast]
     );
 
     // Reads the same proposal_open_contract stream OpenContract.js reads.
@@ -144,7 +128,12 @@ const useManualTrade = () => {
             subscription = api.onMessage?.().subscribe(({ data }: { data: Record<string, unknown> }) => {
                 if (data?.msg_type !== 'proposal_open_contract') return;
                 const contract = data.proposal_open_contract as Record<string, unknown> | undefined;
-                if (contract?.is_sold) settle(contract);
+                if (!contract || !pending.has(Number(contract.contract_id))) return;
+                // Every update goes out, not just the last one: that is what
+                // fills a transaction row in as it goes rather than making it
+                // appear only once the contract has already closed.
+                if (contract.is_sold) settle(contract);
+                else broadcast(contract);
             });
         };
 
@@ -155,10 +144,10 @@ const useManualTrade = () => {
             is_mounted.current = false;
             clearInterval(rebind_timer);
             subscription?.unsubscribe?.();
-            pending.forEach(entry => clearTimeout(entry.timeout));
+            pending.forEach(timeout => clearTimeout(timeout));
             pending.clear();
         };
-    }, [settle]);
+    }, [settle, broadcast]);
 
     const placeTrade = useCallback(
         async ({ contract_type, symbol, stake, duration, barrier }: TPlaceTradeParams) => {
@@ -190,15 +179,13 @@ const useManualTrade = () => {
                 if (barrier !== undefined) proposal_request.barrier = barrier;
 
                 const proposal_response = await api.send(proposal_request);
-                const proposal_error = readError(proposal_response);
-                if (proposal_error) throw proposal_response;
+                if (readError(proposal_response)) throw proposal_response;
 
                 const proposal = proposal_response.proposal;
                 if (!proposal?.id) throw new Error('The price request came back without a proposal.');
 
                 const buy_response = await api.send({ buy: proposal.id, price: proposal.ask_price });
-                const buy_error = readError(buy_response);
-                if (buy_error) throw buy_response;
+                if (readError(buy_response)) throw buy_response;
 
                 const buy = buy_response.buy;
                 const contract_id = Number(buy.contract_id);
@@ -221,53 +208,27 @@ const useManualTrade = () => {
                     duration * 2000 + SETTLEMENT_GRACE_MS
                 );
 
-                open_contracts.current.set(contract_id, { contract_type, timeout });
-                if (is_mounted.current) {
-                    setPendingCount(open_contracts.current.size);
-                    addJournal('info', `Bought ${contract_type} for ${Number(buy.buy_price).toFixed(2)} ${currency}`);
-                }
+                open_contracts.current.set(contract_id, timeout);
+                if (is_mounted.current) setPendingCount(open_contracts.current.size);
+
+                globalObserver.emit('ui.log.success', {
+                    log_type: LogTypes.PURCHASE,
+                    extra: { longcode: buy.longcode, transaction_id: buy.transaction_id },
+                });
                 return true;
             } catch (thrown) {
                 const message = readError(thrown) ?? 'The trade could not be placed.';
-                if (is_mounted.current) {
-                    setErrorMessage(message);
-                    addJournal('error', message);
-                }
+                if (is_mounted.current) setErrorMessage(message);
+                globalObserver.emit('ui.log.error', message);
                 return false;
             } finally {
                 if (is_mounted.current) setIsPlacing(false);
             }
         },
-        [addJournal, settle]
+        [settle]
     );
 
-    const reset = useCallback(() => {
-        setTrades([]);
-        setJournal([]);
-        setErrorMessage(null);
-    }, []);
-
-    const total_stake = trades.reduce((sum, trade) => sum + trade.buy_price, 0);
-    const total_payout = trades.reduce((sum, trade) => sum + trade.sell_price, 0);
-    const won = trades.filter(trade => trade.is_win).length;
-
-    return {
-        placeTrade,
-        reset,
-        is_placing,
-        pending_count,
-        trades,
-        journal,
-        error_message,
-        stats: {
-            total_stake,
-            total_payout,
-            runs: trades.length,
-            won,
-            lost: trades.length - won,
-            profit: total_payout - total_stake,
-        },
-    };
+    return { placeTrade, is_placing, pending_count, error_message };
 };
 
 export default useManualTrade;

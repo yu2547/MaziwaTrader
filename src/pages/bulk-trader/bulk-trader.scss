@@ -1,13 +1,13 @@
+// The run panel is a right-anchored drawer that positions itself, so the page
+// is a single column that simply keeps clear of it on desktop rather than a
+// two-column grid with a slot for it.
 .mw-bulk-trader {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 34rem;
-    gap: 1.6rem;
-    align-items: start;
+    position: relative;
     padding: 1.6rem;
     min-height: 100%;
 
-    @media (width <= 1100px) {
-        grid-template-columns: minmax(0, 1fr);
+    @media (width >= 1101px) {
+        padding-inline-end: 38rem;
     }
 
     &__main {
@@ -260,123 +260,6 @@
         font-size: 1.3rem;
         color: #fff;
         background: #e35d5b;
-    }
-
-    &__panel {
-        display: flex;
-        flex-direction: column;
-        gap: 1.2rem;
-        padding: 1.6rem;
-        border-radius: 8px;
-        background: var(--general-main-1);
-        border: 1px solid var(--general-section-1);
-        position: sticky;
-        top: 1.6rem;
-
-        @media (width <= 1100px) {
-            position: static;
-        }
-    }
-
-    &__panel-head {
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: var(--text-prominent);
-    }
-
-    &__summary {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 1.4rem 0.8rem;
-
-        div {
-            display: flex;
-            flex-direction: column;
-            gap: 0.3rem;
-            min-width: 0;
-        }
-
-        span {
-            font-size: 1.1rem;
-            color: var(--text-less-prominent);
-        }
-
-        strong {
-            font-size: 1.3rem;
-            font-weight: 700;
-            font-variant-numeric: tabular-nums;
-            color: var(--text-prominent);
-        }
-    }
-
-    &__profit {
-        color: #4eaaa5 !important;
-
-        &--loss {
-            color: #e35d5b !important;
-        }
-    }
-
-    &__pending {
-        font-size: 1.2rem;
-        color: var(--text-less-prominent);
-    }
-
-    &__reset {
-        padding: 1rem;
-        border-radius: 4px;
-        border: 1px solid var(--general-section-5, rgb(0 0 0 / 12%));
-        background: transparent;
-        color: var(--text-prominent);
-        font-size: 1.4rem;
-        font-weight: 600;
-        cursor: pointer;
-
-        &:hover {
-            background: var(--general-section-1);
-        }
-    }
-
-    &__journal {
-        display: flex;
-        flex-direction: column;
-        gap: 0.6rem;
-        max-height: 28rem;
-        overflow-y: auto;
-    }
-
-    &__journal-empty {
-        margin: 0;
-        font-size: 1.2rem;
-        color: var(--text-less-prominent);
-    }
-
-    &__journal-row {
-        display: flex;
-        gap: 0.8rem;
-        font-size: 1.2rem;
-        color: var(--text-general);
-        border-inline-start: 3px solid transparent;
-        padding-inline-start: 0.8rem;
-
-        &--win {
-            border-inline-start-color: #4eaaa5;
-        }
-
-        &--loss {
-            border-inline-start-color: #e35d5b;
-        }
-
-        &--error {
-            border-inline-start-color: #ffad3a;
-            color: #e35d5b;
-        }
-    }
-
-    &__journal-time {
-        flex: none;
-        font-variant-numeric: tabular-nums;
-        color: var(--text-less-prominent);
     }
 }
 
