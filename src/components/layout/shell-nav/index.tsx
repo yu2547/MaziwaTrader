@@ -13,7 +13,6 @@ import {
     LabelPairedObjectsColumnCaptionRegularIcon,
     LabelPairedPuzzlePieceTwoCaptionRegularIcon,
     LabelPairedShieldCheckCaptionRegularIcon,
-    LabelPairedVideoCaptionRegularIcon,
 } from '@deriv/quill-icons/LabelPaired';
 import { LegacyReportsIcon } from '@deriv/quill-icons/Legacy';
 import { Localize } from '@deriv-com/translations';
@@ -65,11 +64,6 @@ const TAB_DESTINATIONS: TTabDestination[] = [
         icon: <LabelPairedChartLineCaptionRegularIcon {...ICON_PROPS} />,
         label: <Localize i18n_default_text='Charts' />,
         tab_index: DBOT_TABS.CHART,
-    },
-    {
-        icon: <LabelPairedVideoCaptionRegularIcon {...ICON_PROPS} />,
-        label: <Localize i18n_default_text='Tutorials' />,
-        tab_index: DBOT_TABS.TUTORIAL,
     },
     {
         icon: <LabelPairedObjectsColumnCaptionRegularIcon {...ICON_PROPS} />,
