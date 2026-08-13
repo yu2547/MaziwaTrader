@@ -14,7 +14,6 @@ import { StandaloneCircleUserRegularIcon } from '@deriv/quill-icons/Standalone';
 import { Localize, useTranslations } from '@deriv-com/translations';
 import { Header, useDevice, Wrapper } from '@deriv-com/ui';
 import { Tooltip } from '@deriv-com/ui';
-import { AppLogo } from '../app-logo';
 import CustomNotifications from './custom-notifications/custom-notifications';
 import AccountsInfoLoader from './account-info-loader';
 import AccountSwitcher from './account-switcher';
@@ -195,10 +194,12 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
                 'app-header--mobile': !isDesktop,
             })}
         >
+            {/* No logo and no Trader's Hub link: the shell navigation directly
+                below this bar is the app's own wayfinding, and both of those
+                pointed away from it - the logo back to the marketing site, the
+                link out to Deriv's hub. */}
             <Wrapper variant='left'>
-                <AppLogo />
                 <MobileMenu />
-                {isDesktop && <MenuItems.TradershubLink />}
                 {isDesktop && <MenuItems />}
             </Wrapper>
             <Wrapper variant='right'>

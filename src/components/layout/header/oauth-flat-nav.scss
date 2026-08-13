@@ -1,110 +1,93 @@
-// Two groups, one open gap between them - Reports/Cashier hug the true left
-// edge, the account cluster hugs the true right edge. Everything within
-// each group sits on one text baseline. Flat background, no gradient. The
-// balance becomes the focal point purely because it's the largest, boldest
-// text on the line; nothing else here is styled to compete with it.
+// Two groups, one open gap between them - the currency dial, support and
+// Cashier hug the true left edge; Deposit and the account balance hug the
+// true right edge.
+// Painted from the app's own theme tokens rather than fixed colours, so the
+// bar follows the light/dark switch in the footer instead of staying dark
+// under a light page. Only the two brand accents - the Deposit pill and the
+// active tab underline - are literal values.
 .mw-premium-nav {
     position: sticky;
     top: 0;
     z-index: 100;
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     flex-wrap: nowrap;
     flex-shrink: 0;
-    padding: 1.2rem 2.2rem;
-    background: #0a0e1a;
-    border-bottom: 1px solid rgb(255 255 255 / 7%);
+    padding: 0.8rem 2rem;
+    background: var(--general-main-1);
+    border-bottom: 1px solid var(--general-section-1);
 
-    &__left {
-        display: flex;
-        align-items: baseline;
-        gap: 2rem;
-    }
-
+    &__left,
     &__right {
         display: flex;
-        align-items: baseline;
-        gap: 2rem;
+        align-items: center;
+        gap: 1.6rem;
     }
 
     &__link {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        color: #565c6e;
+        gap: 0.6rem;
+        color: var(--text-general);
         text-decoration: none;
-        font-size: 1.2rem;
+        font-size: 1.4rem;
         font-weight: 500;
         white-space: nowrap;
         transition: color 150ms ease;
 
         &:hover {
-            color: #9aa2b5;
+            color: var(--text-prominent);
         }
+
+        svg > path {
+            fill: currentcolor;
+        }
+    }
+
+    &__icon-link {
+        display: inline-flex;
+        align-items: center;
+        line-height: 0;
+    }
+
+    // The one call to action on the bar, so it is the one filled shape.
+    &__deposit {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.6rem 1.6rem;
+        border-radius: 999px;
+        background: #7c5cfc;
+        color: #fff;
+        font-size: 1.3rem;
+        font-weight: 700;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: filter 150ms ease;
+
+        &:hover {
+            filter: brightness(1.08);
+        }
+    }
+
+    &__account {
+        position: relative;
     }
 
     &__balance {
         display: inline-flex;
-        align-items: baseline;
-        gap: 0.4rem;
-        overflow: hidden;
-    }
-
-    &__balance-icon {
-        display: inline-flex;
         align-items: center;
-        align-self: center;
-    }
-
-    // Deriv's own brand teal ($color-green-3 in _constants.scss) - a real
-    // color already used across the app for balances/positive values, not
-    // a new one.
-    &__balance-number {
-        display: inline-block;
-        font-family: 'IBM Plex Mono', 'SFMono-Regular', 'Consolas', monospace;
-        font-size: 2rem;
-        font-weight: 700;
-        color: #00a79e;
-        font-variant-numeric: tabular-nums;
-        white-space: nowrap;
-        line-height: 1;
-    }
-
-    &__balance-currency {
-        font-family: 'IBM Plex Mono', 'SFMono-Regular', 'Consolas', monospace;
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #00a79e;
-        white-space: nowrap;
-    }
-
-    &__profile {
-        position: relative;
-        align-self: center;
-    }
-
-    // Plain icon, quiet at rest - a flat background only appears on
-    // interaction, purely as a click-target cue, never a permanent material.
-    &__avatar {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
+        gap: 0.6rem;
+        padding: 0.4rem 0.6rem;
         border: none;
+        border-radius: 8px;
         background: transparent;
-        color: #6b7280;
         cursor: pointer;
-        transition:
-            color 150ms ease,
-            background 150ms ease;
+        transition: background 150ms ease;
 
         &:hover,
         &[aria-expanded='true'] {
-            color: #eef3fb;
-            background: rgb(255 255 255 / 8%);
+            background: var(--general-section-1);
         }
 
         &:focus-visible {
@@ -113,56 +96,146 @@
         }
     }
 
-    // A light surface, deliberately - this is a popover menu, not part of
-    // the dark bar's own material. It reads as a distinct layer floating
-    // above the page, the same way any dropdown menu does.
+    &__balance-icon {
+        display: inline-flex;
+        align-items: center;
+        line-height: 0;
+    }
+
+    &__balance-number {
+        display: inline-block;
+        font-size: 1.7rem;
+        font-weight: 700;
+        color: var(--text-prominent);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        line-height: 1;
+    }
+
+    &__balance-currency {
+        font-size: 1.7rem;
+        font-weight: 700;
+        color: var(--text-prominent);
+        white-space: nowrap;
+    }
+
+    &__balance-caret {
+        display: inline-flex;
+        align-items: center;
+        line-height: 0;
+        color: var(--text-general);
+        transition: transform 180ms ease;
+
+        &--open {
+            transform: rotate(180deg);
+        }
+
+        svg > path {
+            fill: currentcolor;
+        }
+    }
+
+    // A popover menu floating above the page - its own surface, not part of
+    // the bar's material.
     &__panel {
         position: absolute;
-        top: calc(100% + 10px);
+        top: calc(100% + 8px);
         right: 0;
-        width: 280px;
-        border-radius: 12px;
-        background: #fff;
-        border: 1px solid rgb(0 0 0 / 8%);
+        width: 320px;
+        border-radius: 8px;
+        background: var(--general-main-1);
+        border: 1px solid var(--general-section-1);
         box-shadow: 0 16px 40px rgb(0 0 0 / 18%);
         z-index: 200;
         overflow: hidden;
     }
 
-    &__panel-header {
-        padding: 0.9rem 1.2rem 0.5rem;
-        font-size: 1.05rem;
-        font-weight: 600;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: #8a95ab;
+    &__panel-tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        border-bottom: 1px solid var(--general-section-1);
+    }
+
+    &__panel-tab {
+        padding: 1.2rem 0.8rem;
+        border: none;
+        border-bottom: 2px solid transparent;
+        background: transparent;
+        color: var(--text-general);
+        font-size: 1.4rem;
+        font-weight: 500;
+        cursor: pointer;
+
+        &--active {
+            color: var(--text-prominent);
+            font-weight: 700;
+            border-bottom-color: #ff444f;
+        }
+    }
+
+    &__panel-section {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 1.2rem 1.6rem 0.6rem;
+        border: none;
+        background: transparent;
+        color: var(--text-general);
+        font-size: 1.3rem;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    &__panel-section-caret {
+        display: inline-flex;
+        line-height: 0;
+        color: var(--text-general);
+        transform: rotate(180deg);
+        transition: transform 180ms ease;
+
+        &--open {
+            transform: rotate(0deg);
+        }
+
+        svg > path {
+            fill: currentcolor;
+        }
     }
 
     &__panel-list {
         display: flex;
         flex-direction: column;
-        max-height: 240px;
+        max-height: 260px;
         overflow-y: auto;
-        padding: 0.4rem;
+        padding: 0 0.8rem 0.8rem;
+    }
+
+    &__panel-empty {
+        margin: 0;
+        padding: 0.8rem;
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
     }
 
     &__panel-account {
         display: flex;
         align-items: center;
-        gap: 0.8rem;
-        padding: 0.8rem 0.9rem;
-        border-radius: 8px;
+        gap: 1rem;
+        padding: 1rem;
+        border-radius: 6px;
         border: none;
         background: transparent;
         cursor: pointer;
         text-align: left;
 
         &:hover {
-            background: rgb(0 0 0 / 4%);
+            background: var(--general-section-1);
         }
 
         &--active {
-            background: rgb(255 68 79 / 6%);
+            background: var(--general-section-1);
+            box-shadow: inset 0 0 0 1px var(--general-section-5, rgb(0 0 0 / 12%));
         }
     }
 
@@ -173,76 +246,66 @@
         flex: 1;
         display: flex;
         flex-direction: column;
-        font-size: 1.2rem;
-        color: #1a1f2c;
+        font-size: 1.4rem;
+        color: var(--text-prominent);
         font-weight: 600;
+        min-width: 0;
     }
 
     &__panel-account-id {
-        font-size: 1.05rem;
-        color: #8a95ab;
+        font-size: 1.1rem;
+        color: var(--text-less-prominent);
         font-weight: 500;
     }
 
     &__panel-account-balance {
-        font-size: 1.15rem;
+        font-size: 1.3rem;
         font-weight: 600;
-        color: #1a1f2c;
+        color: var(--text-prominent);
         font-variant-numeric: tabular-nums;
-        white-space: nowrap;
-    }
-
-    // Visibly inert - no real reset endpoint exists yet for this account
-    // type, so this stays disabled rather than pretending to work.
-    &__panel-reset {
-        flex-shrink: 0;
-        border: 1px solid rgb(0 0 0 / 12%);
-        border-radius: 999px;
-        background: transparent;
-        color: #8a95ab;
-        font-size: 0.95rem;
-        font-weight: 600;
-        padding: 0.35rem 0.7rem;
-        cursor: not-allowed;
         white-space: nowrap;
     }
 
     &__panel-divider {
         height: 1px;
-        background: rgb(0 0 0 / 8%);
+        background: var(--general-section-1);
     }
 
     &__panel-logout {
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
+        gap: 0.6rem;
         width: 100%;
-        padding: 1rem 1.2rem;
+        padding: 1.2rem 1.6rem;
         border: none;
         background: transparent;
-        color: #8a95ab;
-        font-size: 1.25rem;
-        font-weight: 600;
+        color: var(--text-prominent);
+        font-size: 1.4rem;
+        font-weight: 500;
         cursor: pointer;
 
         &:hover {
-            color: #ff444f;
+            background: var(--general-section-1);
+        }
+
+        svg > path {
+            fill: currentcolor;
         }
     }
 }
 
 @media (width <= 1100px) {
     .mw-premium-nav {
-        padding: 1.1rem 1.4rem;
+        padding: 0.8rem 1.4rem;
 
         &__left,
         &__right {
-            gap: 1.4rem;
+            gap: 1.2rem;
         }
 
-        &__balance-number {
-            font-size: 1.7rem;
+        &__balance-number,
+        &__balance-currency {
+            font-size: 1.5rem;
         }
     }
 }
@@ -251,9 +314,8 @@
     .mw-premium-nav {
         flex-wrap: wrap;
         justify-content: center;
-        align-items: center;
-        row-gap: 1rem;
-        padding: 1.2rem;
+        row-gap: 0.8rem;
+        padding: 1rem 1.2rem;
 
         &__left,
         &__right {
