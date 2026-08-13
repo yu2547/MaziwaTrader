@@ -7,14 +7,12 @@ import { api_base } from '@/external/bot-skeleton';
 import { useStore } from '@/hooks/useStore';
 import { clearStoredSession } from '@/utils/auth/deriv-oauth';
 import { convertFromUsd, useExchangeRates } from '@/utils/currency/exchange-rate';
-import { LegacyWhatsappIcon } from '@deriv/quill-icons/Legacy';
 import {
     StandaloneCashRegisterRegularIcon,
     StandaloneChevronDownBoldIcon,
     StandaloneRightFromBracketRegularIcon,
 } from '@deriv/quill-icons/Standalone';
 import { useTranslations } from '@deriv-com/translations';
-import { URLConstants } from '@deriv-com/utils';
 import SegmentedControl from './segmented-control';
 import './oauth-flat-nav.scss';
 
@@ -120,15 +118,6 @@ const OAuthFlatNav = observer(() => {
                     value={display_currency}
                     onChange={value => setDisplayCurrency(value as TDisplayCurrency)}
                 />
-                <a
-                    className='mw-premium-nav__icon-link'
-                    href={URLConstants.whatsApp}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    aria-label={localize('WhatsApp support')}
-                >
-                    <LegacyWhatsappIcon iconSize='xs' />
-                </a>
                 <a
                     className='mw-premium-nav__link'
                     href={standalone_routes.cashier}

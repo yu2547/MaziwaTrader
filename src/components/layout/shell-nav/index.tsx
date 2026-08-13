@@ -47,7 +47,10 @@ type TRouteDestination = {
     path: string;
 };
 
-const ICON_PROPS = { height: '24px', width: '24px', fill: 'var(--text-general)' } as const;
+// The bar paints its own ground, so the icons carry its accent rather than
+// the page's text colour. shell-nav.scss overrides the fill to white on the
+// active item.
+const ICON_PROPS = { height: '24px', width: '24px', fill: '#4da3ff' } as const;
 
 const TAB_DESTINATIONS: TTabDestination[] = [
     {

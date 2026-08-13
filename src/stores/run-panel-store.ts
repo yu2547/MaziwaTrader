@@ -7,6 +7,7 @@ import { contract_stages, TContractStage } from '@/constants/contract-stage';
 import { run_panel } from '@/constants/run-panel';
 import { api_base, ErrorTypes, MessageTypes, observer, unrecoverable_errors } from '@/external/bot-skeleton';
 import { getSelectedTradeType } from '@/external/bot-skeleton/scratch/utils';
+import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
 // import { journalError, switch_account_notification } from '@/utils/bot-notifications';
 import GTM from '@/utils/gtm';
 import { helpers } from '@/utils/store-helpers';
@@ -198,8 +199,27 @@ export default class RunPanelStore {
         // sessions are unaffected: client.is_logged_in true short-circuits
         // this exactly as it did before.
         if (!client.is_logged_in && !api_base.is_otp_transport) {
-            this.showLoginDialog();
-            return;
+            // An OAuth session whose trading socket has not come up is not a
+            // logged-out user, and the login dialog is a dead end for someone
+            // already looking at their own balance. Try the connection again
+            // here - the boot-time attempt can lose to a slow network or a
+            // token that landed a moment later - and if it still will not
+            // open, say why in the journal instead of "Please login".
+            if (getStoredAccessToken()) {
+                const connected = await api_base.initOtpConnection();
+                if (!connected) {
+                    observer.emit(
+                        'ui.log.error',
+                        localize('Could not open a trading connection for your account. {{reason}}', {
+                            reason: api_base.otp_error ?? '',
+                        })
+                    );
+                    return;
+                }
+            } else {
+                this.showLoginDialog();
+                return;
+            }
         }
 
         /**

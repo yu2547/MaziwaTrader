@@ -1,21 +1,27 @@
 // Lives in the shell, directly under the header and above the routed content.
 // Deliberately in normal document flow - no position:fixed, no z-index games -
 // so it occupies real layout space and cannot overlap page content.
+// Painted dark on purpose, in both themes: it is the app's own spine, and
+// keeping it a constant deep navy separates it from the account bar above and
+// the page below far more strongly than a light bar with a hairline border
+// managed. The literal colours here are that decision, not theme tokens the
+// light theme would wash out.
+$shell-nav-bg: #0e2237;
+$shell-nav-active: #1a5cff;
+$shell-nav-icon: #4da3ff;
+
 .shell-nav {
     flex-shrink: 0;
     width: 100%;
-    border-bottom: 1px solid var(--general-section-1, rgb(0 0 0 / 8%));
-    background: var(--general-main-1, #fff);
+    background: $shell-nav-bg;
 
     // Horizontal scroll rather than wrapping keeps the bar exactly one row
     // tall at every width, so the content below never shifts down.
     &__scroller {
         display: flex;
-        align-items: center;
-        gap: 0.4rem;
+        align-items: stretch;
         overflow-x: auto;
         scrollbar-width: none;
-        padding: 0 1.2rem;
 
         &::-webkit-scrollbar {
             display: none;
@@ -25,45 +31,53 @@
     &__item {
         display: inline-flex;
         align-items: center;
-        gap: 0.6rem;
+        gap: 0.8rem;
         flex-shrink: 0;
-        padding: 1.2rem 1.4rem;
+        padding: 1.2rem 1.6rem;
         border: none;
-        border-bottom: 2px solid transparent;
         background: transparent;
-        color: var(--text-general, #333);
-        font-size: 1.4rem;
-        font-weight: 400;
+        color: #fff;
+        font-size: 1.5rem;
+        font-weight: 700;
         line-height: 1;
         white-space: nowrap;
         text-decoration: none;
         cursor: pointer;
-        transition:
-            color 150ms ease,
-            border-color 150ms ease;
+        transition: background 150ms ease;
+
+        svg,
+        svg > path,
+        svg > g > path {
+            fill: $shell-nav-icon;
+        }
 
         &:hover {
-            color: var(--brand-red-coral, #ff444f);
+            background: rgb(255 255 255 / 8%);
         }
 
         &:focus-visible {
-            outline: 2px solid var(--brand-blue, #1a5cff);
+            outline: 2px solid $shell-nav-icon;
             outline-offset: -2px;
         }
 
+        // A filled block rather than an underline: at this weight and on this
+        // ground an underline barely registers.
         &--active {
-            border-bottom-color: var(--brand-red-coral, #ff444f);
-            color: var(--brand-red-coral, #ff444f);
-            font-weight: 700;
+            background: $shell-nav-active;
+
+            svg,
+            svg > path,
+            svg > g > path {
+                fill: #fff;
+            }
         }
     }
 
     &__divider {
         flex-shrink: 0;
         width: 1px;
-        height: 2.4rem;
-        margin: 0 0.6rem;
-        background: var(--general-section-1, rgb(0 0 0 / 12%));
+        margin: 0.8rem 0.4rem;
+        background: rgb(255 255 255 / 15%);
     }
 }
 
@@ -72,12 +86,8 @@
 // every route - it is never removed, only condensed.
 @media (width <= 768px) {
     .shell-nav {
-        &__scroller {
-            padding: 0 0.6rem;
-        }
-
         &__item {
-            padding: 1rem;
+            padding: 1rem 1.2rem;
             gap: 0;
         }
 
@@ -94,8 +104,7 @@
         }
 
         &__divider {
-            height: 1.8rem;
-            margin: 0 0.2rem;
+            margin: 1rem 0.2rem;
         }
     }
 }

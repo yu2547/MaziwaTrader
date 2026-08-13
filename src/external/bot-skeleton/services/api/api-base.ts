@@ -77,6 +77,8 @@ class APIBase {
     // is live reads this flag, not isAuthorized$.
     is_otp_transport = false;
     otp_account: TOptionsAccount | null = null;
+    // Why the last OTP connection attempt failed, for showing the user.
+    otp_error: string | null = null;
 
     // Single mutable slot (not an accumulating event list) for "something wants to
     // know when subscriptions have just been restored after a reconnect". Kept as
@@ -343,6 +345,7 @@ class APIBase {
             };
             this.is_otp_transport = true;
             this.otp_account = result.account;
+            this.otp_error = null;
             this.is_authorized = true;
             this.connection_manager.setState(CONNECTION_STATE.AUTHORIZED);
 
@@ -362,6 +365,12 @@ class APIBase {
             return true;
         } catch (e) {
             wsLog('Connection', 'initOtpConnection() failed', e);
+            // Kept so the reason can be shown to the user rather than only
+            // written to the console. Every failure here ends with the Run
+            // button refusing to start, and "Please login" on its own is
+            // actively misleading to someone who is already logged in.
+            const { message, detail } = (e ?? {}) as { message?: string; detail?: string };
+            this.otp_error = [message, detail].filter(Boolean).join(' ') || String(e);
             this.is_otp_transport = false;
             this.otp_account = null;
             this.is_authorized = false;
