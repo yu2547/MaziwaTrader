@@ -36,7 +36,7 @@ export type TOptionsApiErrorKind =
     | 'websocket_connect_failed'
     | 'network_failure'
     | 'invalid_response'
-    | 'no_demo_account';
+    | 'no_options_account';
 
 export class OptionsApiError extends Error {
     kind: TOptionsApiErrorKind;

@@ -26,6 +26,7 @@ const SESSION_KEY_CODE_VERIFIER = 'deriv_oauth_code_verifier';
 const SESSION_KEY_STATE = 'deriv_oauth_state';
 const SESSION_KEY_ACCESS_TOKEN = 'deriv_oauth_access_token';
 const SESSION_KEY_TOKEN_META = 'deriv_oauth_token_meta';
+const SESSION_KEY_SELECTED_ACCOUNT = 'deriv_oauth_selected_account_id';
 
 const log = (stage: string, detail?: unknown) => {
     // eslint-disable-next-line no-console
@@ -130,10 +131,24 @@ export const getStoredTokenMeta = (): { expires_in: number; token_type: string; 
     }
 };
 
+/**
+ * Which Options account the user last picked in the header. Persisted next to
+ * the token rather than kept only in OAuthSessionStore because api_base
+ * connects on page load, before any React store has been populated - and the
+ * account it connects to is the account bots place contracts against, so it
+ * has to survive a refresh rather than silently reverting to accounts[0].
+ */
+export const getStoredSelectedAccountId = () => sessionStorage.getItem(SESSION_KEY_SELECTED_ACCOUNT) ?? undefined;
+
+export const storeSelectedAccountId = (account_id: string) => {
+    if (account_id) sessionStorage.setItem(SESSION_KEY_SELECTED_ACCOUNT, account_id);
+};
+
 /** Removes the persisted OAuth session - call this on logout so a stale token can't be silently restored on the next load. */
 export const clearStoredSession = () => {
     sessionStorage.removeItem(SESSION_KEY_ACCESS_TOKEN);
     sessionStorage.removeItem(SESSION_KEY_TOKEN_META);
+    sessionStorage.removeItem(SESSION_KEY_SELECTED_ACCOUNT);
 };
 
 /**

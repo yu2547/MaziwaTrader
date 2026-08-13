@@ -30,11 +30,7 @@ import { generateOtpApiInstance } from './appId';
  *   live: an OTP-authenticated `balance` request succeeded immediately after
  *   open, no `authorize` message sent) - so there is nothing to fake here,
  *   and nothing here should be mistaken for classic auth state.
- * - Does not select or touch a real-money account. Only ever looks for an
- *   existing demo Options account. This is a Phase 1 scope decision, not an
- *   oversight: this transport has not yet been validated end-to-end, so it
- *   must not be reachable for real accounts until that validation is done.
- * - Does not auto-create a demo account as a side effect of connecting.
+ * - Does not auto-create an account as a side effect of connecting.
  *   Account creation is a distinct, explicit action (createOptionsAccount in
  *   options-trading-api.ts) - silently creating one here would make
  *   "connect" have a surprising side effect once this factory is eventually
@@ -55,15 +51,27 @@ export type TOtpConnectionResult = {
 
 /**
  * Resolves once a fresh OTP-authenticated Options WebSocket has been
- * constructed for the caller's demo account. Throws OptionsApiError (never
- * returns null) on any failure, so callers can inspect `.kind` to decide how
- * to react - in particular:
- *   - no stored OAuth session at all -> callers should treat this as "not an
- *     OTP-eligible session" and fall back to classic silently, not as an
- *     error worth surfacing to the user.
- *   - 'no_demo_account' -> a real, actionable state (no demo Options account
- *     exists yet) that's worth surfacing, distinct from a network/API
- *     failure.
+ * constructed. Throws OptionsApiError (never returns null) on any failure, so
+ * callers can inspect `.kind` to decide how to react - in particular, no
+ * stored OAuth session at all means "not an OTP-eligible session", which
+ * callers should treat as a silent fall back to classic rather than an error
+ * worth surfacing.
+ *
+ * Which account it connects to:
+ *   preferred_account_id, when given and present in the list -> that account
+ *   otherwise                                                -> accounts[0]
+ *
+ * accounts[0] is the same account oauth-session-store's `selected_account`
+ * getter defaults to, so with no explicit preference the connection matches
+ * whatever the header is displaying.
+ *
+ * This previously refused anything but a demo account. That was a deliberate
+ * restriction while the transport was unproven, but it also meant a session
+ * whose selected account is real silently fell through to the classic
+ * connection - which cannot trade, so Run reported "Please login" while the
+ * balance was on screen. It now follows the selected account, so REAL MONEY
+ * IS REACHABLE HERE: whatever account this connects to is the account the bot
+ * will place contracts against.
  *
  * Does not wait for the WebSocket's `open` event before resolving - this
  * mirrors generateDerivApiInstance()'s existing (classic) behavior exactly,
@@ -71,7 +79,7 @@ export type TOtpConnectionResult = {
  * Keeping that asymmetry identical means a later "attach this instance to
  * ConnectionManager" step needs no special-casing for OTP vs classic.
  */
-export const createOtpConnection = async (): Promise<TOtpConnectionResult> => {
+export const createOtpConnection = async (preferred_account_id?: string): Promise<TOtpConnectionResult> => {
     const access_token = getStoredAccessToken();
     if (!access_token) {
         throw new OptionsApiError(
@@ -82,12 +90,12 @@ export const createOtpConnection = async (): Promise<TOtpConnectionResult> => {
     }
 
     const accounts = await listOptionsAccounts(access_token);
-    const account = accounts.find(a => a.account_type === 'demo');
+    const account = accounts.find(a => a.account_id === preferred_account_id) ?? accounts[0];
     if (!account) {
         throw new OptionsApiError(
-            'no_demo_account',
-            'No demo Options trading account exists yet for this session.',
-            'This factory deliberately does not auto-create one - create a demo account explicitly (createOptionsAccount) first, then retry.'
+            'no_options_account',
+            'This login has no Options trading account yet.',
+            'This factory deliberately does not create one - createOptionsAccount() in options-trading-api.ts is the explicit action for that.'
         );
     }
 

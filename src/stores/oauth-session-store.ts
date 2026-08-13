@@ -1,4 +1,5 @@
 import { action, computed, makeObservable, observable } from 'mobx';
+import { getStoredSelectedAccountId, storeSelectedAccountId } from '@/utils/auth/deriv-oauth';
 import type { TOptionsAccount } from '@/utils/options-trading/options-trading-api';
 
 /**
@@ -71,12 +72,18 @@ export default class OAuthSessionStore {
     setAccounts = (accounts: TOptionsAccount[]) => {
         this.accounts = accounts;
         if (!this.selected_account_id && accounts.length) {
-            this.selected_account_id = accounts[0].account_id;
+            // Restore the account the user last picked, so a refresh doesn't
+            // silently move the header (and the bot's trading account) back to
+            // accounts[0]. api_base reads the same stored id on load.
+            const stored_id = getStoredSelectedAccountId();
+            const restored = accounts.find(account => account.account_id === stored_id);
+            this.selected_account_id = (restored ?? accounts[0]).account_id;
         }
     };
 
     selectAccount = (account_id: string) => {
         this.selected_account_id = account_id;
+        storeSelectedAccountId(account_id);
     };
 
     clear = () => {

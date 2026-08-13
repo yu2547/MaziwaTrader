@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { observer } from 'mobx-react-lite';
 import { CurrencyIcon } from '@/components/currency/currency-icon';
 import { addComma, getDecimalPlaces, standalone_routes } from '@/components/shared';
+import { api_base } from '@/external/bot-skeleton';
 import { useStore } from '@/hooks/useStore';
 import { clearStoredSession } from '@/utils/auth/deriv-oauth';
 import { convertFromUsd, useExchangeRates } from '@/utils/currency/exchange-rate';
@@ -76,10 +77,18 @@ const OAuthFlatNav = observer(() => {
     const accounts_of_active_type = accounts.filter(account => account.account_type === active_type);
     const selected = oauth_session.selected_account;
 
+    // The OTP socket is issued for one account, so picking a different one has
+    // to reconnect the trading connection too - otherwise the header would
+    // show Real while the bot still traded Demo (or vice versa).
+    const selectAccount = (account_id: string) => {
+        oauth_session.selectAccount(account_id);
+        api_base.switchOtpAccount(account_id);
+    };
+
     const handleAccountTypeChange = (value: string) => {
         if (value === oauth_session.account_type) return;
         const target = accounts.find(account => account.account_type === value);
-        if (target) oauth_session.selectAccount(target.account_id);
+        if (target) selectAccount(target.account_id);
     };
 
     const handleLogout = () => {
@@ -175,13 +184,13 @@ const OAuthFlatNav = observer(() => {
                                         role='button'
                                         tabIndex={0}
                                         onClick={() => {
-                                            oauth_session.selectAccount(account.account_id);
+                                            selectAccount(account.account_id);
                                             setIsProfileOpen(false);
                                         }}
                                         onKeyDown={event => {
                                             if (event.key === 'Enter' || event.key === ' ') {
                                                 event.preventDefault();
-                                                oauth_session.selectAccount(account.account_id);
+                                                selectAccount(account.account_id);
                                                 setIsProfileOpen(false);
                                             }
                                         }}

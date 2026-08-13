@@ -1,7 +1,7 @@
 import Cookies from 'js-cookie';
 import CommonStore from '@/stores/common-store';
 import { TAuthData } from '@/types/api-types';
-import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
+import { getStoredAccessToken, getStoredSelectedAccountId } from '@/utils/auth/deriv-oauth';
 import { clearAuthData } from '@/utils/auth-utils';
 import type { TOptionsAccount } from '@/utils/options-trading/options-trading-api';
 import { observer as globalObserver } from '../../utils/observer';
@@ -329,9 +329,9 @@ class APIBase {
      * account_list/country/scopes have no OAuth/REST equivalent available
      * yet and are intentionally left unset rather than guessed at.
      */
-    async initOtpConnection(): Promise<boolean> {
+    async initOtpConnection(preferred_account_id = getStoredSelectedAccountId()): Promise<boolean> {
         try {
-            const result = await createOtpConnection();
+            const result = await createOtpConnection(preferred_account_id);
             this.connection_manager.attach(result.api);
             this.api = this.connection_manager.api;
             this.token = '';
@@ -367,6 +367,27 @@ class APIBase {
             this.is_authorized = false;
             return false;
         }
+    }
+
+    /**
+     * Re-runs the OTP connection against a different Options account, for the
+     * Real/Demo switch in the header. Necessary because the OTP is issued for
+     * one specific account_id at socket-open and cannot be re-pointed on a
+     * live socket - so "switch account" genuinely means "reconnect".
+     *
+     * Without this, switching to Real would only change the balance on screen
+     * while the bot kept trading the previously connected account. Refuses
+     * mid-run for the same reason: swapping the socket under a running bot
+     * would strand its open contract on the old connection.
+     */
+    async switchOtpAccount(account_id: string): Promise<boolean> {
+        if (!this.is_otp_transport || !account_id || account_id === this.account_id) return false;
+        if (this.is_running) {
+            wsLog('Connection', 'switchOtpAccount() ignored - the bot is running', { account_id });
+            return false;
+        }
+        wsLog('Connection', 'switchOtpAccount() reconnecting', { from: this.account_id, to: account_id });
+        return this.initOtpConnection(account_id);
     }
 
     async getSelfExclusion() {
