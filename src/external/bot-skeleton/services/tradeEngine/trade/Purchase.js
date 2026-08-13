@@ -82,7 +82,7 @@ export default Engine =>
                     delayIndex++
                 ).then(onSuccess);
             }
-            const trade_option = tradeOptionToBuy(contract_type, this.tradeOptions);
+            const trade_option = tradeOptionToBuy(contract_type, this.tradeOptions, api_base.is_otp_transport);
             const action = () => api_base.api.send(trade_option);
 
             this.isSold = false;

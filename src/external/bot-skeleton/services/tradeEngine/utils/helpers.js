@@ -54,7 +54,13 @@ export const tradeOptionToProposal = (trade_option, purchase_reference, use_unde
         return proposal;
     });
 
-export const tradeOptionToBuy = (contract_type, trade_option) => {
+// use_underlying_symbol_field: same substitution tradeOptionToProposal()
+// makes above, for the same reason. A strategy with no payout block - which
+// includes the default workspace - never subscribes to proposals, so it buys
+// straight from these parameters, and the Options API rejects the whole
+// request with "Input validation failed: parameters" when it finds `symbol`
+// there. Classic callers never pass true, so their request is unchanged.
+export const tradeOptionToBuy = (contract_type, trade_option, use_underlying_symbol_field = false) => {
     const buy = {
         buy: '1',
         price: trade_option.amount,
@@ -66,7 +72,9 @@ export const tradeOptionToBuy = (contract_type, trade_option) => {
             duration: trade_option.duration,
             duration_unit: trade_option.duration_unit,
             multiplier: trade_option.multiplier,
-            symbol: trade_option.symbol,
+            ...(use_underlying_symbol_field
+                ? { underlying_symbol: trade_option.symbol }
+                : { symbol: trade_option.symbol }),
         },
     };
     if (trade_option.prediction !== undefined) {
