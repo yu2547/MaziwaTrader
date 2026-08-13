@@ -179,7 +179,19 @@ export default class ContractsFor {
 
         return contracts.filter(contract => {
             const has_matching_category = contract.contract_category === contract_category;
-            const has_matching_barrier = contract.barrier_category === barrier_category;
+            // The Options API's contracts_for entries carry no barrier_category
+            // (captured live: barriers, contract_category, contract_type,
+            // expiry_type, market, min/max_contract_duration, submarket,
+            // underlying_symbol - and nothing else). Comparing an absent field
+            // to a real category was false for every contract, so this filter
+            // returned [] for every trade type, which is what left Trade Type,
+            // Contract Type and Duration empty and produced "please enter a
+            // value between 0 to ." with no maximum.
+            //
+            // Only applied when the response actually carries the field, so a
+            // classic response - which does - filters exactly as before.
+            const has_matching_barrier =
+                contract.barrier_category === undefined || contract.barrier_category === barrier_category;
 
             return has_matching_category && has_matching_barrier;
         });
@@ -206,14 +218,6 @@ export default class ContractsFor {
             const {
                 contracts_for: { available: contracts },
             } = response;
-
-            // TEMPORARY - remove once the OTP contracts_for schema is mapped.
-            // The Trade Type / Contract Type / Duration dropdowns all read
-            // fields off these entries, and on the OTP transport they come
-            // back empty; this prints what the API actually sends so the
-            // mapping is written from real data instead of guesswork.
-            // eslint-disable-next-line no-console
-            console.info('[MW-CONTRACTS] symbol:', symbol, 'count:', contracts?.length, 'first entry:', contracts?.[0]);
 
             // We don't offer forward-starting contracts in bot.
             const filtered_contracts = contracts.filter(c => c.start_type !== 'forward');
