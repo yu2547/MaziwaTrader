@@ -1,22 +1,57 @@
 import { useEffect, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
+import { useStore } from '@/hooks/useStore';
 import { TActiveSymbol, TTick } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
+import useManualTrade from './use-manual-trade';
 import './bulk-trader.scss';
 
 const DEFAULT_SYMBOL = 'R_100';
 const MAX_TICK_HISTORY = 1000;
+const MAX_TRADES_PER_CLICK = 50;
 
-const TRADE_TYPES = ['Even/Odd', 'Over/Under', 'Matches/Differs', 'Rise/Fall'] as const;
-type TTradeType = (typeof TRADE_TYPES)[number];
+/**
+ * Each trade type is two opposing contracts, which is exactly the pair of
+ * buttons at the bottom of the page. `barrier` marks the types Deriv needs a
+ * prediction digit for.
+ */
+const TRADE_TYPES = {
+    'Even/Odd': { left: 'DIGITEVEN', right: 'DIGITODD', left_label: 'Even', right_label: 'Odd', barrier: false },
+    'Over/Under': { left: 'DIGITOVER', right: 'DIGITUNDER', left_label: 'Over', right_label: 'Under', barrier: true },
+    'Matches/Differs': {
+        left: 'DIGITMATCH',
+        right: 'DIGITDIFF',
+        left_label: 'Matches',
+        right_label: 'Differs',
+        barrier: true,
+    },
+    'Rise/Fall': { left: 'CALL', right: 'PUT', left_label: 'Rise', right_label: 'Fall', barrier: false },
+} as const;
+
+type TTradeType = keyof typeof TRADE_TYPES;
+
+/**
+ * `pip_size` means two different things on this API and the difference is
+ * silent: a `tick` reports it as a count of decimal places (R_100 -> 2),
+ * while an `active_symbols` entry reports it as the pip's value (R_100 ->
+ * 0.01). Feeding the second straight into toFixed() rounds the argument to 0,
+ * which formatted every quote as a bare integer and made the "last digit" the
+ * units digit - so the whole distribution collapsed onto one digit.
+ */
+const toDecimalPlaces = (pip_size: number | undefined): number | undefined => {
+    if (pip_size === undefined || pip_size === null || Number.isNaN(pip_size)) return undefined;
+    if (pip_size >= 1) return Math.round(pip_size);
+    if (pip_size <= 0) return undefined;
+    return Math.round(-Math.log10(pip_size));
+};
 
 // Matches Deriv's own definition of "last digit": the final character of the
-// quote once it's formatted to the symbol's real pip size, not a rounded
-// float - e.g. 640.72 at pip_size 2 has last digit 2, not floor(0.72*100)%10
+// quote once it's formatted to the symbol's real precision, not a rounded
+// float - e.g. 640.72 at 2 decimals has last digit 2, not floor(0.72*100)%10
 // which can disagree after floating point error.
-const getLastDigit = (quote: number, pip_size: number): number => {
-    const fixed = quote.toFixed(pip_size);
+const getLastDigit = (quote: number, decimals: number): number => {
+    const fixed = quote.toFixed(decimals);
     return Number(fixed[fixed.length - 1]);
 };
 
@@ -42,7 +77,7 @@ const DigitGauge = ({ digit, percentage, is_current }: { digit: number; percenta
                     {digit}
                 </text>
                 <text x='32' y='42' textAnchor='middle' className='mw-bulk-trader__gauge-pct'>
-                    {percentage.toFixed(1)}%
+                    {percentage.toFixed(2)}%
                 </text>
             </svg>
             {is_current && <span className='mw-bulk-trader__gauge-arrow'>▲</span>}
@@ -54,41 +89,36 @@ const NumberField = ({
     label,
     value,
     onChange,
-    suffix,
     min = 0,
     max,
     step = 1,
-    disabled = false,
 }: {
     label: string;
     value: number;
     onChange: (value: number) => void;
-    suffix?: string;
     min?: number;
     max?: number;
     step?: number;
-    disabled?: boolean;
 }) => (
     <label className='mw-bulk-trader__field'>
         <span className='mw-bulk-trader__field-label'>{label}</span>
-        <div className='mw-bulk-trader__field-input'>
-            <input
-                type='number'
-                value={Number.isFinite(value) ? value : ''}
-                onChange={event => onChange(event.target.value === '' ? 0 : Number(event.target.value))}
-                min={min}
-                max={max}
-                step={step}
-                disabled={disabled}
-            />
-            {suffix && <span className='mw-bulk-trader__field-suffix'>{suffix}</span>}
-        </div>
+        <input
+            className='mw-bulk-trader__field-input'
+            type='number'
+            value={Number.isFinite(value) ? value : ''}
+            onChange={event => onChange(event.target.value === '' ? 0 : Number(event.target.value))}
+            min={min}
+            max={max}
+            step={step}
+        />
     </label>
 );
 
 const BulkTraderPage = observer(() => {
-    const { feed, isConnected, latencyMs } = usePublicMarketFeed();
+    const { feed, isConnected } = usePublicMarketFeed();
+    const { oauth_session, client } = useStore() ?? {};
     const { localize } = useTranslations();
+    const trade = useManualTrade();
 
     const [symbols, setSymbols] = useState<TActiveSymbol[]>([]);
     const [selected_symbol, setSelectedSymbol] = useState(DEFAULT_SYMBOL);
@@ -98,18 +128,9 @@ const BulkTraderPage = observer(() => {
     const [digits, setDigits] = useState<number[]>([]);
     const [last_tick, setLastTick] = useState<TTick | null>(null);
 
-    // Trade configuration - pure form state. Nothing here is ever sent
-    // anywhere: execution depends on the classic trading engine, which is
-    // confirmed unreachable (see the disabled notice below), so these values
-    // are only ever staged for when that connection comes back.
-    const [stake, setStake] = useState(1);
+    const [stake, setStake] = useState(0.5);
     const [duration_ticks, setDurationTicks] = useState(1);
-    const [no_of_trades, setNoOfTrades] = useState(1);
-    const [use_martingale, setUseMartingale] = useState(false);
-    const [martingale_multiplier, setMartingaleMultiplier] = useState(2);
-    const [stop_loss, setStopLoss] = useState(0);
-    const [take_profit, setTakeProfit] = useState(0);
-    const [risk_pct, setRiskPct] = useState(2);
+    const [trades_per_click, setTradesPerClick] = useState(1);
 
     useEffect(() => {
         if (!isConnected) return;
@@ -124,8 +145,9 @@ const BulkTraderPage = observer(() => {
     }, [isConnected, feed]);
 
     const selected_symbol_info = symbols.find(item => item.underlying_symbol === selected_symbol);
-    const pip_size = selected_symbol_info?.pip_size ?? last_tick?.pip_size ?? 2;
-    const market_open = selected_symbol_info ? selected_symbol_info.exchange_is_open === 1 : null;
+    // The tick is the more trustworthy source - it is the message the quote
+    // itself arrived on - so it wins over the symbol list.
+    const decimals = toDecimalPlaces(last_tick?.pip_size) ?? toDecimalPlaces(selected_symbol_info?.pip_size) ?? 2;
 
     useEffect(() => {
         if (!isConnected) return undefined;
@@ -134,8 +156,9 @@ const BulkTraderPage = observer(() => {
 
         const unsubscribe = feed.subscribeTicks(selected_symbol, tick => {
             setLastTick(tick);
-            const tick_pip_size = selected_symbol_info?.pip_size ?? tick.pip_size ?? 2;
-            const digit = getLastDigit(tick.quote, tick_pip_size);
+            const tick_decimals =
+                toDecimalPlaces(tick.pip_size) ?? toDecimalPlaces(selected_symbol_info?.pip_size) ?? 2;
+            const digit = getLastDigit(tick.quote, tick_decimals);
             setDigits(prev => [digit, ...prev].slice(0, MAX_TICK_HISTORY));
         });
 
@@ -156,22 +179,6 @@ const BulkTraderPage = observer(() => {
 
     const current_digit = digits[0] ?? null;
 
-    const stats = useMemo(() => {
-        const total = sample.length || 1;
-        const even_count = sample.filter(d => d % 2 === 0).length;
-        const over_count = sample.filter(d => d > barrier).length;
-        const under_count = sample.filter(d => d < barrier).length;
-        const match_count = sample.filter(d => d === barrier).length;
-        return {
-            even_pct: (even_count / total) * 100,
-            odd_pct: ((sample.length - even_count) / total) * 100,
-            over_pct: (over_count / total) * 100,
-            under_pct: (under_count / total) * 100,
-            match_pct: (match_count / total) * 100,
-            differ_pct: ((sample.length - match_count) / total) * 100,
-        };
-    }, [sample, barrier]);
-
     const rise_fall_stats = useMemo(() => {
         if (sample.length < 2) return { rise_pct: 0, fall_pct: 0 };
         let rises = 0;
@@ -186,236 +193,255 @@ const BulkTraderPage = observer(() => {
         return { rise_pct: (rises / total) * 100, fall_pct: (falls / total) * 100 };
     }, [sample]);
 
-    const recent_digits = digits.slice(0, 20);
+    // The percentage printed inside each action button: how often that side
+    // has won over the current sample. Rise/Fall is measured tick-over-tick,
+    // the rest straight off the digit distribution.
+    const side_percentages = useMemo(() => {
+        const total = sample.length || 1;
+        switch (trade_type) {
+            case 'Even/Odd': {
+                const even = sample.filter(digit => digit % 2 === 0).length;
+                return { left: (even / total) * 100, right: ((sample.length - even) / total) * 100 };
+            }
+            case 'Over/Under': {
+                const over = sample.filter(digit => digit > barrier).length;
+                const under = sample.filter(digit => digit < barrier).length;
+                return { left: (over / total) * 100, right: (under / total) * 100 };
+            }
+            case 'Matches/Differs': {
+                const matches = sample.filter(digit => digit === barrier).length;
+                return { left: (matches / total) * 100, right: ((sample.length - matches) / total) * 100 };
+            }
+            case 'Rise/Fall':
+            default:
+                return { left: rise_fall_stats.rise_pct, right: rise_fall_stats.fall_pct };
+        }
+    }, [sample, trade_type, barrier, rise_fall_stats]);
+
+    const recent_digits = digits.slice(0, 8);
+    const config = TRADE_TYPES[trade_type];
+    const is_logged_in = Boolean(oauth_session?.is_authenticated || client?.is_logged_in);
+    const total_risk = stake * trades_per_click;
+
+    const placeSide = async (contract_type: string) => {
+        // Sequential rather than parallel: each contract is priced off a fresh
+        // proposal, and firing them together would race the same account
+        // balance against Deriv's own rate limits.
+        for (let i = 0; i < Math.min(trades_per_click, MAX_TRADES_PER_CLICK); i += 1) {
+            // eslint-disable-next-line no-await-in-loop
+            const placed = await trade.placeTrade({
+                contract_type,
+                symbol: selected_symbol,
+                stake,
+                duration: duration_ticks,
+                ...(config.barrier ? { barrier } : {}),
+            });
+            if (!placed) break;
+        }
+    };
+
+    // The OAuth account is the one that actually gets debited, so its currency
+    // wins. ClientStore.currency is only consulted for classic sessions, and
+    // is deliberately last - it holds a leftover value when nobody is logged
+    // in, which would otherwise label an empty summary in a currency this
+    // session has nothing to do with.
+    const currency = oauth_session?.currency || (is_logged_in && (client?.currency as string)) || 'USD';
 
     return (
         <div className='mw-bulk-trader'>
-            <div className='mw-bulk-trader__header'>
-                <h1>{localize('Bulk Trader')}</h1>
-                <p>
-                    {localize(
-                        'Live digit statistics from the public market feed. Trade execution is disabled until the classic trading connection is restored - everything below is real, live data, not a simulation.'
+            <div className='mw-bulk-trader__main'>
+                <div className='mw-bulk-trader__row'>
+                    <label className='mw-bulk-trader__select'>
+                        <span>{localize('Market')}</span>
+                        <select value={selected_symbol} onChange={event => setSelectedSymbol(event.target.value)}>
+                            {symbols.length === 0 && <option value={selected_symbol}>{selected_symbol}</option>}
+                            {symbols.map(item => (
+                                <option key={item.underlying_symbol} value={item.underlying_symbol}>
+                                    {item.underlying_symbol_name}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                    <label className='mw-bulk-trader__select'>
+                        <span>{localize('Trade type')}</span>
+                        <select value={trade_type} onChange={event => setTradeType(event.target.value as TTradeType)}>
+                            {Object.keys(TRADE_TYPES).map(type => (
+                                <option key={type} value={type}>
+                                    {type}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                </div>
+
+                <div className='mw-bulk-trader__row mw-bulk-trader__row--single'>
+                    <NumberField
+                        label={localize('Number of ticks')}
+                        value={sample_size}
+                        onChange={value => setSampleSize(Math.min(MAX_TICK_HISTORY, Math.max(10, value)))}
+                        min={10}
+                        max={MAX_TICK_HISTORY}
+                        step={10}
+                    />
+                    {config.barrier && (
+                        <NumberField
+                            label={localize('Barrier digit')}
+                            value={barrier}
+                            onChange={value => setBarrier(Math.min(9, Math.max(0, value)))}
+                            min={0}
+                            max={9}
+                        />
                     )}
-                </p>
-                <div className='mw-bulk-trader__status-row'>
-                    <span
-                        className={`mw-bulk-trader__status-pill ${isConnected ? 'mw-bulk-trader__status-pill--live' : ''}`}
-                    >
-                        <span className='mw-bulk-trader__status-dot' />
-                        {isConnected ? localize('Live') : localize('Connecting…')}
-                    </span>
-                    <span className='mw-bulk-trader__status-meta'>
-                        {localize('Latency')}: {latencyMs != null ? `${latencyMs}ms` : '—'}
-                    </span>
-                    <span className='mw-bulk-trader__status-meta'>
-                        {localize('Market')}:{' '}
-                        {market_open === null ? '—' : market_open ? localize('Open') : localize('Closed')}
+                </div>
+
+                <div className='mw-bulk-trader__current-tick'>
+                    <span className='mw-bulk-trader__current-tick-label'>{localize('Current tick')}</span>
+                    <span className='mw-bulk-trader__current-tick-value'>
+                        {last_tick ? last_tick.quote.toFixed(decimals) : '—'}
                     </span>
                 </div>
-            </div>
 
-            <div className='mw-bulk-trader__controls'>
-                <label className='mw-bulk-trader__select'>
-                    <span>{localize('Market')}</span>
-                    <select value={selected_symbol} onChange={event => setSelectedSymbol(event.target.value)}>
-                        {symbols.length === 0 && <option value={selected_symbol}>{selected_symbol}</option>}
-                        {symbols.map(item => (
-                            <option key={item.underlying_symbol} value={item.underlying_symbol}>
-                                {item.underlying_symbol_name}
-                            </option>
-                        ))}
-                    </select>
-                </label>
-                <label className='mw-bulk-trader__select'>
-                    <span>{localize('Trade type')}</span>
-                    <select value={trade_type} onChange={event => setTradeType(event.target.value as TTradeType)}>
-                        {TRADE_TYPES.map(type => (
-                            <option key={type} value={type}>
-                                {type}
-                            </option>
-                        ))}
-                    </select>
-                </label>
-                <NumberField
-                    label={localize('Number of ticks (sample size)')}
-                    value={sample_size}
-                    onChange={setSampleSize}
-                    min={10}
-                    max={MAX_TICK_HISTORY}
-                    step={10}
-                />
-                {(trade_type === 'Over/Under' || trade_type === 'Matches/Differs') && (
-                    <NumberField
-                        label={localize('Barrier digit')}
-                        value={barrier}
-                        onChange={value => setBarrier(Math.min(9, Math.max(0, value)))}
-                        min={0}
-                        max={9}
-                    />
-                )}
-            </div>
-
-            <div className='mw-bulk-trader__current-tick'>
-                <span className='mw-bulk-trader__current-tick-label'>{localize('Current tick')}</span>
-                <span className='mw-bulk-trader__current-tick-value'>
-                    {last_tick ? last_tick.quote.toFixed(pip_size) : '—'}
-                </span>
-                <span className='mw-bulk-trader__current-tick-sample'>
-                    {localize('Sample')}: {sample.length}/{sample_size} {localize('ticks')}
-                </span>
-            </div>
-
-            <div className='mw-bulk-trader__gauges'>
-                {digit_percentages.map((pct, digit) => (
-                    <DigitGauge key={digit} digit={digit} percentage={pct} is_current={digit === current_digit} />
-                ))}
-            </div>
-
-            {recent_digits.length > 0 && (
-                <div className='mw-bulk-trader__history'>
-                    {recent_digits.map((digit, index) => (
-                        <span
-                            key={index}
-                            className={`mw-bulk-trader__history-chip ${digit % 2 === 0 ? 'mw-bulk-trader__history-chip--even' : 'mw-bulk-trader__history-chip--odd'}`}
-                        >
-                            {digit % 2 === 0 ? 'E' : 'O'}
-                        </span>
+                <div className='mw-bulk-trader__gauges'>
+                    {digit_percentages.map((pct, digit) => (
+                        <DigitGauge key={digit} digit={digit} percentage={pct} is_current={digit === current_digit} />
                     ))}
                 </div>
-            )}
 
-            <div className='mw-bulk-trader__stat-bars'>
-                {trade_type === 'Even/Odd' && (
-                    <>
-                        <div className='mw-bulk-trader__stat-bar mw-bulk-trader__stat-bar--good'>
-                            <span>{localize('Even')}</span>
-                            <strong>{stats.even_pct.toFixed(2)}%</strong>
-                        </div>
-                        <div className='mw-bulk-trader__stat-bar mw-bulk-trader__stat-bar--bad'>
-                            <span>{localize('Odd')}</span>
-                            <strong>{stats.odd_pct.toFixed(2)}%</strong>
-                        </div>
-                    </>
-                )}
-                {trade_type === 'Over/Under' && (
-                    <>
-                        <div className='mw-bulk-trader__stat-bar mw-bulk-trader__stat-bar--good'>
-                            <span>
-                                {localize('Over')} {barrier}
+                {recent_digits.length > 0 && (
+                    <div className='mw-bulk-trader__history'>
+                        {recent_digits.map((digit, index) => (
+                            <span
+                                key={index}
+                                className={`mw-bulk-trader__history-chip ${digit % 2 === 0 ? 'mw-bulk-trader__history-chip--even' : 'mw-bulk-trader__history-chip--odd'}`}
+                            >
+                                {digit % 2 === 0 ? 'E' : 'O'}
                             </span>
-                            <strong>{stats.over_pct.toFixed(2)}%</strong>
-                        </div>
-                        <div className='mw-bulk-trader__stat-bar mw-bulk-trader__stat-bar--bad'>
-                            <span>
-                                {localize('Under')} {barrier}
-                            </span>
-                            <strong>{stats.under_pct.toFixed(2)}%</strong>
-                        </div>
-                    </>
+                        ))}
+                    </div>
                 )}
-                {trade_type === 'Matches/Differs' && (
-                    <>
-                        <div className='mw-bulk-trader__stat-bar mw-bulk-trader__stat-bar--good'>
-                            <span>
-                                {localize('Matches')} {barrier}
-                            </span>
-                            <strong>{stats.match_pct.toFixed(2)}%</strong>
-                        </div>
-                        <div className='mw-bulk-trader__stat-bar mw-bulk-trader__stat-bar--bad'>
-                            <span>{localize('Differs')}</span>
-                            <strong>{stats.differ_pct.toFixed(2)}%</strong>
-                        </div>
-                    </>
-                )}
-                {trade_type === 'Rise/Fall' && (
-                    <>
-                        <div className='mw-bulk-trader__stat-bar mw-bulk-trader__stat-bar--good'>
-                            <span>{localize('Rise')}</span>
-                            <strong>{rise_fall_stats.rise_pct.toFixed(2)}%</strong>
-                        </div>
-                        <div className='mw-bulk-trader__stat-bar mw-bulk-trader__stat-bar--bad'>
-                            <span>{localize('Fall')}</span>
-                            <strong>{rise_fall_stats.fall_pct.toFixed(2)}%</strong>
-                        </div>
-                    </>
-                )}
-            </div>
 
-            <div className='mw-bulk-trader__config'>
-                <h2>{localize('Trade configuration')}</h2>
-                <div className='mw-bulk-trader__config-grid'>
-                    <NumberField label={localize('Stake')} value={stake} onChange={setStake} min={0.35} step={0.1} />
+                <div className='mw-bulk-trader__row mw-bulk-trader__row--three'>
                     <NumberField
-                        label={localize('Duration')}
+                        label={localize('Ticks')}
                         value={duration_ticks}
-                        onChange={setDurationTicks}
-                        suffix={localize('ticks')}
+                        onChange={value => setDurationTicks(Math.min(10, Math.max(1, value)))}
                         min={1}
                         max={10}
                     />
+                    <NumberField label={localize('Stake')} value={stake} onChange={setStake} min={0.35} step={0.1} />
                     <NumberField
-                        label={localize('Number of trades')}
-                        value={no_of_trades}
-                        onChange={setNoOfTrades}
+                        label={localize('Trades per click')}
+                        value={trades_per_click}
+                        onChange={value => setTradesPerClick(Math.min(MAX_TRADES_PER_CLICK, Math.max(1, value)))}
                         min={1}
-                        max={1000}
+                        max={MAX_TRADES_PER_CLICK}
                     />
-                    <NumberField
-                        label={localize('Stop loss')}
-                        value={stop_loss}
-                        onChange={setStopLoss}
-                        suffix='USD'
-                        step={0.5}
-                    />
-                    <NumberField
-                        label={localize('Take profit')}
-                        value={take_profit}
-                        onChange={setTakeProfit}
-                        suffix='USD'
-                        step={0.5}
-                    />
-                    <NumberField
-                        label={localize('Risk per trade')}
-                        value={risk_pct}
-                        onChange={setRiskPct}
-                        suffix='%'
-                        max={100}
-                    />
-                    <label className='mw-bulk-trader__field mw-bulk-trader__field--checkbox'>
-                        <span className='mw-bulk-trader__field-label'>{localize('Use martingale')}</span>
-                        <input
-                            type='checkbox'
-                            checked={use_martingale}
-                            onChange={event => setUseMartingale(event.target.checked)}
-                        />
-                    </label>
-                    {use_martingale && (
-                        <NumberField
-                            label={localize('Martingale multiplier')}
-                            value={martingale_multiplier}
-                            onChange={setMartingaleMultiplier}
-                            min={1.1}
-                            step={0.1}
-                        />
-                    )}
                 </div>
 
-                <div className='mw-bulk-trader__execution-notice'>
-                    <p>
-                        {localize(
-                            'Execution requires the classic Deriv trading connection, which is currently unavailable. Your configuration above is saved on this page and will be ready to run the moment that connection is restored.'
-                        )}
-                    </p>
+                <div className='mw-bulk-trader__actions'>
                     <button
                         type='button'
-                        className='mw-bulk-trader__start-btn'
-                        disabled
-                        title={localize('Execution unavailable')}
+                        className='mw-bulk-trader__action mw-bulk-trader__action--left'
+                        onClick={() => placeSide(config.left)}
+                        disabled={!is_logged_in || trade.is_placing}
                     >
-                        {localize('Start Bulk Trading')}
+                        <span className='mw-bulk-trader__action-label'>{localize(config.left_label)}</span>
+                        <span className='mw-bulk-trader__action-pct'>{side_percentages.left.toFixed(2)}%</span>
+                    </button>
+                    <button
+                        type='button'
+                        className='mw-bulk-trader__action mw-bulk-trader__action--right'
+                        onClick={() => placeSide(config.right)}
+                        disabled={!is_logged_in || trade.is_placing}
+                    >
+                        <span className='mw-bulk-trader__action-label'>{localize(config.right_label)}</span>
+                        <span className='mw-bulk-trader__action-pct'>{side_percentages.right.toFixed(2)}%</span>
                     </button>
                 </div>
+
+                <div className='mw-bulk-trader__risk'>
+                    {is_logged_in
+                        ? localize('Each click stakes {{total}} {{currency}} in total ({{count}} × {{stake}}).', {
+                              total: total_risk.toFixed(2),
+                              currency,
+                              count: trades_per_click,
+                              stake: stake.toFixed(2),
+                          })
+                        : localize('Log in to place trades. The statistics above are live either way.')}
+                </div>
+
+                {trade.error_message && <div className='mw-bulk-trader__error'>{trade.error_message}</div>}
             </div>
+
+            <aside className='mw-bulk-trader__panel'>
+                <div className='mw-bulk-trader__panel-head'>{localize('Summary')}</div>
+                <div className='mw-bulk-trader__summary'>
+                    <div>
+                        <span>{localize('Total stake')}</span>
+                        <strong>
+                            {trade.stats.total_stake.toFixed(2)} {currency}
+                        </strong>
+                    </div>
+                    <div>
+                        <span>{localize('Total payout')}</span>
+                        <strong>
+                            {trade.stats.total_payout.toFixed(2)} {currency}
+                        </strong>
+                    </div>
+                    <div>
+                        <span>{localize('No. of runs')}</span>
+                        <strong>{trade.stats.runs}</strong>
+                    </div>
+                    <div>
+                        <span>{localize('Contracts lost')}</span>
+                        <strong>{trade.stats.lost}</strong>
+                    </div>
+                    <div>
+                        <span>{localize('Contracts won')}</span>
+                        <strong>{trade.stats.won}</strong>
+                    </div>
+                    <div>
+                        <span>{localize('Total profit/loss')}</span>
+                        <strong
+                            className={
+                                trade.stats.profit >= 0 ? 'mw-bulk-trader__profit' : 'mw-bulk-trader__profit--loss'
+                            }
+                        >
+                            {trade.stats.profit.toFixed(2)} {currency}
+                        </strong>
+                    </div>
+                </div>
+
+                {trade.pending_count > 0 && (
+                    <div className='mw-bulk-trader__pending'>
+                        {localize('{{count}} contract(s) still running…', { count: trade.pending_count })}
+                    </div>
+                )}
+
+                <button type='button' className='mw-bulk-trader__reset' onClick={trade.reset}>
+                    {localize('Reset')}
+                </button>
+
+                <div className='mw-bulk-trader__panel-head'>{localize('Journal')}</div>
+                <div className='mw-bulk-trader__journal'>
+                    {trade.journal.length === 0 && (
+                        <p className='mw-bulk-trader__journal-empty'>
+                            {localize('Placed contracts and their results appear here.')}
+                        </p>
+                    )}
+                    {trade.journal.map(entry => (
+                        <div
+                            key={entry.id}
+                            className={`mw-bulk-trader__journal-row mw-bulk-trader__journal-row--${entry.kind}`}
+                        >
+                            <span className='mw-bulk-trader__journal-time'>
+                                {new Date(entry.at).toLocaleTimeString('en-GB', { hour12: false })}
+                            </span>
+                            <span>{entry.message}</span>
+                        </div>
+                    ))}
+                </div>
+            </aside>
         </div>
     );
 });
