@@ -1,5 +1,6 @@
 import { localize } from '@deriv-com/translations';
 import { config } from '../../../../constants/config';
+import { api_base } from '../../../../services/api/api-base';
 import { initErrorHandlingListener, removeErrorHandlingEventListener } from '../../../../utils';
 import DBotStore from '../../../dbot-store';
 import {
@@ -162,12 +163,21 @@ window.Blockly.Blocks.trade_definition = {
 window.Blockly.JavaScript.javascriptGenerator.forBlock.trade_definition = block => {
     const { client } = DBotStore.instance;
 
-    if (!client || !client.is_logged_in) {
+    // ClientStore only ever reflects the classic AuthWrapper session, so an
+    // OAuth + OTP session has no `is_logged_in` and no token to hand over -
+    // its socket was already authenticated at open. Refusing here is what put
+    // "Please login" in the journal of someone looking at their own balance:
+    // the run gate had already let them through, and code generation threw
+    // instead. Classic sessions are unaffected.
+    const is_otp_session = api_base.is_otp_transport;
+    if (!is_otp_session && (!client || !client.is_logged_in)) {
         throw new Error('Please login');
     }
 
-    const { loginid } = client;
-    const account = client.getToken(loginid);
+    // Only ever passed to Bot.init, which does not authorize with it - the
+    // engine reads api_base.token/account_info for the live connection - so
+    // an OTP session has nothing to put here.
+    const account = is_otp_session ? '' : client.getToken(client.loginid);
     const market_block = block.getChildByType('trade_definition_market');
     const trade_type_block = block.getChildByType('trade_definition_tradetype');
     const contract_type_block = block.getChildByType('trade_definition_contracttype');

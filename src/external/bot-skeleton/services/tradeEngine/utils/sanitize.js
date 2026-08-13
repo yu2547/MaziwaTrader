@@ -1,5 +1,6 @@
 import { localize } from '@deriv-com/translations';
 import { createError } from '../../../utils/error';
+import { api_base } from '../../api/api-base';
 
 const isPositiveNumber = num => Number.isFinite(num) && num > 0;
 
@@ -27,7 +28,12 @@ const expectOptions = options => {
 export const expectInitArg = args => {
     const [token, options] = args;
 
-    if (!token) {
+    // The token is vestigial on this path: loginAndGetBalance() never
+    // authorizes with it, it reads api_base.token/account_info for the
+    // already-authorized connection. An OTP session legitimately has no
+    // classic token, so an empty one is only a problem when there is no
+    // authenticated transport behind it either.
+    if (!token && !api_base.is_otp_transport) {
         throw createError('LoginError', localize('Please login'));
     }
 
