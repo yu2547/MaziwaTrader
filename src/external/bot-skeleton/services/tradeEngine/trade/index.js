@@ -171,7 +171,14 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
 
     makeDirectPurchaseDecision() {
         const { has_payout_block, is_basis_payout } = checkBlocksForProposalRequest();
-        this.is_proposal_subscription_required = has_payout_block || is_basis_payout;
+        // The OTP transport always goes through a proposal, whatever the
+        // strategy looks like. The direct path buys from a `parameters`
+        // object built locally, and the Options API rejects that object -
+        // "Input validation failed: parameters" - where it accepts the
+        // proposal request this app has already exercised against it live.
+        // Buying by proposal id sends `{buy: <id>, price}` and no parameters
+        // at all, so there is nothing left for it to disagree with.
+        this.is_proposal_subscription_required = has_payout_block || is_basis_payout || api_base.is_otp_transport;
 
         if (this.is_proposal_subscription_required) {
             this.makeProposals({ ...this.options, ...this.tradeOptions });

@@ -222,10 +222,21 @@ export const updateErrorMessage = error => {
     if (error.error?.code === 'InputValidationFailed') {
         if (error.error.details?.duration) {
             error.error.message = localize('Duration must be a positive integer');
+            return;
         }
         if (error.error.details?.amount) {
             error.error.message = localize('Amount must be a positive number.');
+            return;
         }
+        // Anything else: append whatever the API said was wrong. Without
+        // this the journal shows only the top-level "Input validation
+        // failed: <field>", which names the object it rejected but never
+        // what about it it disliked - unreadable for anyone trying to work
+        // out why a trade did not go through.
+        const details = Object.entries(error.error.details ?? {})
+            .map(([field, reason]) => `${field}: ${typeof reason === 'string' ? reason : JSON.stringify(reason)}`)
+            .join('; ');
+        if (details) error.error.message = `${error.error.message} (${details})`;
     }
 };
 
