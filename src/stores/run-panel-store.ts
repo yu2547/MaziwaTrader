@@ -5,7 +5,7 @@ import { isSafari, mobileOSDetect, standalone_routes } from '@/components/shared
 import { redirectToSignUp } from '@/components/shared';
 import { contract_stages, TContractStage } from '@/constants/contract-stage';
 import { run_panel } from '@/constants/run-panel';
-import { api_base, ErrorTypes, MessageTypes, observer, unrecoverable_errors } from '@/external/bot-skeleton';
+import { api_base, config, ErrorTypes, MessageTypes, observer, unrecoverable_errors } from '@/external/bot-skeleton';
 import { getSelectedTradeType } from '@/external/bot-skeleton/scratch/utils';
 import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
 // import { journalError, switch_account_notification } from '@/utils/bot-notifications';
@@ -220,6 +220,38 @@ export default class RunPanelStore {
                 this.showLoginDialog();
                 return;
             }
+        }
+
+        // The socket is bound to one account from the moment it opens, and
+        // nothing re-checks that against the account the header is showing -
+        // so a session could sit there displaying one balance while the bot
+        // priced its contracts against another, which reads as a nonsense
+        // "insufficient balance" on an account with money in it. Re-point it
+        // here, where it is cheap and the bot has not started yet.
+        const { oauth_session } = this.root_store;
+        const selected_account_id = oauth_session?.selected_account_id;
+        if (api_base.is_otp_transport && selected_account_id && api_base.account_id !== selected_account_id) {
+            await api_base.switchOtpAccount(selected_account_id);
+        }
+
+        // Say which account this run is spending. It is the single most
+        // useful line in the journal when a contract is refused, and there is
+        // no other way to tell demo from real once a run is under way.
+        const otp_account = api_base.otp_account;
+        if (otp_account) {
+            observer.emit('ui.log.notify', {
+                message: localize('Trading on {{account_id}} ({{account_type}}, {{currency}}).', {
+                    account_id: otp_account.account_id,
+                    account_type: otp_account.account_type,
+                    currency: otp_account.currency,
+                }),
+                message_type: MessageTypes.NOTIFY,
+                className: 'journal__text',
+                // journal.playAudio() does getElementById(sound).play() for
+                // anything that is not the silent option, so an omitted sound
+                // throws on a null element.
+                sound: config().lists.NOTIFICATION_SOUND[0][1],
+            });
         }
 
         /**
