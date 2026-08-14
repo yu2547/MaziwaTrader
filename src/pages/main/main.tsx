@@ -138,7 +138,15 @@ const AppWrapper = observer(() => {
                 api_base.setIsRunning(false);
                 setWebSocketState(false);
             }
+            return;
         }
+        // Nothing ever set this back. A dropped socket latched it false, and
+        // BotStopped shows "Platform temporarily unavailable" for as long as
+        // it stays that way - so a transient drop left that dialog on screen
+        // permanently, over a connection that had already reconnected, with
+        // its only exit being the reload its close button performs. The flag
+        // now recovers with the connection it describes.
+        setWebSocketState(true);
     }, [clear, connectionStatus, setWebSocketState, stopBot]);
 
     // Update tab shadows height to match bot builder height
