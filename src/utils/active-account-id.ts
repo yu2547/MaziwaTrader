@@ -24,12 +24,17 @@ import { api_base } from '@/external/bot-skeleton/services/api/api-base';
  * as before - the fallback is only reached when that is empty.
  */
 export const getActiveAccountId = (client?: { loginid?: string | null } | null): string =>
-    client?.loginid || api_base?.otp_account?.account_id || '';
+    (api_base?.is_otp_transport ? api_base?.otp_account?.account_id : '') || client?.loginid || '';
 
 /**
- * Currency of that same account. ClientStore.currency is empty on an OTP
- * session for the same reason loginid is, which left the run panel's money
- * amounts rendering with no currency beside them.
+ * Currency of that same account.
+ *
+ * The OTP account wins over ClientStore for the same reason it does above:
+ * ClientStore is not merely empty on these sessions, it can hold a leftover
+ * value from a previous classic login. That is what put "Total profit/loss
+ * 0.00 AUD" under a balance of 727.31 USD - the amounts were the right
+ * numbers labelled with an account this session has nothing to do with.
+ * Classic sessions never reach the fallback, so they are unaffected.
  */
 export const getActiveCurrency = (client?: { currency?: string | null } | null): string =>
-    client?.currency || api_base?.otp_account?.currency || '';
+    (api_base?.is_otp_transport ? api_base?.otp_account?.currency : '') || client?.currency || '';
