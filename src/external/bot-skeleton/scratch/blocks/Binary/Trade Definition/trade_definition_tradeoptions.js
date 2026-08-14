@@ -581,6 +581,33 @@ window.Blockly.Blocks.trade_definition_tradeoptions = {
 
                 if (duration) {
                     const { min, max } = duration;
+
+                    // config()'s NOT_AVAILABLE_DURATIONS sentinel - the value
+                    // getDurations() returns when it could not read any
+                    // durations at all - is {unit: 'na', min: 0} with no max
+                    // at all. Run straight through the range check below it
+                    // becomes `input >= 0 && input <= undefined`, false for
+                    // every input, and the message renders as "please enter a
+                    // value between 0 to ." with a blank maximum: a perfectly
+                    // good duration reported invalid against a range that
+                    // does not exist.
+                    //
+                    // That is a different failure from a genuinely
+                    // out-of-range duration and it needs to say so, naming the
+                    // market and trade type whose contract list did not load
+                    // so the real cause is identifiable. The range check for
+                    // real durations below is untouched.
+                    if (duration.unit === 'na' || typeof max !== 'number' || Number.isNaN(max)) {
+                        this.error_message = localize(
+                            'No contract durations loaded for {{symbol}} / {{trade_type}}, so the duration cannot be checked yet. Reselect the market and trade type, or wait for the contract list to load, then run again.',
+                            {
+                                symbol: this.selected_symbol || localize('(no market selected)'),
+                                trade_type: this.selected_trade_type || localize('(no trade type selected)'),
+                            }
+                        );
+                        return true;
+                    }
+
                     const is_valid_duration = input_number >= min && input_number <= max;
 
                     if (min === max) {
