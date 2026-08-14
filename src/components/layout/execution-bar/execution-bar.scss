@@ -1,0 +1,209 @@
+// Pinned above the footer, below everything that opens over it. Sits in the
+// shell, so it is present on every route rather than being re-created per
+// page.
+$exec-bar-height: 6rem;
+
+.mw-exec-bar {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 3.6rem; // clears the footer
+    z-index: 3;
+    background: var(--general-main-1);
+    border-top: 1px solid var(--general-section-1);
+    box-shadow: 0 -4px 20px rgb(0 0 0 / 10%);
+
+    @media (width <= 768px) {
+        bottom: 0;
+    }
+
+    // The handle straddles the bar's top edge, which is what makes it read as
+    // a grab point for the panel above rather than another button in the row.
+    &__handle {
+        position: absolute;
+        top: -1.6rem;
+        inset-inline-start: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 5.6rem;
+        height: 1.8rem;
+        padding: 0;
+        border: 1px solid var(--general-section-1);
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        background: var(--general-main-1);
+        color: var(--text-general);
+        cursor: pointer;
+
+        svg > path {
+            fill: currentcolor;
+            transition: transform 180ms ease;
+        }
+
+        &--open svg {
+            transform: rotate(180deg);
+        }
+    }
+
+    &__inner {
+        display: flex;
+        align-items: center;
+        gap: 1.6rem;
+        min-width: 0;
+        min-height: $exec-bar-height;
+        padding: 0.8rem 1.6rem;
+
+        @media (width <= 600px) {
+            gap: 0.8rem;
+            padding: 0.8rem;
+        }
+    }
+
+    &__config-short {
+        display: none;
+    }
+
+    @media (width <= 600px) {
+        &__config-long {
+            display: none;
+        }
+
+        &__config-short {
+            display: inline;
+        }
+    }
+
+    &__run {
+        flex: none;
+    }
+
+    &__status {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        min-width: 0;
+        flex: 1;
+    }
+
+    &__status-label {
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-less-prominent);
+    }
+
+    &__status-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text-prominent);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // A live bot is the one state worth showing from across the room.
+    &--running &__status-value {
+        color: #4eaaa5;
+    }
+
+    &__config {
+        flex: none;
+        padding: 0.9rem 1.4rem;
+        border-radius: 6px;
+        border: 1px solid var(--general-section-5, rgb(0 0 0 / 12%));
+        background: transparent;
+        color: var(--text-prominent);
+        font-size: 1.3rem;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--general-section-1);
+        }
+
+        @media (width <= 600px) {
+            padding: 0.8rem 1rem;
+            font-size: 1.2rem;
+        }
+    }
+
+    // Floats clear of the bar rather than sitting in it, so it stays reachable
+    // with a thumb on mobile.
+    &__ai {
+        position: fixed;
+        inset-inline-end: 1.6rem;
+        bottom: calc(3.6rem + #{$exec-bar-height} + 1.2rem);
+        z-index: 4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 5rem;
+        height: 5rem;
+        border: none;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #7c5cfc, #4da3ff);
+        color: #fff;
+        font-size: 1.4rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        box-shadow: 0 6px 20px rgb(124 92 252 / 45%);
+
+        &:hover {
+            filter: brightness(1.08);
+        }
+
+        @media (width <= 768px) {
+            bottom: calc(#{$exec-bar-height} + 1.2rem);
+        }
+    }
+
+    &__ai-panel {
+        position: fixed;
+        inset-inline-end: 1.6rem;
+        bottom: calc(3.6rem + #{$exec-bar-height} + 7rem);
+        z-index: 4;
+        width: min(32rem, calc(100vw - 3.2rem));
+        padding: 1.6rem;
+        border-radius: 8px;
+        background: var(--general-main-1);
+        border: 1px solid var(--general-section-1);
+        box-shadow: 0 16px 40px rgb(0 0 0 / 18%);
+
+        p {
+            margin: 0.8rem 0 1.2rem;
+            font-size: 1.3rem;
+            line-height: 1.5;
+            color: var(--text-general);
+        }
+
+        button {
+            padding: 0.7rem 1.4rem;
+            border-radius: 6px;
+            border: 1px solid var(--general-section-5, rgb(0 0 0 / 12%));
+            background: transparent;
+            color: var(--text-prominent);
+            font-size: 1.3rem;
+            cursor: pointer;
+        }
+
+        @media (width <= 768px) {
+            bottom: calc(#{$exec-bar-height} + 7rem);
+        }
+    }
+
+    &__ai-panel-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text-prominent);
+    }
+}
+
+// Every route has to clear the fixed bar, otherwise the last of the page sits
+// permanently underneath it.
+.layout .main-body {
+    padding-bottom: calc(#{$exec-bar-height} + 4rem);
+}

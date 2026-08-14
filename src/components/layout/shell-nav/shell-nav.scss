@@ -15,6 +15,14 @@ $shell-nav-icon: #4da3ff;
     width: 100%;
     background: $shell-nav-bg;
 
+    // The scroller below is the only thing here allowed to scroll. Without
+    // these the items overflowed the shell as a flex item (min-width defaults
+    // to auto), and the whole page picked up a horizontal scrollbar on
+    // narrow screens instead of the strip swiping on its own.
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+
     // Horizontal scroll rather than wrapping keeps the bar exactly one row
     // tall at every width, so the content below never shifts down.
     &__scroller {

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import RunPanel from '@/components/run-panel';
 import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
 import { useStore } from '@/hooks/useStore';
 import { TActiveSymbol, TTick } from '@/utils/market-data/public-market-feed';
@@ -375,12 +374,6 @@ const BulkTraderPage = observer(() => {
 
                 {trade.error_message && <div className='mw-bulk-trader__error'>{trade.error_message}</div>}
             </div>
-
-            {/* The app's own Summary/Transactions/Journal panel, not a copy of
-                it. Contracts bought here are broadcast on the same
-                globalObserver events the bot engine broadcasts, so they land
-                in the same record the bot's own runs do. */}
-            <RunPanel />
         </div>
     );
 });

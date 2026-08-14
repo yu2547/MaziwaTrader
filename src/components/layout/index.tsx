@@ -4,6 +4,7 @@ import Cookies from 'js-cookie';
 import { observer } from 'mobx-react-lite';
 import { Outlet, useLocation } from 'react-router-dom';
 import PWAUpdateNotification from '@/components/pwa-update-notification';
+import RunPanel from '@/components/run-panel';
 import { api_base } from '@/external/bot-skeleton';
 import { V2GetActiveToken } from '@/external/bot-skeleton/services/api/appId';
 import { useOfflineDetection } from '@/hooks/useOfflineDetection';
@@ -13,6 +14,7 @@ import { handleOidcAuthFailure } from '@/utils/auth-utils';
 import { requestOidcAuthentication } from '@deriv-com/auth-client';
 import { useDevice } from '@deriv-com/ui';
 import { crypto_currencies_display_order, fiat_currencies_display_order } from '../shared';
+import ExecutionBar from './execution-bar';
 import Footer from './footer';
 import AppHeader from './header';
 import Body from './main-body';
@@ -266,6 +268,20 @@ const Layout = observer(() => {
             <Body>
                 <Outlet />
             </Body>
+            {/* Both of these belong to the shell for the same reason the
+                navigation does: the run panel is the app's record of what it
+                has traded and the execution bar is how the bot is started and
+                stopped, and neither should vanish because the content area
+                changed route. They were previously rendered by pages/main,
+                which is why they only existed on the index route - and why a
+                second copy had to be pasted into Bulk Trader to get them
+                there at all. One copy, mounted once. */}
+            {!isCallbackPage && !isLandingPage && (
+                <>
+                    <RunPanel />
+                    <ExecutionBar />
+                </>
+            )}
             {!isCallbackPage && !isLandingPage && isDesktop && <Footer />}
             <PWAUpdateNotification />
         </div>

@@ -10,10 +10,8 @@ import Money from '@/components/shared_ui/money';
 import Tabs from '@/components/shared_ui/tabs';
 import Text from '@/components/shared_ui/text';
 import Summary from '@/components/summary';
-import TradeAnimation from '@/components/trade-animation';
 import Transactions from '@/components/transactions';
 import { popover_zindex } from '@/constants/z-indexes';
-import usePWA from '@/hooks/usePWA';
 import { useStore } from '@/hooks/useStore';
 import { getActiveCurrency } from '@/utils/active-account-id';
 import { Localize, localize } from '@deriv-com/translations';
@@ -181,17 +179,6 @@ const DrawerFooter = ({ is_clear_stat_disabled, onClearStatClick }: TDrawerFoote
     </div>
 );
 
-const MobileDrawerFooter = () => {
-    const { isPWALaunch, isIOS } = usePWA();
-    return (
-        <div className={classNames('controls__section', { 'controls__section--ios-pwa': isIOS && isPWALaunch })}>
-            <div className='controls__buttons'>
-                <TradeAnimation className='controls__animation' should_show_overlay />
-            </div>
-        </div>
-    );
-};
-
 const StatisticsInfoModal = ({
     is_mobile,
     is_statistics_info_modal_open,
@@ -338,7 +325,11 @@ const RunPanelContent = observer(() => {
                 >
                     {content}
                 </Drawer>
-                {!isDesktop && <MobileDrawerFooter />}
+                {/* The mobile drawer footer used to carry its own copy of the
+                    Run control. The shell's execution bar now provides that on
+                    every screen size, so rendering it here put a second Run
+                    button on the page - and its fixed, full-width row was one
+                    of the two things pushing phones into horizontal scroll. */}
             </div>
             <SelfExclusion onRunButtonClick={onRunButtonClick} />
             <StatisticsInfoModal
