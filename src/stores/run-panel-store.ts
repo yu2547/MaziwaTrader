@@ -5,7 +5,15 @@ import { isSafari, mobileOSDetect, standalone_routes } from '@/components/shared
 import { redirectToSignUp } from '@/components/shared';
 import { contract_stages, TContractStage } from '@/constants/contract-stage';
 import { run_panel } from '@/constants/run-panel';
-import { api_base, config, ErrorTypes, MessageTypes, observer, unrecoverable_errors } from '@/external/bot-skeleton';
+import {
+    api_base,
+    ApiHelpers,
+    config,
+    ErrorTypes,
+    MessageTypes,
+    observer,
+    unrecoverable_errors,
+} from '@/external/bot-skeleton';
 import { getSelectedTradeType } from '@/external/bot-skeleton/scratch/utils';
 import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
 // import { journalError, switch_account_notification } from '@/utils/bot-notifications';
@@ -228,10 +236,34 @@ export default class RunPanelStore {
         // priced its contracts against another, which reads as a nonsense
         // "insufficient balance" on an account with money in it. Re-point it
         // here, where it is cheap and the bot has not started yet.
+        // Re-pointing means tearing the socket down and opening a new one, so
+        // it cannot be done in the same breath as starting the bot: the
+        // workspace read its contract details from the old socket, and
+        // anything it re-reads mid-handshake comes back empty. That is what
+        // turned this check into "Duration value is not allowed ... between 0
+        // to ." - not a bad duration, an empty contract list arriving while
+        // the connection was still opening.
+        //
+        // So switch, then stop, and say so. The next Run starts on a settled
+        // connection. It costs one extra click in the rare case the header
+        // and the socket have drifted apart, and it never trades the wrong
+        // account or races the workspace.
         const { oauth_session } = this.root_store;
         const selected_account_id = oauth_session?.selected_account_id;
         if (api_base.is_otp_transport && selected_account_id && api_base.account_id !== selected_account_id) {
-            await api_base.switchOtpAccount(selected_account_id);
+            const switched = await api_base.switchOtpAccount(selected_account_id);
+            if (switched) {
+                ApiHelpers?.instance?.contracts_for?.disposeCache();
+                observer.emit('ui.log.notify', {
+                    message: localize('Connected to {{account_id}}. Press Run again to start.', {
+                        account_id: selected_account_id,
+                    }),
+                    message_type: MessageTypes.NOTIFY,
+                    className: 'journal__text',
+                    sound: config().lists.NOTIFICATION_SOUND[0][1],
+                });
+                return;
+            }
         }
 
         // Say which account this run is spending. It is the single most
