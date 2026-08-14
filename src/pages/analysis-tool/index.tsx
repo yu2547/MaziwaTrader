@@ -4,7 +4,7 @@ import { useTranslations } from '@deriv-com/translations';
 import Dcircles from './dcircles';
 import './analysis-tool.scss';
 
-type TAnalysisView = 'dcircles' | 'signals' | 'analysis_tool' | 'sl_tools' | 'all_analysis';
+type TAnalysisView = 'dcircles' | 'signals' | 'analysis_tool' | 'sl_tools' | 'all_analysis' | 'tick_analyser';
 
 const VIEWS: { id: TAnalysisView; label: string }[] = [
     { id: 'dcircles', label: 'Dcircles' },
@@ -12,6 +12,7 @@ const VIEWS: { id: TAnalysisView; label: string }[] = [
     { id: 'analysis_tool', label: 'Analysis Tool' },
     { id: 'sl_tools', label: 'SL Tools' },
     { id: 'all_analysis', label: 'All Analysis' },
+    { id: 'tick_analyser', label: 'Tick Analyser' },
 ];
 
 /**
@@ -72,6 +73,7 @@ const AnalysisTool = observer(() => {
                 {view === 'signals' && <NotConnected title={localize('Signals')} />}
                 {view === 'sl_tools' && <NotConnected title={localize('SL Tools')} />}
                 {view === 'all_analysis' && <NotConnected title={localize('All Analysis')} />}
+                {view === 'tick_analyser' && <NotConnected title={localize('Tick Analyser')} />}
             </div>
         </div>
     );

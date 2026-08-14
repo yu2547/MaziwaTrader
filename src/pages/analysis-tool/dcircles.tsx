@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useMemo, useState } from 'react';
+import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
 import { DBOT_TABS } from '@/constants/bot-contents';
@@ -8,78 +8,98 @@ import { getDigitDistribution, getLastDigit, toDecimalPlaces } from '@/utils/mar
 import { TActiveSymbol, TTick } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
 
-const DEFAULT_SYMBOL = 'R_100';
+const DEFAULT_SYMBOL = '1HZ100V';
 const DEFAULT_TICK_WINDOW = 1000;
-const MIN_TICK_WINDOW = 10;
-const MAX_TICK_WINDOW = 1000;
+const MIN_TICK_WINDOW = 50;
+const MAX_TICK_WINDOW = 5000;
+const RECENT_COLLAPSED = 10;
+const RECENT_EXPANDED = 50;
 
-/**
- * The markets the analysis view offers, named the way Deriv names them in
- * active_symbols. Matching on the API's own display name rather than writing
- * symbol codes here means the codes are never guessed - whatever
- * `underlying_symbol` Deriv returns for "Volatility 75 Index" is what gets
- * subscribed to.
- */
-const PREFERRED_MARKETS = [
-    'Volatility 10 Index',
-    'Volatility 25 Index',
-    'Volatility 50 Index',
-    'Volatility 75 Index',
-    'Volatility 100 Index',
-    'Jump 10 Index',
-    'Jump 25 Index',
-    'Jump 50 Index',
-    'Jump 75 Index',
-    'Jump 100 Index',
-];
+/** Digit circle colours, by the digit's standing in the live sample. */
+type TStanding = 'highest' | 'second_highest' | 'lowest' | 'second_lowest' | 'none';
 
 const DigitCircle = ({
     digit,
     percentage,
-    is_latest,
-    is_highest,
+    standing,
+    is_current,
 }: {
     digit: number;
     percentage: number;
-    is_latest: boolean;
-    is_highest: boolean;
+    standing: TStanding;
+    is_current: boolean;
+}) => (
+    <div className='mw-dcircles__cell'>
+        <span className={`mw-dcircles__marker ${is_current ? 'mw-dcircles__marker--on' : ''}`}>▼</span>
+        <div
+            className={`mw-dcircles__circle mw-dcircles__circle--${standing} ${
+                is_current ? 'mw-dcircles__circle--current' : ''
+            }`}
+        >
+            <span className='mw-dcircles__circle-digit'>{digit}</span>
+            <span className='mw-dcircles__circle-pct'>{percentage.toFixed(1)}%</span>
+        </div>
+    </div>
+);
+
+const Bar = ({
+    label,
+    count,
+    percentage,
+    tone,
+}: {
+    label: string;
+    count: number;
+    percentage: number;
+    tone: 'good' | 'bad' | 'flat';
+}) => (
+    <div className='mw-dcircles__panel'>
+        <div className='mw-dcircles__panel-label'>{label}</div>
+        <div className='mw-dcircles__panel-value'>
+            {count} <span>({percentage.toFixed(1)}%)</span>
+        </div>
+        <div className='mw-dcircles__panel-track'>
+            <div
+                className={`mw-dcircles__panel-fill mw-dcircles__panel-fill--${tone}`}
+                style={{ width: `${Math.min(percentage, 100)}%` }}
+            />
+        </div>
+    </div>
+);
+
+const RecentStrip = ({
+    title,
+    items,
+    expanded,
+    onToggle,
+}: {
+    title: string;
+    items: { key: string; text: string; tone: 'good' | 'bad' | 'flat' }[];
+    expanded: boolean;
+    onToggle: () => void;
 }) => {
-    const radius = 26;
-    const circumference = 2 * Math.PI * radius;
-    // The arc is the digit's share of the sample, drawn from the top.
-    const offset = circumference - (Math.min(percentage, 100) / 100) * circumference;
-
-    const modifiers = [is_latest ? 'mw-dcircles__circle--latest' : '', is_highest ? 'mw-dcircles__circle--highest' : '']
-        .filter(Boolean)
-        .join(' ');
-
+    const { localize } = useTranslations();
     return (
-        <div className={`mw-dcircles__circle ${modifiers}`}>
-            <svg viewBox='0 0 64 64' className='mw-dcircles__circle-svg'>
-                <circle cx='32' cy='32' r={radius} className='mw-dcircles__circle-track' />
-                <circle
-                    cx='32'
-                    cy='32'
-                    r={radius}
-                    className='mw-dcircles__circle-fill'
-                    strokeDasharray={circumference}
-                    strokeDashoffset={offset}
-                    transform='rotate(-90 32 32)'
-                />
-                <text x='32' y='30' textAnchor='middle' className='mw-dcircles__circle-digit'>
-                    {digit}
-                </text>
-                <text x='32' y='43' textAnchor='middle' className='mw-dcircles__circle-pct'>
-                    {percentage.toFixed(2)}%
-                </text>
-            </svg>
-            {is_latest && <span className='mw-dcircles__circle-marker'>▲</span>}
+        <div className='mw-dcircles__recent'>
+            <div className='mw-dcircles__recent-head'>
+                <span>{title}</span>
+                <button type='button' onClick={onToggle}>
+                    {expanded ? localize('Less') : localize('More')}
+                </button>
+            </div>
+            <div className='mw-dcircles__recent-strip'>
+                {items.map(item => (
+                    <span key={item.key} className={`mw-dcircles__chip mw-dcircles__chip--${item.tone}`}>
+                        {item.text}
+                    </span>
+                ))}
+            </div>
         </div>
     );
 };
 
 const Dcircles = observer(() => {
-    const { feed, isConnected, latencyMs } = usePublicMarketFeed();
+    const { feed, isConnected } = usePublicMarketFeed();
     const { dashboard, quick_strategy } = useStore() ?? {};
     const { localize } = useTranslations();
     const navigate = useNavigate();
@@ -87,25 +107,22 @@ const Dcircles = observer(() => {
     const [symbols, setSymbols] = useState<TActiveSymbol[]>([]);
     const [selected_symbol, setSelectedSymbol] = useState(DEFAULT_SYMBOL);
     const [tick_window, setTickWindow] = useState(DEFAULT_TICK_WINDOW);
+    const [barrier, setBarrier] = useState(5);
     const [digits, setDigits] = useState<number[]>([]);
     const [last_tick, setLastTick] = useState<TTick | null>(null);
-    const [is_wide_eye, setIsWideEye] = useState(false);
+    const [history_decimals, setHistoryDecimals] = useState<number | null>(null);
     const [is_ai_open, setIsAiOpen] = useState(false);
     const [is_info_open, setIsInfoOpen] = useState(false);
+    const [expanded, setExpanded] = useState({ eo: false, ou: false, md: false });
 
+    // Every market Deriv offers, not a curated subset - the reference lists
+    // the 1s indices alongside the standard ones.
     useEffect(() => {
         if (!isConnected) return;
         feed.getActiveSymbols()
             .then(list => {
-                const by_name = new Map(list.map(item => [item.underlying_symbol_name, item]));
-                const preferred = PREFERRED_MARKETS.map(name => by_name.get(name)).filter(
-                    (item): item is TActiveSymbol => !!item
-                );
-                // Falls back to every synthetic Deriv offers rather than to a
-                // hardcoded list, so a renamed market degrades to "more
-                // choice" instead of "no choice".
                 const synthetics = list.filter(item => item.market === 'synthetic_index');
-                setSymbols(preferred.length ? preferred : synthetics.length ? synthetics : list);
+                setSymbols(synthetics.length ? synthetics : list);
             })
             .catch(() => {
                 // Non-fatal: the selector stays on the default symbol.
@@ -113,20 +130,40 @@ const Dcircles = observer(() => {
     }, [isConnected, feed]);
 
     const selected_symbol_info = symbols.find(item => item.underlying_symbol === selected_symbol);
-    const decimals = toDecimalPlaces(last_tick?.pip_size) ?? toDecimalPlaces(selected_symbol_info?.pip_size) ?? 2;
+    const decimals =
+        toDecimalPlaces(last_tick?.pip_size) ??
+        history_decimals ??
+        toDecimalPlaces(selected_symbol_info?.pip_size) ??
+        2;
 
-    // Re-subscribes whenever the market changes: the previous subscription is
-    // dropped by the cleanup, so switching market immediately re-points the
-    // analysis rather than blending two markets' ticks together.
+    // Seed the sample from history, then keep it current from the live
+    // stream. Without the seed the distribution would climb from 0/1000 over
+    // sixteen minutes before it meant anything.
+    const request_id = useRef(0);
     useEffect(() => {
         if (!isConnected) return undefined;
+        const id = ++request_id.current;
         setDigits([]);
         setLastTick(null);
+        setHistoryDecimals(null);
+
+        feed.getTickHistory(selected_symbol, MAX_TICK_WINDOW)
+            .then(({ prices, pip_size }) => {
+                if (id !== request_id.current) return; // a later market won the race
+                const places = toDecimalPlaces(pip_size) ?? 2;
+                setHistoryDecimals(places);
+                // History arrives oldest-first; this list is newest-first.
+                setDigits(prices.map(price => getLastDigit(price, places)).reverse());
+            })
+            .catch(() => {
+                // Non-fatal: the live stream still fills the sample.
+            });
 
         const unsubscribe = feed.subscribeTicks(selected_symbol, tick => {
+            if (id !== request_id.current) return;
             setLastTick(tick);
-            const tick_decimals = toDecimalPlaces(tick.pip_size) ?? 2;
-            setDigits(prev => [getLastDigit(tick.quote, tick_decimals), ...prev].slice(0, MAX_TICK_WINDOW));
+            const places = toDecimalPlaces(tick.pip_size) ?? 2;
+            setDigits(prev => [getLastDigit(tick.quote, places), ...prev].slice(0, MAX_TICK_WINDOW));
         });
 
         return () => unsubscribe();
@@ -134,8 +171,43 @@ const Dcircles = observer(() => {
 
     const sample = useMemo(() => digits.slice(0, tick_window), [digits, tick_window]);
     const distribution = useMemo(() => getDigitDistribution(sample), [sample]);
-    const highest = useMemo(() => Math.max(...distribution), [distribution]);
-    const latest_digit = digits[0] ?? null;
+    const current_digit = digits[0] ?? null;
+
+    // Highest and lowest get the strong colours, runners-up a softer one -
+    // the same read the reference gives: what is running hot, what is cold.
+    const standings = useMemo(() => {
+        const result: TStanding[] = new Array(10).fill('none');
+        if (!sample.length) return result;
+        const order = distribution.map((pct, digit) => ({ pct, digit })).sort((a, b) => b.pct - a.pct);
+        if (order[0]) result[order[0].digit] = 'highest';
+        if (order[1]) result[order[1].digit] = 'second_highest';
+        if (order[9]) result[order[9].digit] = 'lowest';
+        if (order[8]) result[order[8].digit] = 'second_lowest';
+        return result;
+    }, [distribution, sample.length]);
+
+    const total = sample.length || 1;
+    const even_count = sample.filter(digit => digit % 2 === 0).length;
+    const under_count = sample.filter(digit => digit < barrier).length;
+    const equal_count = sample.filter(digit => digit === barrier).length;
+    const over_count = sample.filter(digit => digit > barrier).length;
+
+    const recent = (limit: number) => digits.slice(0, limit);
+    const eo_items = recent(expanded.eo ? RECENT_EXPANDED : RECENT_COLLAPSED).map((digit, index) => ({
+        key: `eo-${index}`,
+        text: digit % 2 === 0 ? 'E' : 'O',
+        tone: (digit % 2 === 0 ? 'good' : 'bad') as 'good' | 'bad',
+    }));
+    const ou_items = recent(expanded.ou ? RECENT_EXPANDED : RECENT_COLLAPSED).map((digit, index) => ({
+        key: `ou-${index}`,
+        text: digit < barrier ? 'U' : digit === barrier ? '=' : 'O',
+        tone: (digit < barrier ? 'good' : digit === barrier ? 'flat' : 'bad') as 'good' | 'bad' | 'flat',
+    }));
+    const md_items = recent(expanded.md ? RECENT_EXPANDED : RECENT_COLLAPSED).map((digit, index) => ({
+        key: `md-${index}`,
+        text: digit === barrier ? 'M' : 'D',
+        tone: (digit === barrier ? 'good' : 'bad') as 'good' | 'bad',
+    }));
 
     const openTradingConfiguration = () => {
         startTransition(() => {
@@ -148,18 +220,14 @@ const Dcircles = observer(() => {
     return (
         <div className='mw-dcircles'>
             <div className='mw-dcircles__actions'>
-                <button type='button' className='mw-dcircles__action' onClick={openTradingConfiguration}>
-                    {localize('Trading Configuration')}
+                <button type='button' className='mw-dcircles__action mw-dcircles__action--eye'>
+                    {localize('Wide Eye')}
                 </button>
                 <button
                     type='button'
-                    className={`mw-dcircles__action ${is_wide_eye ? 'mw-dcircles__action--on' : ''}`}
-                    onClick={() => setIsWideEye(prev => !prev)}
-                    aria-pressed={is_wide_eye}
+                    className='mw-dcircles__action mw-dcircles__action--ai'
+                    onClick={() => setIsAiOpen(prev => !prev)}
                 >
-                    {localize('Wide Eye')}
-                </button>
-                <button type='button' className='mw-dcircles__action' onClick={() => setIsAiOpen(prev => !prev)}>
                     {localize('Launch AI')}
                 </button>
                 <button
@@ -170,12 +238,15 @@ const Dcircles = observer(() => {
                 >
                     i
                 </button>
+                <button type='button' className='mw-dcircles__config' onClick={openTradingConfiguration}>
+                    {localize('Trading Configuration')}
+                </button>
             </div>
 
             {is_info_open && (
                 <p className='mw-dcircles__note'>
                     {localize(
-                        'Every figure here is counted from live ticks on the selected market - the last digit of each quote, taken at that market’s own precision, over the most recent {{count}} ticks. Nothing is simulated, and the sample starts empty each time you switch market.',
+                        'Every figure here is counted from real ticks on the selected market: the last digit of each quote at that market’s own precision. The sample is seeded from tick history and kept current from the live stream, so it is full immediately rather than filling over the next {{count}} seconds.',
                         { count: tick_window }
                     )}
                 </p>
@@ -184,104 +255,140 @@ const Dcircles = observer(() => {
             {is_ai_open && (
                 <p className='mw-dcircles__note mw-dcircles__note--warn'>
                     {localize(
-                        'No analysis backend is connected to this build, so there is nothing for Launch AI to run yet. The control is here and wired up; what is missing is the service behind it. It shows this rather than inventing a reading.'
+                        'No analysis backend is connected to this build, so there is nothing for Launch AI to run yet. The control is wired up; the service behind it is what is missing. It says so rather than inventing a reading.'
                     )}
                 </p>
             )}
 
-            <div className='mw-dcircles__controls'>
-                <label className='mw-dcircles__field'>
-                    <span>{localize('Market')}</span>
-                    <select value={selected_symbol} onChange={event => setSelectedSymbol(event.target.value)}>
-                        {symbols.length === 0 && <option value={selected_symbol}>{selected_symbol}</option>}
-                        {symbols.map(item => (
-                            <option key={item.underlying_symbol} value={item.underlying_symbol}>
-                                {item.underlying_symbol_name}
-                            </option>
-                        ))}
-                    </select>
-                </label>
-                <label className='mw-dcircles__field'>
-                    <span>{localize('Tick window')}</span>
-                    <input
-                        type='number'
-                        value={tick_window}
-                        min={MIN_TICK_WINDOW}
-                        max={MAX_TICK_WINDOW}
-                        step={10}
-                        onChange={event =>
-                            setTickWindow(
-                                Math.min(MAX_TICK_WINDOW, Math.max(MIN_TICK_WINDOW, Number(event.target.value) || 0))
-                            )
-                        }
-                    />
-                </label>
+            <label className='mw-dcircles__market'>
+                <span>{localize('Select Market:')}</span>
+                <select value={selected_symbol} onChange={event => setSelectedSymbol(event.target.value)}>
+                    {symbols.length === 0 && <option value={selected_symbol}>{selected_symbol}</option>}
+                    {symbols.map(item => (
+                        <option key={item.underlying_symbol} value={item.underlying_symbol}>
+                            {item.underlying_symbol_name}
+                        </option>
+                    ))}
+                </select>
+            </label>
+
+            <div className='mw-dcircles__quote'>
+                <span className='mw-dcircles__quote-value'>{last_tick ? last_tick.quote.toFixed(decimals) : '—'}</span>
+                <span className='mw-dcircles__quote-digit'>{current_digit ?? '—'}</span>
             </div>
 
-            <div className='mw-dcircles__readout'>
-                <div className='mw-dcircles__quote'>
-                    <span className='mw-dcircles__quote-label'>{localize('Current value')}</span>
-                    <span className='mw-dcircles__quote-value'>
-                        {last_tick ? last_tick.quote.toFixed(decimals) : '—'}
-                    </span>
-                </div>
-                <div className='mw-dcircles__quote'>
-                    <span className='mw-dcircles__quote-label'>{localize('Last digit')}</span>
-                    <span className='mw-dcircles__quote-value mw-dcircles__quote-value--digit'>
-                        {latest_digit ?? '—'}
-                    </span>
-                </div>
-                <div className='mw-dcircles__meta'>
-                    <span className={`mw-dcircles__dot ${isConnected ? 'mw-dcircles__dot--live' : ''}`} />
-                    {isConnected ? localize('Live') : localize('Connecting…')}
-                    {' · '}
-                    {localize('{{collected}}/{{window}} ticks', { collected: sample.length, window: tick_window })}
-                    {latencyMs != null && ` · ${latencyMs}ms`}
-                </div>
+            <div className='mw-dcircles__window'>
+                <span>{localize('Ticks window:')}</span>
+                <input
+                    type='number'
+                    value={tick_window}
+                    min={MIN_TICK_WINDOW}
+                    max={MAX_TICK_WINDOW}
+                    step={50}
+                    onChange={event =>
+                        setTickWindow(
+                            Math.min(MAX_TICK_WINDOW, Math.max(MIN_TICK_WINDOW, Number(event.target.value) || 0))
+                        )
+                    }
+                />
+                <span className='mw-dcircles__window-range'>
+                    ({MIN_TICK_WINDOW}–{MAX_TICK_WINDOW})
+                </span>
             </div>
 
-            <div className={`mw-dcircles__grid ${is_wide_eye ? 'mw-dcircles__grid--wide' : ''}`}>
+            <div className='mw-dcircles__dist-head'>
+                <span>{localize('Last {{count}} ticks digit distribution', { count: tick_window })}</span>
+                <span className='mw-dcircles__dist-count'>
+                    {sample.length}/{tick_window}
+                </span>
+            </div>
+
+            <div className='mw-dcircles__grid'>
                 {distribution.map((percentage, digit) => (
                     <DigitCircle
                         key={digit}
                         digit={digit}
                         percentage={percentage}
-                        is_latest={digit === latest_digit}
-                        is_highest={sample.length > 0 && percentage === highest}
+                        standing={standings[digit]}
+                        is_current={digit === current_digit}
                     />
                 ))}
             </div>
+            <div className='mw-dcircles__legend'>
+                <span>{localize('current digit / most')}</span>
+                <span>{localize('least frequency')}</span>
+            </div>
 
-            {is_wide_eye && (
-                <div className='mw-dcircles__wide'>
-                    <div className='mw-dcircles__wide-row'>
-                        <span>{localize('Even')}</span>
-                        <strong>
-                            {sample.length
-                                ? `${((sample.filter(d => d % 2 === 0).length / sample.length) * 100).toFixed(2)}%`
-                                : '—'}
-                        </strong>
-                    </div>
-                    <div className='mw-dcircles__wide-row'>
-                        <span>{localize('Odd')}</span>
-                        <strong>
-                            {sample.length
-                                ? `${((sample.filter(d => d % 2 !== 0).length / sample.length) * 100).toFixed(2)}%`
-                                : '—'}
-                        </strong>
-                    </div>
-                    <div className='mw-dcircles__wide-strip'>
-                        {digits.slice(0, 24).map((digit, index) => (
-                            <span
-                                key={index}
-                                className={`mw-dcircles__wide-chip ${digit % 2 === 0 ? 'mw-dcircles__wide-chip--even' : 'mw-dcircles__wide-chip--odd'}`}
-                            >
-                                {digit}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            )}
+            <h3 className='mw-dcircles__heading'>{localize('Even/Odd')}</h3>
+            <div className='mw-dcircles__panels mw-dcircles__panels--two'>
+                <Bar label={localize('Even')} count={even_count} percentage={(even_count / total) * 100} tone='good' />
+                <Bar
+                    label={localize('Odd')}
+                    count={sample.length - even_count}
+                    percentage={((sample.length - even_count) / total) * 100}
+                    tone='bad'
+                />
+            </div>
+            <RecentStrip
+                title={localize('Recent E/O')}
+                items={eo_items}
+                expanded={expanded.eo}
+                onToggle={() => setExpanded(prev => ({ ...prev, eo: !prev.eo }))}
+            />
+
+            <label className='mw-dcircles__barrier'>
+                <span>{localize('Over/Under:')}</span>
+                <select value={barrier} onChange={event => setBarrier(Number(event.target.value))}>
+                    {Array.from({ length: 10 }, (_, digit) => (
+                        <option key={digit} value={digit}>
+                            {digit}
+                        </option>
+                    ))}
+                </select>
+            </label>
+            <div className='mw-dcircles__panels mw-dcircles__panels--three'>
+                <Bar
+                    label={localize('Under')}
+                    count={under_count}
+                    percentage={(under_count / total) * 100}
+                    tone='good'
+                />
+                <Bar
+                    label={localize('Equal')}
+                    count={equal_count}
+                    percentage={(equal_count / total) * 100}
+                    tone='flat'
+                />
+                <Bar label={localize('Over')} count={over_count} percentage={(over_count / total) * 100} tone='bad' />
+            </div>
+            <RecentStrip
+                title={localize('Recent U/= /O')}
+                items={ou_items}
+                expanded={expanded.ou}
+                onToggle={() => setExpanded(prev => ({ ...prev, ou: !prev.ou }))}
+            />
+
+            <h3 className='mw-dcircles__heading'>{localize('Matches/Differs')}</h3>
+            <div className='mw-dcircles__panels mw-dcircles__panels--two'>
+                <Bar
+                    label={localize('Matches')}
+                    count={equal_count}
+                    percentage={(equal_count / total) * 100}
+                    tone='good'
+                />
+                <Bar
+                    label={localize('Differs')}
+                    count={sample.length - equal_count}
+                    percentage={((sample.length - equal_count) / total) * 100}
+                    tone='bad'
+                />
+            </div>
+            <RecentStrip
+                title={localize('Recent M/D')}
+                items={md_items}
+                expanded={expanded.md}
+                onToggle={() => setExpanded(prev => ({ ...prev, md: !prev.md }))}
+            />
         </div>
     );
 });

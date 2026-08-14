@@ -214,6 +214,31 @@ class PublicMarketFeed {
         return (response.candles as TCandle[]) ?? [];
     }
 
+    /**
+     * The last `count` quotes for a symbol, newest last, with the decimal
+     * precision they should be read at.
+     *
+     * Digit analysis is meaningless until the sample is full, and a live
+     * subscription alone takes `count` seconds to fill one - sixteen minutes
+     * for the default thousand. This seeds it in one request. Verified live
+     * against this endpoint: `style: 'ticks'` returns
+     * {history: {prices, times}, pip_size}.
+     */
+    async getTickHistory(symbol: string, count = 1000): Promise<{ prices: number[]; pip_size: number }> {
+        const response = await this.send({
+            ticks_history: symbol,
+            adjust_start_time: 1,
+            count,
+            end: 'latest',
+            style: 'ticks',
+        });
+        const history = response.history as { prices?: number[] } | undefined;
+        return {
+            prices: history?.prices ?? [],
+            pip_size: (response.pip_size as number) ?? 2,
+        };
+    }
+
     private sendTicksSubscribe(symbol: string) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
         this.ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));

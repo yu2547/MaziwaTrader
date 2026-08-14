@@ -1,23 +1,24 @@
+$mw-green: #22a06b;
+$mw-red: #e04b4b;
+$mw-blue: #1a5cff;
+$mw-orange: #f2960d;
+$mw-grey: #7d8fa3;
+
 .analysis-tool {
     width: 100%;
     min-height: 100%;
     display: flex;
     flex-direction: column;
 
-    // Not `hidden`: the sub-navigation needs to scroll horizontally inside
-    // its own strip, and the views below need to scroll vertically.
-    overflow: visible;
-
     // One row at every width. Scrolls rather than wrapping, so nothing below
     // it moves when the labels stop fitting.
     &__nav {
         display: flex;
         align-items: stretch;
-        gap: 0.4rem;
+        gap: 0.8rem;
         overflow-x: auto;
         scrollbar-width: none;
-        padding: 0.8rem 1.2rem;
-        border-bottom: 1px solid var(--general-section-1);
+        padding: 1.2rem;
         background: var(--general-main-1);
 
         &::-webkit-scrollbar {
@@ -27,10 +28,10 @@
 
     &__nav-item {
         flex-shrink: 0;
-        padding: 0.9rem 1.6rem;
-        border: none;
-        border-radius: 999px;
-        background: var(--general-section-1);
+        padding: 1rem 1.8rem;
+        border: 1px solid var(--general-section-1);
+        border-radius: 6px;
+        background: var(--general-main-1);
         color: var(--text-general);
         font-size: 1.3rem;
         font-weight: 600;
@@ -45,7 +46,8 @@
         }
 
         &--active {
-            background: #1a5cff;
+            background: $mw-blue;
+            border-color: $mw-blue;
             color: #fff;
         }
     }
@@ -98,7 +100,7 @@
     display: flex;
     flex-direction: column;
     gap: 1.4rem;
-    padding: 1.6rem;
+    padding: 0 1.6rem 2.4rem;
 
     // Nothing here may push the page sideways on a phone.
     max-width: 100%;
@@ -107,29 +109,31 @@
     &__actions {
         display: flex;
         align-items: center;
-        gap: 0.8rem;
+        justify-content: center;
+        gap: 1rem;
         flex-wrap: wrap;
     }
 
     &__action {
-        padding: 0.9rem 1.4rem;
-        border-radius: 6px;
-        border: 1px solid var(--general-section-5, rgb(0 0 0 / 12%));
-        background: transparent;
-        color: var(--text-prominent);
-        font-size: 1.3rem;
-        font-weight: 600;
+        padding: 0.9rem 1.8rem;
+        border: none;
+        border-radius: 999px;
+        color: #fff;
+        font-size: 1.4rem;
+        font-weight: 700;
         white-space: nowrap;
         cursor: pointer;
 
-        &:hover {
-            background: var(--general-section-1);
+        &--eye {
+            background: #d9736b;
         }
 
-        &--on {
-            background: #1a5cff;
-            border-color: #1a5cff;
-            color: #fff;
+        &--ai {
+            background: #3d9df5;
+        }
+
+        &:hover {
+            filter: brightness(1.06);
         }
     }
 
@@ -137,20 +141,28 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 3rem;
-        height: 3rem;
+        width: 2.8rem;
+        height: 2.8rem;
+        border: none;
         border-radius: 50%;
-        border: 1px solid var(--general-section-5, rgb(0 0 0 / 12%));
-        background: transparent;
-        color: var(--text-general);
+        background: $mw-grey;
+        color: #fff;
         font-size: 1.4rem;
         font-weight: 700;
         font-style: italic;
         cursor: pointer;
+    }
 
-        &:hover {
-            background: var(--general-section-1);
-        }
+    &__config {
+        padding: 0.9rem 1.6rem;
+        border: none;
+        border-radius: 6px;
+        background: $mw-blue;
+        color: #fff;
+        font-size: 1.3rem;
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: pointer;
     }
 
     &__note {
@@ -163,104 +175,121 @@
         color: var(--text-general);
 
         &--warn {
-            border-inline-start: 3px solid #ffad3a;
+            border-inline-start: 3px solid $mw-orange;
         }
     }
 
-    &__controls {
-        display: grid;
-        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-        gap: 1.2rem;
-
-        @media (width <= 600px) {
-            grid-template-columns: minmax(0, 1fr);
-        }
-    }
-
-    &__field {
+    &__market,
+    &__barrier {
         display: flex;
         flex-direction: column;
-        gap: 0.4rem;
+        gap: 0.6rem;
         min-width: 0;
 
         > span {
-            font-size: 1.1rem;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--text-less-prominent);
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--text-prominent);
         }
 
-        select,
-        input {
+        select {
             width: 100%;
-            padding: 1rem 1.2rem;
+            padding: 1.1rem 1.2rem;
             border-radius: 6px;
-            background: var(--general-section-1);
-            border: 1px solid var(--general-section-5, rgb(0 0 0 / 8%));
+            background: var(--general-main-1);
+            border: 1px solid var(--general-section-1);
             color: var(--text-prominent);
             font-size: 1.5rem;
-            font-weight: 500;
-            font-variant-numeric: tabular-nums;
             outline: none;
 
             &:focus {
-                border-color: #1a5cff;
+                border-color: $mw-blue;
             }
         }
     }
 
-    &__readout {
-        display: flex;
-        align-items: flex-end;
-        gap: 2.4rem;
-        flex-wrap: wrap;
+    &__barrier {
+        flex-direction: row;
+        align-items: center;
+        gap: 1.2rem;
+
+        select {
+            flex: 1;
+        }
     }
 
+    // The quote and its last digit, the two numbers the whole page is about.
     &__quote {
         display: flex;
-        flex-direction: column;
-        gap: 0.2rem;
-    }
-
-    &__quote-label {
-        font-size: 1.1rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--text-less-prominent);
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.6rem;
+        padding: 1.6rem 2rem;
+        border-radius: 6px;
+        background: var(--general-section-1);
     }
 
     &__quote-value {
         font-size: 2.8rem;
         font-weight: 700;
-        line-height: 1.1;
         font-variant-numeric: tabular-nums;
-        color: #1a5cff;
+        color: var(--text-prominent);
+    }
 
-        &--digit {
+    &__quote-digit {
+        font-size: 2.8rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: $mw-blue;
+    }
+
+    &__window {
+        display: flex;
+        align-items: center;
+        gap: 1.2rem;
+        flex-wrap: wrap;
+
+        > span:first-child {
+            font-size: 1.4rem;
+            font-weight: 600;
             color: var(--text-prominent);
+        }
+
+        input {
+            width: 10rem;
+            padding: 0.8rem 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--general-section-1);
+            background: var(--general-main-1);
+            color: var(--text-prominent);
+            font-size: 1.4rem;
+            font-variant-numeric: tabular-nums;
+            text-align: center;
+            outline: none;
         }
     }
 
-    &__meta {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding-bottom: 0.4rem;
+    &__window-range {
         font-size: 1.2rem;
         color: var(--text-less-prominent);
     }
 
-    &__dot {
-        width: 0.8rem;
-        height: 0.8rem;
-        border-radius: 50%;
-        background: #ffad3a;
+    &__dist-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.2rem;
+        font-size: 1.4rem;
+        color: var(--text-general);
+    }
 
-        &--live {
-            background: #4eaaa5;
-        }
+    &__dist-count {
+        padding: 0.4rem 0.9rem;
+        border-radius: 4px;
+        background: var(--general-section-1);
+        font-size: 1.2rem;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-general);
     }
 
     &__grid {
@@ -268,115 +297,220 @@
         grid-template-columns: repeat(10, minmax(0, 1fr));
         gap: 0.8rem;
 
-        @media (width <= 900px) {
+        @media (width <= 700px) {
             grid-template-columns: repeat(5, minmax(0, 1fr));
-            row-gap: 2rem;
+            row-gap: 1.2rem;
         }
     }
 
-    &__circle {
-        position: relative;
+    &__cell {
         display: flex;
         flex-direction: column;
         align-items: center;
+        gap: 0.2rem;
         min-width: 0;
     }
 
-    &__circle-svg {
-        width: 100%;
-        height: auto;
-        max-width: 8rem;
-    }
-
-    &__circle-track {
-        fill: none;
-        stroke: var(--general-section-1);
-        stroke-width: 6;
-    }
-
-    &__circle-fill {
-        fill: none;
-        stroke: #7d8fa3;
-        stroke-width: 6;
-        stroke-linecap: butt;
-        transition: stroke-dashoffset 0.4s ease;
-    }
-
-    // The digit that just arrived, and the digit leading the sample, are the
-    // two worth picking out - and they are different questions, so they get
-    // different colours rather than competing for one highlight.
-    &__circle--highest &__circle-fill {
-        stroke: #1a5cff;
-    }
-
-    &__circle--latest &__circle-fill {
-        stroke: #e35d5b;
-    }
-
-    &__circle-digit {
-        fill: var(--text-prominent);
-        font-size: 14px;
-        font-weight: 700;
-    }
-
-    &__circle-pct {
-        fill: var(--text-general);
-        font-size: 8.5px;
-        font-weight: 600;
-    }
-
-    &__circle-marker {
-        position: absolute;
-        bottom: -1.2rem;
-        color: #e35d5b;
+    &__marker {
         font-size: 1.1rem;
-    }
+        line-height: 1;
+        color: transparent;
 
-    &__wide {
-        display: flex;
-        flex-direction: column;
-        gap: 0.8rem;
-        padding: 1.2rem;
-        border-radius: 8px;
-        background: var(--general-section-1);
-    }
-
-    &__wide-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        font-size: 1.3rem;
-        color: var(--text-general);
-
-        strong {
-            font-variant-numeric: tabular-nums;
-            color: var(--text-prominent);
+        &--on {
+            color: $mw-blue;
         }
     }
 
-    &__wide-strip {
+    // Ring by default; the strong colours are reserved for the digits that
+    // are actually leading or trailing the sample.
+    &__circle {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.4rem;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        max-width: 6rem;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        border: 2px solid var(--general-section-1);
+        background: var(--general-main-1);
+        color: var(--text-prominent);
+
+        &--highest {
+            background: $mw-green;
+            border-color: $mw-green;
+            color: #fff;
+        }
+
+        &--second_highest {
+            background: $mw-blue;
+            border-color: $mw-blue;
+            color: #fff;
+        }
+
+        &--lowest {
+            background: $mw-red;
+            border-color: $mw-red;
+            color: #fff;
+        }
+
+        &--second_lowest {
+            background: $mw-orange;
+            border-color: $mw-orange;
+            color: #fff;
+        }
+
+        &--current {
+            box-shadow: 0 0 0 3px rgb(26 92 255 / 35%);
+        }
     }
 
-    &__wide-chip {
+    &__circle-digit {
+        font-size: 1.6rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+
+    &__circle-pct {
+        font-size: 1rem;
+        font-weight: 600;
+        line-height: 1.1;
+        opacity: 0.85;
+    }
+
+    &__legend {
+        display: flex;
+        justify-content: center;
+        gap: 2.4rem;
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+
+    &__heading {
+        margin: 0.8rem 0 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-prominent);
+    }
+
+    &__panels {
+        display: grid;
+        gap: 1.6rem;
+
+        &--two {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        &--three {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        @media (width <= 700px) {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+
+    &__panel {
+        padding: 1.4rem 1.6rem;
+        border-radius: 6px;
+        background: var(--general-section-1);
+        min-width: 0;
+    }
+
+    &__panel-label {
+        text-align: center;
+        font-size: 1.4rem;
+        color: var(--text-general);
+    }
+
+    &__panel-value {
+        text-align: center;
+        margin: 0.4rem 0 1rem;
+        font-size: 1.8rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-prominent);
+
+        span {
+            font-size: 1.3rem;
+            font-weight: 500;
+            color: var(--text-general);
+        }
+    }
+
+    &__panel-track {
+        height: 0.5rem;
+        border-radius: 999px;
+        background: var(--general-main-1);
+        overflow: hidden;
+    }
+
+    &__panel-fill {
+        height: 100%;
+        border-radius: 999px;
+        transition: width 300ms ease;
+
+        &--good {
+            background: $mw-green;
+        }
+
+        &--bad {
+            background: $mw-red;
+        }
+
+        &--flat {
+            background: $mw-grey;
+        }
+    }
+
+    &__recent-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.2rem;
+        margin-bottom: 0.8rem;
+        font-size: 1.4rem;
+        color: var(--text-prominent);
+
+        button {
+            padding: 0.4rem 1.2rem;
+            border: none;
+            border-radius: 4px;
+            background: $mw-blue;
+            color: #fff;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    }
+
+    &__recent-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    &__chip {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         width: 2.4rem;
         height: 2.4rem;
-        border-radius: 4px;
+        border-radius: 50%;
         font-size: 1.2rem;
         font-weight: 700;
         color: #fff;
 
-        &--even {
-            background: #4eaaa5;
+        &--good {
+            background: $mw-green;
         }
 
-        &--odd {
-            background: #e35d5b;
+        &--bad {
+            background: $mw-red;
+        }
+
+        &--flat {
+            background: $mw-grey;
         }
     }
 }

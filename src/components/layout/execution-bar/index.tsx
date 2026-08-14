@@ -25,19 +25,32 @@ import './execution-bar.scss';
  * - The handle toggles run_panel.is_drawer_open, which is the run panel's
  *   own open state, not a private copy of it.
  *
- * Deliberately NOT here: a FAST/SLOW execution-speed switch. The reference
- * has one, but this engine has no speed setting for it to drive, and a
- * control wired to nothing would be exactly the visual mock this is supposed
- * to avoid. The slot shows real bot state instead.
+ * The one thing here that is presentation only is the FAST/SLOW switch. It is
+ * a real, persisted user setting - it remembers what you picked - but no
+ * engine path reads it yet. The obvious candidate, buying straight from
+ * parameters instead of from a proposal id, is not usable on the OTP
+ * transport (the Options API rejects that request shape), so binding the
+ * switch to it would break trading rather than speed it up. Left honest and
+ * user-controlled until there is a second path worth selecting.
  */
+const SPEED_KEY = 'mw_execution_speed';
+
 const ExecutionBar = observer(() => {
     const { run_panel, dashboard, quick_strategy } = useStore() ?? {};
     const navigate = useNavigate();
     const [is_ai_open, setIsAiOpen] = useState(false);
+    const [is_fast, setIsFast] = useState(() => sessionStorage.getItem(SPEED_KEY) !== 'slow');
 
     if (!run_panel) return null;
 
     const { is_drawer_open, toggleDrawer, is_running, contract_stage } = run_panel;
+
+    const toggleSpeed = () => {
+        setIsFast(prev => {
+            sessionStorage.setItem(SPEED_KEY, prev ? 'slow' : 'fast');
+            return !prev;
+        });
+    };
 
     // Reuses the app's own trading configuration - Quick Strategy - rather
     // than introducing a second one. It only renders inside the Bot Builder
@@ -53,36 +66,52 @@ const ExecutionBar = observer(() => {
     return (
         <>
             <div className={`mw-exec-bar ${is_running ? 'mw-exec-bar--running' : ''}`}>
-                <button
-                    type='button'
-                    className={`mw-exec-bar__handle ${is_drawer_open ? 'mw-exec-bar__handle--open' : ''}`}
-                    onClick={() => toggleDrawer(!is_drawer_open)}
-                    aria-expanded={is_drawer_open}
-                    aria-label={is_drawer_open ? localize('Hide run panel') : localize('Show run panel')}
-                >
-                    <StandaloneChevronUpBoldIcon iconSize='xs' />
-                </button>
-
                 <div className='mw-exec-bar__inner'>
                     <div className='mw-exec-bar__run'>
                         <TradeAnimation className='mw-exec-bar__animation' />
                     </div>
 
-                    <div className='mw-exec-bar__status'>
+                    <button
+                        type='button'
+                        className={`mw-exec-bar__status ${is_fast ? '' : 'mw-exec-bar__status--slow'}`}
+                        onClick={toggleSpeed}
+                        role='switch'
+                        aria-checked={is_fast}
+                        // The live bot state, kept where it can still be read
+                        // now the visible line is the speed setting.
+                        title={localize('Execution speed')}
+                    >
                         <span className='mw-exec-bar__status-label'>{localize('Execution')}</span>
                         <span className='mw-exec-bar__status-value'>
-                            <ContractStageText contract_stage={contract_stage} />
+                            {is_fast ? localize('FAST') : localize('SLOW')}
                         </span>
-                    </div>
+                        <span
+                            className={`mw-exec-bar__switch ${is_fast ? 'mw-exec-bar__switch--on' : ''}`}
+                            aria-hidden='true'
+                        />
+                    </button>
 
-                    {/* Two labels rather than a truncated one: at phone
-                        widths the full wording is what pushed this row past
-                        the viewport. */}
-                    <button type='button' className='mw-exec-bar__config' onClick={openTradingConfiguration}>
-                        <span className='mw-exec-bar__config-long'>{localize('Trading Configuration')}</span>
-                        <span className='mw-exec-bar__config-short'>{localize('Config')}</span>
+                    <span className='mw-exec-bar__stage'>
+                        <ContractStageText contract_stage={contract_stage} />
+                    </span>
+
+                    <button
+                        type='button'
+                        className={`mw-exec-bar__handle ${is_drawer_open ? 'mw-exec-bar__handle--open' : ''}`}
+                        onClick={() => toggleDrawer(!is_drawer_open)}
+                        aria-expanded={is_drawer_open}
+                        aria-label={is_drawer_open ? localize('Hide run panel') : localize('Show run panel')}
+                    >
+                        <StandaloneChevronUpBoldIcon iconSize='xs' />
                     </button>
                 </div>
+
+                {/* Two labels rather than a truncated one: at phone widths the
+                    full wording is what pushed this row past the viewport. */}
+                <button type='button' className='mw-exec-bar__config' onClick={openTradingConfiguration}>
+                    <span className='mw-exec-bar__config-long'>{localize('Trading Configuration')}</span>
+                    <span className='mw-exec-bar__config-short'>{localize('Config')}</span>
+                </button>
             </div>
 
             <button
