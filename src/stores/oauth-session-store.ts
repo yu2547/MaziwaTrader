@@ -19,12 +19,20 @@ export default class OAuthSessionStore {
     accounts: TOptionsAccount[] = [];
     selected_account_id = '';
 
+    // Live values from the account's `balance` stream on the authenticated
+    // socket. null means "not received yet" - deliberately not 0, which the
+    // header would have shown as a real balance.
+    live_balance: number | null = null;
+    live_currency = '';
+
     constructor() {
         makeObservable(this, {
             access_token: observable,
             token_expires_at: observable,
             accounts: observable,
             selected_account_id: observable,
+            live_balance: observable,
+            live_currency: observable,
             is_authenticated: computed,
             selected_account: computed,
             balance: computed,
@@ -33,6 +41,8 @@ export default class OAuthSessionStore {
             account_type: computed,
             setSession: action,
             setAccounts: action,
+            setLiveBalance: action,
+            clearLiveBalance: action,
             selectAccount: action,
             clear: action,
         });
@@ -48,12 +58,28 @@ export default class OAuthSessionStore {
         );
     }
 
-    get balance() {
-        return this.selected_account?.balance ?? 0;
+    /**
+     * The balance to display, or null when there is genuinely nothing to show
+     * yet - never 0 standing in for "unknown".
+     *
+     * Two real sources, in order of freshness:
+     *   live_balance   - the account's `balance` stream on the authenticated
+     *                    socket, updated whenever Deriv sends a change.
+     *   selected_account.balance - the snapshot the REST account list carried
+     *                    at login. Real, but taken once and never updated.
+     *
+     * Before this, only the second existed: the header rendered a login-time
+     * snapshot for the rest of the session, and `?? 0` turned "no snapshot
+     * yet" into a confident 0.00.
+     */
+    get balance(): number | null {
+        if (this.live_balance !== null) return this.live_balance;
+        const snapshot = this.selected_account?.balance;
+        return typeof snapshot === 'number' ? snapshot : null;
     }
 
     get currency() {
-        return this.selected_account?.currency ?? '';
+        return this.live_currency || this.selected_account?.currency || '';
     }
 
     get account_id() {
@@ -81,9 +107,31 @@ export default class OAuthSessionStore {
         }
     };
 
+    /**
+     * Called only with values taken straight off a `balance` message from the
+     * authenticated socket. Guarded so a message in an unexpected shape
+     * leaves the header in its loading state rather than printing something
+     * that was never a balance.
+     */
+    setLiveBalance = (balance: unknown, currency: unknown) => {
+        const value = typeof balance === 'string' ? Number(balance) : balance;
+        if (typeof value !== 'number' || Number.isNaN(value)) return;
+        this.live_balance = value;
+        if (typeof currency === 'string' && currency) this.live_currency = currency;
+    };
+
+    /** Back to "not received yet" - used when the account or socket changes. */
+    clearLiveBalance = () => {
+        this.live_balance = null;
+        this.live_currency = '';
+    };
+
     selectAccount = (account_id: string) => {
         this.selected_account_id = account_id;
         storeSelectedAccountId(account_id);
+        // The live figure belongs to the account that was connected a moment
+        // ago; showing it beside the newly selected one would be wrong.
+        this.clearLiveBalance();
     };
 
     clear = () => {
@@ -91,5 +139,6 @@ export default class OAuthSessionStore {
         this.token_expires_at = 0;
         this.accounts = [];
         this.selected_account_id = '';
+        this.clearLiveBalance();
     };
 }

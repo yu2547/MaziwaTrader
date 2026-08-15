@@ -4,6 +4,9 @@ import { observer } from 'mobx-react-lite';
 import { CurrencyIcon } from '@/components/currency/currency-icon';
 import { addComma, getDecimalPlaces, standalone_routes } from '@/components/shared';
 import { api_base } from '@/external/bot-skeleton';
+import { CONNECTION_STATUS } from '@/external/bot-skeleton/services/api/observables/connection-status-stream';
+import { useApiBase } from '@/hooks/useApiBase';
+import useLiveBalance from '@/hooks/useLiveBalance';
 import { useStore } from '@/hooks/useStore';
 import { clearStoredSession } from '@/utils/auth/deriv-oauth';
 import { convertFromUsd, useExchangeRates } from '@/utils/currency/exchange-rate';
@@ -32,6 +35,11 @@ type TDisplayCurrency = (typeof CURRENCY_OPTIONS)[number];
 const OAuthFlatNav = observer(() => {
     const { oauth_session } = useStore() ?? {};
     const { localize } = useTranslations();
+    const { connectionStatus } = useApiBase();
+    // Routes the account's live `balance` stream into the store this header
+    // reads. Mounted here because this bar is the only thing that renders for
+    // an OAuth session, so it mounts exactly once.
+    useLiveBalance();
     const [display_currency, setDisplayCurrency] = useState<TDisplayCurrency>('USD');
     const [is_panel_open, setIsPanelOpen] = useState(false);
     const [panel_type, setPanelType] = useState<'real' | 'demo'>('real');
@@ -66,16 +74,27 @@ const OAuthFlatNav = observer(() => {
 
     if (!oauth_session?.is_authenticated) return null;
 
-    const balance_usd = Number(oauth_session.balance || 0);
+    // null means Deriv has not given us a balance for this account yet -
+    // distinct from a real zero, and never rendered as one.
+    const live_balance = oauth_session.balance;
     const account_currency = oauth_session.currency || 'USD';
     const decimals = getDecimalPlaces(account_currency);
     const is_demo = active_type === 'demo';
+    const is_disconnected = connectionStatus === CONNECTION_STATUS.CLOSED;
+    const has_balance = live_balance !== null;
+    const balance_usd = live_balance ?? 0;
     const converted =
-        display_currency === 'KSH' && account_currency === 'USD' ? convertFromUsd(balance_usd, rates, 'KES') : null;
+        display_currency === 'KSH' && account_currency === 'USD' && has_balance
+            ? convertFromUsd(balance_usd, rates, 'KES')
+            : null;
 
     let balance_number: string;
     let balance_currency: string;
-    if (display_currency === 'USD' || account_currency !== 'USD') {
+    if (!has_balance) {
+        // A dash, not a zero. The connection state below says why.
+        balance_number = '—';
+        balance_currency = is_disconnected ? localize('Reconnecting…') : localize('Loading…');
+    } else if (display_currency === 'USD' || account_currency !== 'USD') {
         balance_number = addComma(balance_usd.toFixed(decimals));
         balance_currency = account_currency;
     } else if (converted != null) {
