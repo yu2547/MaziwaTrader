@@ -212,11 +212,16 @@ $exec-bar-gap: 1.2rem;
 
     // The floating scanner trigger: a purple orb with two slow rings and a
     // live dot, sitting clear of the bar so a thumb can reach it.
+    // z-index has to clear the run panel (popover_zindex.RUN_PANEL = 6). At 4
+    // the orb sat inside the panel's rectangle on desktop and was painted
+    // underneath it - elementFromPoint at the orb's own centre returned the
+    // panel's Reset button, so it was neither visible nor clickable. It only
+    // looked like it was floating on mobile, where the panel is elsewhere.
     &__ai {
         position: fixed;
         inset-inline-end: 1.6rem;
         bottom: calc(3.6rem + 1.6rem);
-        z-index: 4;
+        z-index: 7;
         display: flex;
         align-items: center;
         justify-content: center;
