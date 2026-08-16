@@ -6,6 +6,7 @@ import { DBOT_TABS } from '@/constants/bot-contents';
 import { useStore } from '@/hooks/useStore';
 import { StandaloneChevronUpBoldIcon } from '@deriv/quill-icons/Standalone';
 import { localize } from '@deriv-com/translations';
+import EntryScanner from './entry-scanner';
 import './execution-bar.scss';
 
 /**
@@ -111,26 +112,17 @@ const ExecutionBar = observer(() => {
             <button
                 type='button'
                 className='mw-exec-bar__ai'
-                onClick={() => setIsAiOpen(prev => !prev)}
-                aria-expanded={is_ai_open}
-                aria-label={localize('AI assistant')}
+                onClick={() => setIsAiOpen(true)}
+                aria-haspopup='dialog'
+                aria-label={localize('Entry Scanner')}
             >
-                AI
+                <span className='mw-exec-bar__ai-ring' aria-hidden='true' />
+                <span className='mw-exec-bar__ai-ring mw-exec-bar__ai-ring--wide' aria-hidden='true' />
+                <span className='mw-exec-bar__ai-core'>AI</span>
+                <span className='mw-exec-bar__ai-dot' aria-hidden='true' />
             </button>
 
-            {is_ai_open && (
-                <div className='mw-exec-bar__ai-panel' role='dialog' aria-label={localize('AI assistant')}>
-                    <div className='mw-exec-bar__ai-panel-title'>{localize('AI assistant')}</div>
-                    <p>
-                        {localize(
-                            'No analysis backend is connected to this build, so there is nothing here to report yet. This panel stays empty rather than showing generated numbers that were never measured.'
-                        )}
-                    </p>
-                    <button type='button' onClick={() => setIsAiOpen(false)}>
-                        {localize('Close')}
-                    </button>
-                </div>
-            )}
+            {is_ai_open && <EntryScanner onClose={() => setIsAiOpen(false)} />}
         </>
     );
 });
