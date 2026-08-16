@@ -32,6 +32,31 @@ const SCAN_BATCH = 5;
 const MIN_DEPTH = 100;
 const MAX_DEPTH = 5000;
 
+/**
+ * The markets the scan covers: the 1-second volatility indices and their
+ * standard counterparts. Named the way Deriv names them in active_symbols, so
+ * the symbol codes are read from the API rather than written here - whatever
+ * `underlying_symbol` it returns for "Volatility 75 (1s) Index" is what gets
+ * scanned.
+ *
+ * Scanning all 46 synthetics meant ranking Boom, Crash, Jump, Step and the
+ * baskets against each other, which is not the comparison this panel is for.
+ */
+const SCAN_MARKETS = [
+    'Volatility 100 (1s) Index',
+    'Volatility 90 (1s) Index',
+    'Volatility 75 (1s) Index',
+    'Volatility 50 (1s) Index',
+    'Volatility 25 (1s) Index',
+    'Volatility 15 (1s) Index',
+    'Volatility 10 (1s) Index',
+    'Volatility 100 Index',
+    'Volatility 75 Index',
+    'Volatility 50 Index',
+    'Volatility 25 Index',
+    'Volatility 10 Index',
+];
+
 type TResult = {
     symbol: string;
     name: string;
@@ -61,8 +86,14 @@ const EntryScanner = observer(({ onClose }: { onClose: () => void }) => {
         if (!isConnected) return;
         feed.getActiveSymbols()
             .then(list => {
+                const by_name = new Map(list.map(item => [item.underlying_symbol_name, item]));
+                const wanted = SCAN_MARKETS.map(name => by_name.get(name)).filter(
+                    (item): item is TActiveSymbol => !!item
+                );
+                // Falls back to every synthetic rather than to nothing, so a
+                // renamed market costs coverage, not the whole scan.
                 const synthetics = list.filter(item => item.market === 'synthetic_index');
-                setSymbols(synthetics.length ? synthetics : list);
+                setSymbols(wanted.length ? wanted : synthetics);
             })
             .catch(() => {
                 setStatus(localize('Could not load the market list.'));
