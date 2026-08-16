@@ -19,6 +19,26 @@ import { Button } from '@deriv-com/ui';
 
 type TStatus = 'processing' | 'error';
 
+/**
+ * Both steps below are plain fetches with no timeout of their own, so a
+ * request that never settles leaves this page on "Completing sign-in..."
+ * forever - a blank screen with no error and no way forward. Neither .then
+ * nor .catch ever runs, so nothing here can react to it.
+ *
+ * Racing them against a clock guarantees the page always ends somewhere: the
+ * dashboard, or a visible error explaining which step gave up.
+ */
+const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+    let timer: ReturnType<typeof setTimeout>;
+    const timeout = new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} did not respond within ${Math.round(ms / 1000)}s.`)), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer)) as Promise<T>;
+};
+
+const TOKEN_EXCHANGE_TIMEOUT_MS = 20000;
+const ACCOUNTS_TIMEOUT_MS = 15000;
+
 const ERROR_TITLES: Record<string, string> = {
     oauth_server_error: 'Deriv could not complete sign-in',
     redirect_uri_mismatch: 'Redirect URL mismatch',
@@ -43,12 +63,16 @@ const CallbackPage = () => {
         if (has_run.current || !store) return;
         has_run.current = true;
 
-        completeDerivLogin(readCallbackParams())
+        withTimeout(completeDerivLogin(readCallbackParams()), TOKEN_EXCHANGE_TIMEOUT_MS, 'Deriv sign-in')
             .then(async token_response => {
                 store.oauth_session.setSession(token_response.access_token, token_response.expires_in);
 
                 try {
-                    const accounts = await listOptionsAccounts(token_response.access_token);
+                    const accounts = await withTimeout(
+                        listOptionsAccounts(token_response.access_token),
+                        ACCOUNTS_TIMEOUT_MS,
+                        'The account list'
+                    );
                     store.oauth_session.setAccounts(accounts);
                 } catch (accounts_error) {
                     // Non-fatal: the session itself is valid even if the accounts
