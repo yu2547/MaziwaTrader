@@ -575,3 +575,354 @@ $exec-bar-gap: 1.2rem;
         height: auto !important;
     }
 }
+
+// Radar in the scanner hero: rings and blips that sweep while a scan is
+// running and sit still when it is not.
+.mw-scanner__radar {
+    position: absolute;
+    top: 50%;
+    inset-inline-end: 2.4rem;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 9rem;
+    height: 9rem;
+
+    @media (width <= 600px) {
+        display: none;
+    }
+}
+
+.mw-scanner__radar-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px solid rgb(255 255 255 / 28%);
+}
+
+.mw-scanner__radar-ring--mid {
+    inset: 1.6rem;
+    border-color: rgb(255 255 255 / 40%);
+}
+
+.mw-scanner__radar-core {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.4rem;
+    height: 3.4rem;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 16%);
+    border: 1px solid rgb(255 255 255 / 45%);
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.mw-scanner__radar-blip {
+    position: absolute;
+    top: 1.4rem;
+    inset-inline-end: 1.8rem;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+    background: #7dd3fc;
+    box-shadow: 0 0 8px #7dd3fc;
+}
+
+.mw-scanner__radar-blip--two {
+    top: auto;
+    bottom: 1.8rem;
+    inset-inline-end: auto;
+    inset-inline-start: 1.6rem;
+    background: #38bdf8;
+}
+
+.mw-scanner__radar--on .mw-scanner__radar-ring {
+    animation: mw-radar-sweep 1.8s ease-out infinite;
+}
+
+.mw-scanner__radar--on .mw-scanner__radar-ring--mid {
+    animation-delay: 0.6s;
+}
+
+.mw-scanner__radar--on .mw-scanner__radar-blip {
+    animation: mw-radar-blink 1.2s ease-in-out infinite;
+}
+
+.mw-scanner__radar--on .mw-scanner__radar-blip--two {
+    animation-delay: 0.6s;
+}
+
+@keyframes mw-radar-sweep {
+    0% {
+        transform: scale(0.7);
+        opacity: 0.9;
+    }
+
+    100% {
+        transform: scale(1.15);
+        opacity: 0;
+    }
+}
+
+@keyframes mw-radar-blink {
+    0%,
+    100% {
+        opacity: 0.25;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mw-scanner__radar--on .mw-scanner__radar-ring,
+    .mw-scanner__radar--on .mw-scanner__radar-blip {
+        animation: none;
+    }
+}
+
+.mw-scanner__metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.2rem;
+
+    @media (width <= 600px) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    > div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        padding: 1.2rem 1.4rem;
+        border-radius: 10px;
+        background: var(--general-section-1);
+        min-width: 0;
+    }
+
+    span {
+        font-size: 1.05rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: var(--text-less-prominent);
+    }
+
+    strong {
+        font-size: 1.7rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-prominent);
+    }
+}
+
+.mw-scanner__heat {
+    padding: 1rem 1.2rem;
+    border-inline-start: 3px solid #3b82f6;
+    background: var(--general-section-1);
+    border-radius: 6px;
+    font-size: 1.2rem;
+    color: var(--text-general);
+}
+
+.mw-scanner__best {
+    padding: 1.2rem 1.4rem;
+    border-radius: 8px;
+    border: 1px solid rgb(34 197 94 / 45%);
+    background: rgb(34 197 94 / 10%);
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--text-prominent);
+}
+
+.mw-scanner__progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1.2rem 1.4rem;
+    border-radius: 10px;
+    background: var(--general-section-1);
+}
+
+.mw-scanner__progress-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.2rem;
+    font-size: 1.25rem;
+    color: var(--text-general);
+    font-variant-numeric: tabular-nums;
+}
+
+.mw-scanner__progress-track {
+    height: 0.6rem;
+    border-radius: 999px;
+    background: var(--general-main-1);
+    overflow: hidden;
+}
+
+.mw-scanner__progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #2563eb, #38bdf8);
+    transition: width 250ms ease;
+}
+
+.mw-scanner__load--ready {
+    background: linear-gradient(135deg, #0f9d58, #16a34a);
+    color: #fff;
+}
+
+// The parameters sheet sits over the scanner, the way the reference stacks it.
+.mw-scanner__params {
+    position: fixed;
+    inset: 0;
+    z-index: 11;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.6rem;
+    background: rgb(0 0 0 / 45%);
+}
+
+.mw-scanner__params-sheet {
+    width: min(48rem, 100%);
+    max-height: calc(100vh - 3.2rem);
+    overflow-y: auto;
+    border-radius: 10px;
+    background: var(--general-main-1);
+    box-shadow: 0 24px 60px rgb(0 0 0 / 35%);
+}
+
+.mw-scanner__params-head {
+    padding: 1.6rem 2rem;
+    border-bottom: 1px solid var(--general-section-1);
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--text-prominent);
+}
+
+.mw-scanner__params-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.2rem;
+    padding: 1.6rem 2rem 0;
+
+    @media (width <= 600px) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-width: 0;
+    }
+
+    span {
+        font-size: 1.05rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: var(--text-less-prominent);
+    }
+
+    input {
+        padding: 1.1rem 1.2rem;
+        border-radius: 8px;
+        border: 1px solid var(--general-section-1);
+        background: var(--general-main-1);
+        color: var(--text-prominent);
+        font-size: 1.5rem;
+        font-variant-numeric: tabular-nums;
+        outline: none;
+
+        &:focus {
+            border-color: #2563eb;
+        }
+    }
+}
+
+.mw-scanner__params-wide {
+    grid-column: 1 / -1;
+}
+
+.mw-scanner__params-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.6rem;
+    width: calc(100% - 4rem);
+    margin: 1.6rem 2rem 0;
+    padding: 1.2rem 1.4rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-prominent);
+    font-size: 1.4rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mw-scanner__params-switch {
+    position: relative;
+    width: 4.4rem;
+    height: 2.4rem;
+    border-radius: 999px;
+    background: var(--general-section-1);
+    transition: background 200ms ease;
+
+    &:after {
+        content: '';
+        position: absolute;
+        top: 0.3rem;
+        inset-inline-start: 0.3rem;
+        width: 1.8rem;
+        height: 1.8rem;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 1px 3px rgb(0 0 0 / 30%);
+        transition: transform 200ms ease;
+    }
+
+    &--on {
+        background: #2563eb;
+
+        &:after {
+            transform: translateX(2rem);
+        }
+    }
+}
+
+.mw-scanner__params-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.2rem;
+    padding: 1.6rem 2rem 2rem;
+
+    button {
+        padding: 1.3rem;
+        border-radius: 8px;
+        border: 1px solid var(--general-section-1);
+        background: transparent;
+        color: var(--text-prominent);
+        font-size: 1.4rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+}
+
+.mw-scanner__params-launch {
+    border-color: transparent !important;
+    background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+    color: #fff !important;
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
