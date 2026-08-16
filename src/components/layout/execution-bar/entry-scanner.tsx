@@ -9,38 +9,59 @@ import { TActiveSymbol } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
 
 /**
- * Ranks the available markets for a digits Over/Under entry, from real tick
- * history - the same feed Dcircles reads, through the same shared connection.
+ * Ranks markets for a digits Over/Under entry from real tick history - the
+ * same feed the analysis views read, over the same shared connection - and
+ * hands the winner to the app's own strategy loader.
  *
- * The scan is the whole point of this panel, so it is a real measurement: for
- * every market it pulls `scan_depth` ticks, takes the last digit of each at
- * that market's own precision, and counts how often each side of the pair
- * would have won. Markets are then ordered by the weaker of their two sides,
- * because a pair is only as good as the half that fails first. No score here
- * is estimated or generated.
+ * Every number on this panel is counted, never estimated. The composite score
+ * is the one derived figure and its formula is stated in scoreOf() below
+ * rather than left to look like a black box.
  */
 
 type TMode = 'O1/U8' | 'O2/U7' | 'O3/U6';
 
-const MODES: { id: TMode; over: number; under: number; label: string }[] = [
-    { id: 'O1/U8', over: 1, under: 8, label: 'Over1 / Under8' },
-    { id: 'O2/U7', over: 2, under: 7, label: 'Over2 / Under7' },
-    { id: 'O3/U6', over: 3, under: 6, label: 'Over3 / Under6' },
+const MODES: {
+    id: TMode;
+    over: number;
+    under: number;
+    label: string;
+    badge: string;
+    title: string;
+    blurb: string;
+}[] = [
+    {
+        id: 'O1/U8',
+        over: 1,
+        under: 8,
+        label: 'Over1 / Under8',
+        badge: 'RECOVERY ENGINE',
+        title: 'Digits Scanner',
+        blurb: 'Scans Over 1 and Under 8 with recovery confirmation.',
+    },
+    {
+        id: 'O2/U7',
+        over: 2,
+        under: 7,
+        label: 'Over2 / Under7',
+        badge: 'PATTERN HUNTER',
+        title: 'Even/Odd Precision',
+        blurb: 'Scans Over 2 and Under 7 using the same recovery flow.',
+    },
+    {
+        id: 'O3/U6',
+        over: 3,
+        under: 6,
+        label: 'Over3 / Under6',
+        badge: 'TREND PULSE',
+        title: 'Rise/Fall Filter',
+        blurb: 'Scans Over 3 and Under 6 using the same recovery flow.',
+    },
 ];
-
-const SCAN_BATCH = 5;
-const MIN_DEPTH = 100;
-const MAX_DEPTH = 5000;
 
 /**
  * The markets the scan covers: the 1-second volatility indices and their
  * standard counterparts. Named the way Deriv names them in active_symbols, so
- * the symbol codes are read from the API rather than written here - whatever
- * `underlying_symbol` it returns for "Volatility 75 (1s) Index" is what gets
- * scanned.
- *
- * Scanning all 46 synthetics meant ranking Boom, Crash, Jump, Step and the
- * baskets against each other, which is not the comparison this panel is for.
+ * the symbol codes are read from the API rather than written here.
  */
 const SCAN_MARKETS = [
     'Volatility 100 (1s) Index',
@@ -57,28 +78,118 @@ const SCAN_MARKETS = [
     'Volatility 10 Index',
 ];
 
+const MIN_DEPTH = 100;
+const MAX_DEPTH = 5000;
+const RECENT_WINDOW = 200;
+
 type TResult = {
     symbol: string;
     name: string;
-    over_rate: number;
+    win_rate: number;
+    recent_rate: number;
     under_rate: number;
-    /** The weaker side - what the pair is actually worth. */
+    samples: number;
     score: number;
+    hottest: number;
+    coldest: number;
+    missing: number[];
+    low_streak: number;
+    high_streak: number;
+    character: string;
+};
+
+/**
+ * The composite. Weighted 60/40 toward the full sample over the most recent
+ * {RECENT_WINDOW} ticks, then held back by the gap between them - a market
+ * whose recent behaviour has drifted from its own history scores lower than
+ * one that has been steady, at the same headline rate.
+ */
+const scoreOf = (win_rate: number, recent_rate: number) => {
+    const blended = win_rate * 0.6 + recent_rate * 0.4;
+    const drift = Math.abs(win_rate - recent_rate);
+    return Math.max(0, blended - drift / 2);
+};
+
+const analyse = (digits: number[], over: number, under: number) => {
+    const total = digits.length || 1;
+    const counts = new Array(10).fill(0);
+    digits.forEach(digit => {
+        counts[digit] += 1;
+    });
+
+    const wins = digits.filter(digit => digit > over).length;
+    const recent_slice = digits.slice(0, RECENT_WINDOW);
+    const recent_wins = recent_slice.filter(digit => digit > over).length;
+    const unders = digits.filter(digit => digit < under).length;
+
+    let hottest = 0;
+    let coldest = 0;
+    counts.forEach((count, digit) => {
+        if (count > counts[hottest]) hottest = digit;
+        if (count < counts[coldest]) coldest = digit;
+    });
+    const missing = counts.map((count, digit) => ({ count, digit })).filter(entry => entry.count === 0);
+
+    // The longest run on each side of the threshold - how long the market has
+    // gone without the entry, and how long it has stayed with it.
+    let low_streak = 0;
+    let high_streak = 0;
+    let run_low = 0;
+    let run_high = 0;
+    digits.forEach(digit => {
+        if (digit > over) {
+            run_high += 1;
+            run_low = 0;
+        } else {
+            run_low += 1;
+            run_high = 0;
+        }
+        low_streak = Math.max(low_streak, run_low);
+        high_streak = Math.max(high_streak, run_high);
+    });
+
+    const win_rate = (wins / total) * 100;
+    const recent_rate = (recent_slice.length ? recent_wins / recent_slice.length : 0) * 100;
+
+    return {
+        win_rate,
+        recent_rate,
+        under_rate: (unders / total) * 100,
+        samples: digits.length,
+        score: scoreOf(win_rate, recent_rate),
+        hottest,
+        coldest,
+        missing: missing.map(entry => entry.digit),
+        low_streak,
+        high_streak,
+        // A plain description of what the numbers say, not a verdict.
+        character:
+            recent_rate > win_rate + 2 ? 'Momentum Burst' : recent_rate < win_rate - 2 ? 'Cooling Off' : 'Steady',
+    };
 };
 
 const EntryScanner = observer(({ onClose }: { onClose: () => void }) => {
     const { feed, isConnected } = usePublicMarketFeed();
-    const { dashboard, quick_strategy } = useStore() ?? {};
+    const { dashboard, quick_strategy, run_panel } = useStore() ?? {};
     const { localize } = useTranslations();
     const navigate = useNavigate();
 
     const [mode, setMode] = useState<TMode>('O1/U8');
-    const [scan_depth, setScanDepth] = useState(3000);
+    const [scan_depth, setScanDepth] = useState(1000);
     const [symbols, setSymbols] = useState<TActiveSymbol[]>([]);
     const [is_scanning, setIsScanning] = useState(false);
-    const [progress, setProgress] = useState({ done: 0, total: 0 });
+    const [progress, setProgress] = useState({ done: 0, total: 0, market: '' });
     const [best, setBest] = useState<TResult | null>(null);
     const [status, setStatus] = useState('');
+    const [show_params, setShowParams] = useState(false);
+    const [params, setParams] = useState({
+        stake: 0.5,
+        martingale: 2,
+        wins: 5,
+        digits_to_check: 1,
+        stop_loss: 50,
+        use_martingale: true,
+    });
 
     const active_mode = MODES.find(item => item.id === mode) ?? MODES[0];
 
@@ -90,55 +201,49 @@ const EntryScanner = observer(({ onClose }: { onClose: () => void }) => {
                 const wanted = SCAN_MARKETS.map(name => by_name.get(name)).filter(
                     (item): item is TActiveSymbol => !!item
                 );
-                // Falls back to every synthetic rather than to nothing, so a
-                // renamed market costs coverage, not the whole scan.
                 const synthetics = list.filter(item => item.market === 'synthetic_index');
                 setSymbols(wanted.length ? wanted : synthetics);
             })
-            .catch(() => {
-                setStatus(localize('Could not load the market list.'));
-            });
+            .catch(() => setStatus(localize('Could not load the market list.')));
     }, [isConnected, feed, localize]);
+
+    const selectMode = (next: TMode) => {
+        setMode(next);
+        setBest(null);
+        const picked = MODES.find(item => item.id === next);
+        setStatus(localize('Ready to scan {{label}}.', { label: picked?.label ?? next }));
+    };
 
     const scanMarkets = async () => {
         if (is_scanning || symbols.length === 0) return;
         setIsScanning(true);
         setBest(null);
-        setProgress({ done: 0, total: symbols.length });
-        setStatus(localize('Scanning {{count}} markets…', { count: symbols.length }));
 
         const results: TResult[] = [];
-        let done = 0;
-
-        for (let i = 0; i < symbols.length; i += SCAN_BATCH) {
-            const batch = symbols.slice(i, i + SCAN_BATCH);
-            // eslint-disable-next-line no-await-in-loop
-            const settled = await Promise.all(
-                batch.map(async item => {
-                    try {
-                        const { prices, pip_size } = await feed.getTickHistory(item.underlying_symbol, scan_depth);
-                        if (!prices.length) return null;
-                        const places = toDecimalPlaces(pip_size) ?? 2;
-                        const digits = prices.map(price => getLastDigit(price, places));
-                        const over = digits.filter(digit => digit > active_mode.over).length / digits.length;
-                        const under = digits.filter(digit => digit < active_mode.under).length / digits.length;
-                        return {
-                            symbol: item.underlying_symbol,
-                            name: item.underlying_symbol_name,
-                            over_rate: over * 100,
-                            under_rate: under * 100,
-                            score: Math.min(over, under) * 100,
-                        } satisfies TResult;
-                    } catch {
-                        return null;
-                    }
+        for (let i = 0; i < symbols.length; i += 1) {
+            const item = symbols[i];
+            setProgress({ done: i + 1, total: symbols.length, market: item.underlying_symbol_name });
+            setStatus(
+                localize('Scanning {{market}} ({{done}}/{{total}})…', {
+                    market: item.underlying_symbol_name,
+                    done: i + 1,
+                    total: symbols.length,
                 })
             );
-            settled.forEach(result => {
-                if (result) results.push(result);
-            });
-            done += batch.length;
-            setProgress({ done, total: symbols.length });
+            try {
+                // eslint-disable-next-line no-await-in-loop
+                const { prices, pip_size } = await feed.getTickHistory(item.underlying_symbol, scan_depth);
+                if (!prices.length) continue;
+                const places = toDecimalPlaces(pip_size) ?? 2;
+                const digits = prices.map(price => getLastDigit(price, places)).reverse();
+                results.push({
+                    symbol: item.underlying_symbol,
+                    name: item.underlying_symbol_name,
+                    ...analyse(digits, active_mode.over, active_mode.under),
+                });
+            } catch {
+                // A market that will not return history is skipped, not faked.
+            }
         }
 
         results.sort((a, b) => b.score - a.score);
@@ -155,15 +260,38 @@ const EntryScanner = observer(({ onClose }: { onClose: () => void }) => {
         );
     };
 
-    const loadScannerBot = () => {
-        if (!best) return;
+    /**
+     * Hands the scan result to Quick Strategy - the app's own strategy
+     * builder. It loads the bundled Martingale XML, injects these values and
+     * presses Run, so the bot that trades is the one this app already ships
+     * and tests, not a strategy written here from a screenshot.
+     */
+    const launchBot = () => {
+        if (!best || !quick_strategy) return;
         startTransition(() => {
             navigate('/');
             dashboard?.setActiveTab(DBOT_TABS.BOT_BUILDER);
-            quick_strategy?.setFormVisibility(true);
         });
+        quick_strategy.setSelectedStrategy('MARTINGALE');
+        quick_strategy.onSubmit({
+            symbol: best.symbol,
+            tradetype: 'overunder',
+            type: 'DIGITOVER',
+            prediction: active_mode.over,
+            stake: params.stake,
+            // Martingale off means every stake is the first stake.
+            size: params.use_martingale ? params.martingale : 1,
+            loss: params.stop_loss,
+            profit: 0,
+            duration: 1,
+            unit: 't',
+            action: 'RUN',
+        });
+        setShowParams(false);
         onClose();
     };
+
+    const percent = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
 
     return (
         <div className='mw-scanner' role='dialog' aria-modal='true' aria-label={localize('Entry Scanner')}>
@@ -178,15 +306,16 @@ const EntryScanner = observer(({ onClose }: { onClose: () => void }) => {
 
                 <div className='mw-scanner__body'>
                     <div className='mw-scanner__hero'>
-                        <span className='mw-scanner__hero-pill'>✦ {localize('RECOVERY ENGINE')}</span>
-                        <h3>{localize('Digits Scanner')}</h3>
-                        <p>
-                            {localize('Scans Over {{over}} and Under {{under}} across every market.', {
-                                over: active_mode.over,
-                                under: active_mode.under,
-                            })}
-                        </p>
-                        <span className='mw-scanner__hero-orb'>AI</span>
+                        <span className='mw-scanner__hero-pill'>✦ {localize(active_mode.badge)}</span>
+                        <h3>{localize(active_mode.title)}</h3>
+                        <p>{localize(active_mode.blurb)}</p>
+                        <span className={`mw-scanner__radar ${is_scanning ? 'mw-scanner__radar--on' : ''}`}>
+                            <span className='mw-scanner__radar-ring' />
+                            <span className='mw-scanner__radar-ring mw-scanner__radar-ring--mid' />
+                            <span className='mw-scanner__radar-core'>AI</span>
+                            <span className='mw-scanner__radar-blip' />
+                            <span className='mw-scanner__radar-blip mw-scanner__radar-blip--two' />
+                        </span>
                     </div>
 
                     <div className='mw-scanner__modes'>
@@ -195,7 +324,7 @@ const EntryScanner = observer(({ onClose }: { onClose: () => void }) => {
                                 key={item.id}
                                 type='button'
                                 className={`mw-scanner__mode ${mode === item.id ? 'mw-scanner__mode--active' : ''}`}
-                                onClick={() => setMode(item.id)}
+                                onClick={() => selectMode(item.id)}
                                 disabled={is_scanning}
                             >
                                 {item.label}
@@ -225,15 +354,17 @@ const EntryScanner = observer(({ onClose }: { onClose: () => void }) => {
                             <strong>{active_mode.id}</strong>
                         </div>
                         <div className='mw-scanner__field mw-scanner__field--static'>
-                            <span>{localize('MARKETS')}</span>
-                            <strong>{symbols.length || '—'}</strong>
+                            <span>{localize('TICKS')}</span>
+                            <strong>{scan_depth}</strong>
                         </div>
                     </div>
 
                     <div className='mw-scanner__fields mw-scanner__fields--two'>
                         <div className='mw-scanner__field mw-scanner__field--static'>
                             <span>{localize('SELECTED MARKET')}</span>
-                            <strong>{best ? best.name : localize('Scan to find the best market')}</strong>
+                            <strong>
+                                {best ? `${best.name} (${best.symbol})` : localize('Scan to find the best market')}
+                            </strong>
                         </div>
                         <div className='mw-scanner__field mw-scanner__field--static'>
                             <span>{localize('TRADE TYPE')}</span>
@@ -248,20 +379,63 @@ const EntryScanner = observer(({ onClose }: { onClose: () => void }) => {
                         </div>
                     </div>
 
-                    <div className='mw-scanner__status'>
-                        {is_scanning
-                            ? `${status} (${progress.done}/${progress.total})`
-                            : best
-                              ? localize('{{name}} — Over {{over}} won {{o}}%, Under {{under}} won {{u}}%. {{note}}', {
+                    {best && (
+                        <>
+                            <div className='mw-scanner__metrics'>
+                                <div>
+                                    <span>{localize('AI SCORE')}</span>
+                                    <strong>{best.score.toFixed(2)}%</strong>
+                                </div>
+                                <div>
+                                    <span>{localize('WIN RATE')}</span>
+                                    <strong>{best.win_rate.toFixed(1)}%</strong>
+                                </div>
+                                <div>
+                                    <span>{localize('RECENT')}</span>
+                                    <strong>{best.recent_rate.toFixed(1)}%</strong>
+                                </div>
+                                <div>
+                                    <span>{localize('SAMPLES')}</span>
+                                    <strong>{best.samples}</strong>
+                                </div>
+                            </div>
+                            <div className='mw-scanner__heat'>
+                                {localize(
+                                    'Heatmap: hottest digit {{hot}} | coldest digit {{cold}} | missing {{missing}} | low streak {{low}} | high streak {{high}}',
+                                    {
+                                        hot: best.hottest,
+                                        cold: best.coldest,
+                                        missing: best.missing.length ? best.missing.join(', ') : localize('none'),
+                                        low: best.low_streak,
+                                        high: best.high_streak,
+                                    }
+                                )}
+                            </div>
+                            <div className='mw-scanner__best'>
+                                {localize('Best market: {{name}} | {{character}} | AI {{score}}%', {
                                     name: best.name,
-                                    over: active_mode.over,
-                                    under: active_mode.under,
-                                    o: best.over_rate.toFixed(2),
-                                    u: best.under_rate.toFixed(2),
-                                    note: status,
-                                })
-                              : status || localize('Not scanned yet')}
-                    </div>
+                                    character: best.character,
+                                    score: best.score.toFixed(2),
+                                })}
+                            </div>
+                        </>
+                    )}
+
+                    {is_scanning && (
+                        <div className='mw-scanner__progress'>
+                            <div className='mw-scanner__progress-head'>
+                                <span>{progress.market}</span>
+                                <span>
+                                    {progress.done}/{progress.total}
+                                </span>
+                            </div>
+                            <div className='mw-scanner__progress-track'>
+                                <div className='mw-scanner__progress-fill' style={{ width: `${percent}%` }} />
+                            </div>
+                        </div>
+                    )}
+
+                    <div className='mw-scanner__status'>{status || localize('Not scanned yet')}</div>
 
                     <div className='mw-scanner__actions'>
                         <button
@@ -270,17 +444,13 @@ const EntryScanner = observer(({ onClose }: { onClose: () => void }) => {
                             onClick={scanMarkets}
                             disabled={is_scanning || symbols.length === 0}
                         >
-                            {is_scanning ? localize('Scanning…') : localize('Scan Markets')}
+                            {is_scanning ? localize('Scanning Markets…') : localize('Scan Markets')}
                         </button>
                         <button
                             type='button'
-                            className='mw-scanner__load'
-                            onClick={loadScannerBot}
+                            className={`mw-scanner__load ${best ? 'mw-scanner__load--ready' : ''}`}
+                            onClick={() => setShowParams(true)}
                             disabled={!best}
-                            // Opens the app's own trading configuration rather
-                            // than writing a strategy nobody specified. The
-                            // scan result above is what to enter into it.
-                            title={localize('Opens the bot builder configuration')}
                         >
                             {localize('Load Scanner Bot')}
                         </button>
@@ -288,11 +458,104 @@ const EntryScanner = observer(({ onClose }: { onClose: () => void }) => {
 
                     <p className='mw-scanner__note'>
                         {localize(
-                            'Every percentage above is counted from real tick history on the market it names. Past behaviour is not a prediction - it is what already happened.'
+                            'Every figure above is counted from real tick history on the market it names. AI score blends the full sample with the last {{recent}} ticks and is reduced when the two disagree. Past behaviour is not a prediction.',
+                            { recent: RECENT_WINDOW }
                         )}
                     </p>
                 </div>
             </div>
+
+            {show_params && (
+                <div className='mw-scanner__params' role='dialog' aria-label={localize('Scanner Parameters')}>
+                    <div className='mw-scanner__params-sheet'>
+                        <div className='mw-scanner__params-head'>{localize('Scanner Parameters')}</div>
+                        <div className='mw-scanner__params-grid'>
+                            <label>
+                                <span>{localize('STAKE')}</span>
+                                <input
+                                    type='number'
+                                    value={params.stake}
+                                    min={0.35}
+                                    step={0.1}
+                                    onChange={e => setParams(p => ({ ...p, stake: Number(e.target.value) || 0 }))}
+                                />
+                            </label>
+                            <label>
+                                <span>{localize('MARTINGALE')}</span>
+                                <input
+                                    type='number'
+                                    value={params.martingale}
+                                    min={1}
+                                    step={0.1}
+                                    onChange={e => setParams(p => ({ ...p, martingale: Number(e.target.value) || 1 }))}
+                                />
+                            </label>
+                            <label>
+                                <span>{localize('NUMBER OF WINS')}</span>
+                                <input
+                                    type='number'
+                                    value={params.wins}
+                                    min={1}
+                                    onChange={e => setParams(p => ({ ...p, wins: Number(e.target.value) || 1 }))}
+                                />
+                            </label>
+                            <label>
+                                <span>{localize('NO. OF DIGITS TO CHECK')}</span>
+                                <input
+                                    type='number'
+                                    value={params.digits_to_check}
+                                    min={1}
+                                    onChange={e =>
+                                        setParams(p => ({ ...p, digits_to_check: Number(e.target.value) || 1 }))
+                                    }
+                                />
+                            </label>
+                            <label className='mw-scanner__params-wide'>
+                                <span>{localize('STOP LOSS')}</span>
+                                <input
+                                    type='number'
+                                    value={params.stop_loss}
+                                    min={0}
+                                    onChange={e => setParams(p => ({ ...p, stop_loss: Number(e.target.value) || 0 }))}
+                                />
+                            </label>
+                        </div>
+
+                        <button
+                            type='button'
+                            className='mw-scanner__params-toggle'
+                            onClick={() => setParams(p => ({ ...p, use_martingale: !p.use_martingale }))}
+                            role='switch'
+                            aria-checked={params.use_martingale}
+                        >
+                            <span>{localize('Use Martingale')}</span>
+                            <span
+                                className={`mw-scanner__params-switch ${params.use_martingale ? 'mw-scanner__params-switch--on' : ''}`}
+                            />
+                        </button>
+
+                        <p className='mw-scanner__note'>
+                            {localize(
+                                'Launch loads the bundled Martingale strategy with these values and starts it - the same builder the Bot Builder uses. Number of wins and digits to check have no field in that strategy, so they are not applied; send me the scanner bot XML and I will wire them.'
+                            )}
+                        </p>
+
+                        <div className='mw-scanner__params-actions'>
+                            <button type='button' onClick={() => setShowParams(false)}>
+                                {localize('Cancel')}
+                            </button>
+                            <button
+                                type='button'
+                                className='mw-scanner__params-launch'
+                                onClick={launchBot}
+                                disabled={run_panel?.is_running}
+                            >
+                                {localize('Launch Bot')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 });
