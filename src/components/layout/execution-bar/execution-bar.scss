@@ -6,20 +6,32 @@ $exec-bar-height: 6rem;
 // Anchored top-right of the content area, matching the reference: the Run
 // control and the execution readout sit together in one card, with Trading
 // Configuration tucked under it.
+// The run panel is a fixed column - right: 0, width 36.6rem, top 10.4rem (see
+// run-panel.scss). This card belongs at the head of that same column, which
+// means matching its width and edge and then pushing the panel down to make
+// room. Anchoring it at an arbitrary offset just laid it over the panel's own
+// header instead.
+$exec-bar-column-width: 36.6rem;
+$exec-bar-top: 9.6rem; // clears the header + shell nav
+$exec-bar-card-height: 6rem;
+$exec-bar-gap: 1.2rem;
+
 .mw-exec-bar {
     position: fixed;
-    inset-inline-end: 1.6rem;
-    top: 11rem;
+    inset-inline-end: 0;
+    top: $exec-bar-top;
     z-index: 3;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 0.6rem;
+    width: $exec-bar-column-width;
 
     @media (width <= 768px) {
         inset-inline: 0;
         top: auto;
         bottom: 0;
+        width: auto;
         align-items: stretch;
         gap: 0;
     }
@@ -54,8 +66,9 @@ $exec-bar-height: 6rem;
         display: flex;
         align-items: stretch;
         gap: 0;
+        width: 100%;
         min-width: 0;
-        min-height: $exec-bar-height;
+        min-height: $exec-bar-card-height;
         border-radius: 6px;
         overflow: hidden;
         background: var(--general-main-1);
@@ -97,7 +110,7 @@ $exec-bar-height: 6rem;
         justify-content: center;
         align-items: flex-start;
         gap: 0.2rem;
-        min-width: 14rem;
+        min-width: 0;
         flex: 1;
         position: relative;
         padding: 0.6rem 5rem 0.6rem 1.4rem;
@@ -290,5 +303,16 @@ $exec-bar-height: 6rem;
 
     @media (width <= 768px) {
         padding-bottom: calc(#{$exec-bar-height} + 4rem);
+    }
+}
+
+// The run panel starts below the card rather than under it. Its height is
+// driven by --bot-content-height, so the same offset is taken back off the
+// height to keep its bottom edge where it was.
+@media (width >= 769px) {
+    .run-panel__container {
+        top: calc(#{$exec-bar-top} + #{$exec-bar-card-height} + #{$exec-bar-gap}) !important;
+        bottom: 6.1rem !important;
+        height: auto !important;
     }
 }
