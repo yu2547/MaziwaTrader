@@ -231,7 +231,12 @@ $exec-bar-gap: 1.2rem;
         border: none;
         border-radius: 50%;
         background: transparent;
-        cursor: pointer;
+        cursor: grab;
+        touch-action: none;
+
+        &--dragging {
+            cursor: grabbing;
+        }
 
         @media (width <= 768px) {
             bottom: calc(#{$exec-bar-height} + 1.2rem);
@@ -252,8 +257,12 @@ $exec-bar-gap: 1.2rem;
         font-size: 1.6rem;
         font-weight: 700;
         letter-spacing: 0.02em;
-        box-shadow: 0 6px 22px rgb(124 58 237 / 45%);
+        box-shadow:
+            0 6px 22px rgb(124 58 237 / 45%),
+            inset 0 -0.6rem 1.2rem rgb(76 29 149 / 55%),
+            inset 0 0.5rem 0.9rem rgb(255 255 255 / 25%);
         transition: transform 150ms ease;
+        animation: mw-ai-breathe 3.2s ease-in-out infinite;
     }
 
     &__ai:hover &__ai-core {
@@ -262,15 +271,22 @@ $exec-bar-gap: 1.2rem;
 
     &__ai-ring {
         position: absolute;
-        inset: 0.6rem;
+        inset: 0.9rem;
         border-radius: 50%;
-        border: 1px solid rgb(167 139 250 / 55%);
-        animation: mw-ai-pulse 2.6s ease-out infinite;
+        border: 1.5px solid rgb(167 139 250 / 70%);
+        animation: mw-ai-pulse 3s ease-out infinite;
+    }
+
+    &__ai-ring--mid {
+        inset: 0.4rem;
+        border-color: rgb(167 139 250 / 50%);
+        animation-delay: 1s;
     }
 
     &__ai-ring--wide {
         inset: 0;
-        animation-delay: 1.3s;
+        border-color: rgb(167 139 250 / 35%);
+        animation-delay: 2s;
     }
 
     &__ai-dot {
@@ -283,6 +299,33 @@ $exec-bar-gap: 1.2rem;
         border-radius: 50%;
         background: #22c55e;
         border: 2px solid var(--general-main-1);
+        box-shadow: 0 0 0 0 rgb(34 197 94 / 60%);
+        animation: mw-ai-live 2s ease-out infinite;
+    }
+}
+
+@keyframes mw-ai-breathe {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.06);
+    }
+}
+
+@keyframes mw-ai-live {
+    0% {
+        box-shadow: 0 0 0 0 rgb(34 197 94 / 60%);
+    }
+
+    70% {
+        box-shadow: 0 0 0 0.6rem rgb(34 197 94 / 0%);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgb(34 197 94 / 0%);
     }
 }
 
@@ -299,7 +342,9 @@ $exec-bar-gap: 1.2rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .mw-exec-bar__ai-ring {
+    .mw-exec-bar__ai-ring,
+    .mw-exec-bar__ai-core,
+    .mw-exec-bar__ai-dot {
         animation: none;
     }
 }
@@ -599,11 +644,30 @@ $exec-bar-gap: 1.2rem;
     inset: 0;
     border-radius: 50%;
     border: 1px solid rgb(255 255 255 / 28%);
+    animation: mw-radar-sweep 3.2s ease-out infinite;
+}
+
+// The beam. A conic wedge turning behind the rings - this is the part that
+// reads as scanning, and it turns whether or not a scan is running so the
+// panel never looks dead.
+.mw-scanner__radar:before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 0deg,
+        rgb(125 211 252 / 0%) 0deg,
+        rgb(125 211 252 / 45%) 55deg,
+        rgb(125 211 252 / 0%) 90deg
+    );
+    animation: mw-radar-turn 3.6s linear infinite;
 }
 
 .mw-scanner__radar-ring--mid {
     inset: 1.6rem;
     border-color: rgb(255 255 255 / 40%);
+    animation-delay: 1.6s;
 }
 
 .mw-scanner__radar-core {
@@ -623,6 +687,7 @@ $exec-bar-gap: 1.2rem;
 }
 
 .mw-scanner__radar-blip {
+    animation: mw-radar-blink 2.4s ease-in-out infinite;
     position: absolute;
     top: 1.4rem;
     inset-inline-end: 1.8rem;
@@ -634,6 +699,7 @@ $exec-bar-gap: 1.2rem;
 }
 
 .mw-scanner__radar-blip--two {
+    animation-delay: 1.2s;
     top: auto;
     bottom: 1.8rem;
     inset-inline-end: auto;
@@ -641,20 +707,24 @@ $exec-bar-gap: 1.2rem;
     background: #38bdf8;
 }
 
+.mw-scanner__radar--on:before {
+    animation-duration: 1.2s;
+}
+
 .mw-scanner__radar--on .mw-scanner__radar-ring {
-    animation: mw-radar-sweep 1.8s ease-out infinite;
+    animation-duration: 1.6s;
 }
 
 .mw-scanner__radar--on .mw-scanner__radar-ring--mid {
-    animation-delay: 0.6s;
+    animation-delay: 0.8s;
 }
 
 .mw-scanner__radar--on .mw-scanner__radar-blip {
-    animation: mw-radar-blink 1.2s ease-in-out infinite;
+    animation-duration: 1s;
 }
 
 .mw-scanner__radar--on .mw-scanner__radar-blip--two {
-    animation-delay: 0.6s;
+    animation-delay: 0.5s;
 }
 
 @keyframes mw-radar-sweep {
@@ -666,6 +736,12 @@ $exec-bar-gap: 1.2rem;
     100% {
         transform: scale(1.15);
         opacity: 0;
+    }
+}
+
+@keyframes mw-radar-turn {
+    to {
+        transform: rotate(360deg);
     }
 }
 
@@ -681,8 +757,9 @@ $exec-bar-gap: 1.2rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .mw-scanner__radar--on .mw-scanner__radar-ring,
-    .mw-scanner__radar--on .mw-scanner__radar-blip {
+    .mw-scanner__radar:before,
+    .mw-scanner__radar-ring,
+    .mw-scanner__radar-blip {
         animation: none;
     }
 }
