@@ -2,7 +2,6 @@ import { startTransition, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
 import TradeAnimation from '@/components/trade-animation';
-import ContractStageText from '@/components/trade-animation/contract-stage-text';
 import { DBOT_TABS } from '@/constants/bot-contents';
 import { useStore } from '@/hooks/useStore';
 import { StandaloneChevronUpBoldIcon } from '@deriv/quill-icons/Standalone';
@@ -19,11 +18,12 @@ import './execution-bar.scss';
  * - The Run/Stop control is <TradeAnimation/>, the same component the bot
  *   builder used, bound to run_panel.onRunButtonClick / onStopBotClick. It is
  *   not a second button that mimics it.
- * - The execution status is the live contract stage, the same text the run
- *   panel's own header shows, so it changes the moment the bot starts,
- *   buys, or stops.
  * - The handle toggles run_panel.is_drawer_open, which is the run panel's
  *   own open state, not a private copy of it.
+ *
+ * The live contract stage is not shown here. The run panel directly below
+ * already reports it, and a second copy on the card was only repeating what
+ * was already on screen a few pixels away.
  *
  * The one thing here that is presentation only is the FAST/SLOW switch. It is
  * a real, persisted user setting - it remembers what you picked - but no
@@ -43,7 +43,7 @@ const ExecutionBar = observer(() => {
 
     if (!run_panel) return null;
 
-    const { is_drawer_open, toggleDrawer, is_running, contract_stage } = run_panel;
+    const { is_drawer_open, toggleDrawer, is_running } = run_panel;
 
     const toggleSpeed = () => {
         setIsFast(prev => {
@@ -77,8 +77,6 @@ const ExecutionBar = observer(() => {
                         onClick={toggleSpeed}
                         role='switch'
                         aria-checked={is_fast}
-                        // The live bot state, kept where it can still be read
-                        // now the visible line is the speed setting.
                         title={localize('Execution speed')}
                     >
                         <span className='mw-exec-bar__status-label'>{localize('Execution')}</span>
@@ -90,10 +88,6 @@ const ExecutionBar = observer(() => {
                             aria-hidden='true'
                         />
                     </button>
-
-                    <span className='mw-exec-bar__stage'>
-                        <ContractStageText contract_stage={contract_stage} />
-                    </span>
 
                     <button
                         type='button'

@@ -100,6 +100,14 @@ $exec-bar-gap: 1.2rem;
         flex: none;
         display: flex;
         align-items: center;
+
+        // TradeAnimation prints the contract stage next to its button. The run
+        // panel immediately below already reports it, so on this card it was
+        // the same sentence twice, a few pixels apart. Hidden here rather than
+        // removed from the component, which other callers still rely on.
+        .animation__text {
+            display: none;
+        }
     }
 
     // FAST is the resting state (teal), SLOW is the deliberate one (amber) -
@@ -123,28 +131,6 @@ $exec-bar-gap: 1.2rem;
         &--slow {
             background: #fdf6e3;
         }
-    }
-
-    // The live bot state. It lost the headline slot to the speed setting, but
-    // it is the only thing here that says a run actually started, so it keeps
-    // a line of its own rather than being demoted to a tooltip.
-    &__stage {
-        display: flex;
-        align-items: center;
-        padding: 0 1.4rem;
-        border-inline-start: 1px solid var(--general-section-1);
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: var(--text-less-prominent);
-        white-space: nowrap;
-
-        @media (width <= 600px) {
-            display: none;
-        }
-    }
-
-    &--running &__stage {
-        color: #4eaaa5;
     }
 
     &__switch {
