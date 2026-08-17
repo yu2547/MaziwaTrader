@@ -4,6 +4,88 @@ import { config } from '../../constants/config';
 import PendingPromise from '../../utils/pending-promise';
 import { api_base } from './api-base';
 
+/**
+ * Deriv's Options API answers `active_symbols` in a different shape from the
+ * classic API this file was written against. Confirmed live against
+ * wss://api.derivws.com/trading/v1/options/ws/public - of 89 symbols returned,
+ * zero carry `display_name`, `market_display_name`, `submarket_display_name`
+ * or `display_order`. What it sends instead is:
+ *
+ *   underlying_symbol       "R_100"                 (classic: symbol)
+ *   underlying_symbol_name  "Volatility 100 Index"  (classic: display_name)
+ *   pip_size                0.01                    (classic: pip)
+ *   market / submarket      codes only, never names
+ *
+ * Unmapped, this breaks every dropdown in the Bot Builder rather than just
+ * mislabelling one: processActiveSymbols() reads `symbol.symbol`, so every
+ * instrument is filed under the key `undefined` and only the last one
+ * survives, and the Market list renders a blank row where "Derived" belongs.
+ *
+ * Normalising here - once, at the point the list arrives - means every
+ * consumer downstream keeps working against the classic field names.
+ */
+
+/** The API sends market/submarket codes and no names, so the names live here. */
+const MARKET_DISPLAY_NAMES = {
+    synthetic_index: 'Derived',
+    indices: 'Stock Indices',
+    cryptocurrency: 'Cryptocurrencies',
+    forex: 'Forex',
+    commodities: 'Commodities',
+};
+
+const SUBMARKET_DISPLAY_NAMES = {
+    random_index: 'Continuous Indices',
+    crash_index: 'Crash/Boom Indices',
+    jump_index: 'Jump Indices',
+    range_index: 'Range Break Indices',
+    random_daily: 'Daily Reset Indices',
+    forex_basket: 'Forex Basket',
+    commodity_basket: 'Commodities Basket',
+    step_index: 'Step Indices',
+    europe_OTC: 'European Indices',
+    asia_oceania_OTC: 'Asian Indices',
+    americas_OTC: 'American Indices',
+    non_stable_coin: 'Cryptocurrencies',
+    minor_pairs: 'Minor Pairs',
+    major_pairs: 'Major Pairs',
+    metals: 'Metals',
+};
+
+/**
+ * Last resort for a code with no mapping, so a market Deriv adds later shows
+ * as "Some New Market" rather than as a blank row that cannot be picked.
+ */
+const humanizeCode = code =>
+    String(code ?? '')
+        .replace(/_/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\b\w/g, character => character.toUpperCase());
+
+/**
+ * Fills in the classic field names when the Options shape is detected, and
+ * passes classic responses through untouched - the check is per-symbol on
+ * whether the classic key is already there, so a mixed or changed response
+ * cannot break either transport.
+ */
+export const normalizeActiveSymbols = (symbols = []) =>
+    symbols.map(symbol => {
+        const code = symbol.symbol ?? symbol.underlying_symbol;
+        const market = symbol.market;
+        const submarket = symbol.submarket;
+
+        return {
+            ...symbol,
+            symbol: code,
+            display_name: symbol.display_name ?? symbol.underlying_symbol_name ?? code,
+            market_display_name: symbol.market_display_name ?? MARKET_DISPLAY_NAMES[market] ?? humanizeCode(market),
+            submarket_display_name:
+                symbol.submarket_display_name ?? SUBMARKET_DISPLAY_NAMES[submarket] ?? humanizeCode(submarket),
+            pip: symbol.pip ?? symbol.pip_size,
+        };
+    });
+
 export default class ActiveSymbols {
     constructor(trading_times) {
         this.active_symbols = [];
@@ -26,10 +108,10 @@ export default class ActiveSymbols {
         this.is_initialised = true;
 
         if (api_base.has_active_symbols) {
-            this.active_symbols = api_base?.active_symbols ?? [];
+            this.active_symbols = normalizeActiveSymbols(api_base?.active_symbols ?? []);
         } else {
             await api_base.active_symbols_promise;
-            this.active_symbols = api_base?.active_symbols ?? [];
+            this.active_symbols = normalizeActiveSymbols(api_base?.active_symbols ?? []);
         }
 
         this.processed_symbols = this.processActiveSymbols();
