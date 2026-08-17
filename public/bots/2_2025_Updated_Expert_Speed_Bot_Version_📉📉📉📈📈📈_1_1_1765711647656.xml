@@ -62,7 +62,7 @@
         
         <field name="SUBMARKET_LIST">random_index</field>
         
-        <field name="SYMBOL_LIST">1HZ100V</field>
+        <field name="SYMBOL_LIST">R_100</field>
         
         <next>
           
