@@ -254,6 +254,13 @@
         text-align: center;
     }
 
+    // A batch that landed short is the one thing on this line worth catching
+    // the eye - the rest of it is standing information.
+    &__shortfall {
+        color: #e8b64c;
+        font-weight: 600;
+    }
+
     &__error {
         padding: 1rem 1.2rem;
         border-radius: 6px;

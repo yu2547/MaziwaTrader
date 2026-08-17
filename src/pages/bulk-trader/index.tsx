@@ -9,7 +9,6 @@ import './bulk-trader.scss';
 
 const DEFAULT_SYMBOL = 'R_100';
 const MAX_TICK_HISTORY = 1000;
-const MAX_TRADES_PER_CLICK = 50;
 
 /**
  * Each trade type is two opposing contracts, which is exactly the pair of
@@ -131,6 +130,9 @@ const BulkTraderPage = observer(() => {
     const [stake, setStake] = useState(0.5);
     const [duration_ticks, setDurationTicks] = useState(1);
     const [trades_per_click, setTradesPerClick] = useState(1);
+    // What the last click asked for versus what actually opened. Only
+    // interesting when they disagree.
+    const [last_batch, setLastBatch] = useState<{ requested: number; opened: number } | null>(null);
 
     useEffect(() => {
         if (!isConnected) return;
@@ -227,8 +229,13 @@ const BulkTraderPage = observer(() => {
     // the same moment in the market. Placing them one after another meant the
     // last contract of a 20-trade batch opened many ticks after the first,
     // which is not one signal traded 20 times.
-    const placeSide = (contract_type: string) =>
-        trade.placeTrades(
+    //
+    // The count is whatever was typed - there is no ceiling on it here. What
+    // actually opened is reported back rather than assumed, because a batch
+    // large enough to be throttled will land short and the difference matters.
+    const placeSide = async (contract_type: string) => {
+        const requested = trades_per_click;
+        const opened = await trade.placeTrades(
             {
                 contract_type,
                 symbol: selected_symbol,
@@ -236,8 +243,10 @@ const BulkTraderPage = observer(() => {
                 duration: duration_ticks,
                 ...(config.barrier ? { barrier } : {}),
             },
-            Math.min(trades_per_click, MAX_TRADES_PER_CLICK)
+            requested
         );
+        setLastBatch({ requested, opened });
+    };
 
     // The OAuth account is the one that actually gets debited, so its currency
     // wins. ClientStore.currency is only consulted for classic sessions, and
@@ -331,9 +340,8 @@ const BulkTraderPage = observer(() => {
                     <NumberField
                         label={localize('Trades per click')}
                         value={trades_per_click}
-                        onChange={value => setTradesPerClick(Math.min(MAX_TRADES_PER_CLICK, Math.max(1, value)))}
+                        onChange={value => setTradesPerClick(Math.max(1, value))}
                         min={1}
-                        max={MAX_TRADES_PER_CLICK}
                     />
                 </div>
 
@@ -369,6 +377,14 @@ const BulkTraderPage = observer(() => {
                         : localize('Log in to place trades. The statistics above are live either way.')}
                     {trade.pending_count > 0 &&
                         ` ${localize('{{count}} still running.', { count: trade.pending_count })}`}
+                    {last_batch && last_batch.opened < last_batch.requested && (
+                        <span className='mw-bulk-trader__shortfall'>
+                            {` ${localize('Last click: {{opened}} of {{requested}} opened.', {
+                                opened: last_batch.opened,
+                                requested: last_batch.requested,
+                            })}`}
+                        </span>
+                    )}
                 </div>
 
                 {trade.error_message && <div className='mw-bulk-trader__error'>{trade.error_message}</div>}
