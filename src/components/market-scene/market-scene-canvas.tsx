@@ -64,11 +64,11 @@ const lerpColor = (a: TRgb, b: TRgb, t: number): TRgb => ({
 });
 const rgba = (c: TRgb, a: number) => `rgba(${c.r | 0}, ${c.g | 0}, ${c.b | 0}, ${Math.max(0, a).toFixed(3)})`;
 
-// What distant candles/streaks haze toward - a neutral, slightly cool tone
-// so the far end of the tunnel softens rather than just going transparent.
 /** How long one floor ring takes to travel from the horizon to the frame edge. */
 const FLOOR_TRAVEL_MS = 7000;
 
+// What distant candles/streaks haze toward - a neutral, slightly cool tone
+// so the far end of the tunnel softens rather than just going transparent.
 const HAZE_RGB: TRgb = { r: 92, g: 110, b: 140 };
 const GOLD_RGB: TRgb = { r: 255, g: 176, b: 68 };
 const BLUE_RGB: TRgb = { r: 76, g: 168, b: 255 };
