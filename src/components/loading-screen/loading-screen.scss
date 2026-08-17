@@ -46,6 +46,7 @@
         inset: 0;
         z-index: 0;
         animation: mw-parallax-bg 19s ease-in-out infinite 2.6s;
+
         // Background brightness responds to both the slow "breathing" signal
         // and loading progress (both written from loading-canvas.tsx onto
         // this element's style each frame) - the logo/content stay unaffected
@@ -66,8 +67,15 @@
         position: absolute;
         inset: 0;
         z-index: 3;
-        background: radial-gradient(ellipse at 50% 45%, transparent 40%, rgba(0, 0, 0, 0.6) 100%);
+        background: radial-gradient(ellipse at 50% 45%, transparent 40%, rgb(0 0 0 / 60%) 100%);
         pointer-events: none;
+
+        // The only layer back here that used to hold still. A vignette that
+        // never moves reads as a lens cap over an otherwise living scene, so
+        // the aperture breathes slowly - wide enough to notice the room is
+        // alive, slow enough that you never catch it doing it.
+        animation: mw-loading-aperture 11s ease-in-out infinite;
+        will-change: transform, opacity;
     }
 
     &__rays {
@@ -76,9 +84,9 @@
         background: conic-gradient(
             from 0deg,
             transparent 0deg,
-            rgba(232, 182, 76, 0.05) 40deg,
+            rgb(232 182 76 / 5%) 40deg,
             transparent 90deg,
-            rgba(47, 125, 255, 0.06) 200deg,
+            rgb(47 125 255 / 6%) 200deg,
             transparent 260deg
         );
         animation: mw-loading-rays-spin 50s linear infinite;
@@ -96,14 +104,14 @@
         &--blue {
             top: -8%;
             right: -12%;
-            background: rgba(47, 125, 255, 0.24);
+            background: rgb(47 125 255 / 24%);
             animation: mw-loading-drift-one 16s ease-in-out infinite alternate;
         }
 
         &--gold {
             bottom: -15%;
             left: -12%;
-            background: rgba(232, 182, 76, 0.18);
+            background: rgb(232 182 76 / 18%);
             animation: mw-loading-drift-two 18s ease-in-out infinite alternate;
         }
     }
@@ -121,6 +129,7 @@
         font-size: 1.2rem;
         letter-spacing: 0.02em;
         opacity: 0;
+
         // Floats slowly upward through its whole lifetime (2.6s, matched to
         // the spawner in the .tsx) rather than just fading in place - these
         // are meant to read as their own depth plane of drifting data, not
@@ -130,11 +139,11 @@
         will-change: opacity, transform;
 
         &--left {
-            color: rgba(232, 182, 76, 0.6);
+            color: rgb(232 182 76 / 60%);
         }
 
         &--right {
-            color: rgba(47, 125, 255, 0.65);
+            color: rgb(47 125 255 / 65%);
         }
 
         &--fading {
@@ -142,34 +151,67 @@
         }
     }
 
+    // The floor. Wide, flat ellipses racing outward from under the logo -
+    // squashed hard so they read as ground seen in perspective rather than
+    // circles lying on the screen. Gold to the left, blue to the right,
+    // because each half is a clipped copy of the same ellipse.
     &__rings {
         position: absolute;
         left: 50%;
-        bottom: 6%;
+        bottom: 4%;
         width: 1px;
         height: 1px;
+        perspective: 600px;
     }
 
     &__ring {
         position: absolute;
         left: 0;
         top: 0;
-        width: 140px;
-        height: 140px;
-        margin: -70px 0 0 -70px;
+        width: 150rem;
+        height: 44rem;
+        margin: -22rem 0 0 -75rem;
         border-radius: 50%;
-        border: 1px solid rgba(232, 182, 76, 0.3);
         opacity: 0;
-        animation: mw-loading-ring-pulse 4.5s ease-out infinite;
+        animation: mw-loading-floor 7s linear infinite;
+
+        &:before,
+        &:after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 1px solid;
+        }
+
+        &:before {
+            border-color: rgb(232 182 76 / 55%);
+            clip-path: inset(0 50% 0 0);
+        }
+
+        &:after {
+            border-color: rgb(47 125 255 / 55%);
+            clip-path: inset(0 0 0 50%);
+        }
 
         &:nth-child(2) {
-            border-color: rgba(47, 125, 255, 0.28);
-            animation-delay: 1.5s;
+            animation-delay: 1.16s;
         }
 
         &:nth-child(3) {
-            border-color: rgba(255, 255, 255, 0.2);
-            animation-delay: 3s;
+            animation-delay: 2.33s;
+        }
+
+        &:nth-child(4) {
+            animation-delay: 3.5s;
+        }
+
+        &:nth-child(5) {
+            animation-delay: 4.66s;
+        }
+
+        &:nth-child(6) {
+            animation-delay: 5.83s;
         }
     }
 
@@ -182,6 +224,7 @@
         gap: 1.8rem;
         padding: 2rem;
         width: min(420px, 86vw);
+
         // The hero plane: smallest parallax amplitude of anything in the
         // scene, so it reads as the stable focal point the camera is
         // centered on while everything else drifts around it at its own rate.
@@ -212,19 +255,20 @@
         height: auto;
         mix-blend-mode: screen;
         transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-        filter: drop-shadow(0 8px 28px rgba(0, 0, 0, 0.45));
+        filter: drop-shadow(0 8px 28px rgb(0 0 0 / 45%));
+
         // The source PNG has its own dark (non-transparent) background baked
         // in, not a true alpha cutout - this feathers the image's rectangular
         // edges into the scene so it reads as floating rather than boxed.
-        mask-image: radial-gradient(ellipse 62% 56% at 50% 48%, black 15%, transparent 72%);
-        -webkit-mask-image: radial-gradient(ellipse 62% 56% at 50% 48%, black 15%, transparent 72%);
+        mask-image: radial-gradient(ellipse 62% 56% at 50% 48%, #000 15%, transparent 72%);
     }
 
     &__logo-glow {
         position: absolute;
         inset: -22%;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(47, 125, 255, 0.32) 0%, rgba(232, 182, 76, 0.2) 45%, transparent 72%);
+        background: radial-gradient(circle, rgb(47 125 255 / 32%) 0%, rgb(232 182 76 / 20%) 45%, transparent 72%);
+
         // Brightness rises with loading progress (var written from
         // loading-canvas.tsx) on top of the existing pulse, so the logo's
         // own light visibly strengthens as the world energizes. Kept modest
@@ -241,8 +285,8 @@
         background: linear-gradient(
             100deg,
             transparent 42%,
-            rgba(255, 255, 255, 0.35) 50%,
-            rgba(232, 182, 76, 0.28) 54%,
+            rgb(255 255 255 / 35%) 50%,
+            rgb(232 182 76 / 28%) 54%,
             transparent 62%
         );
         mix-blend-mode: screen;
@@ -264,7 +308,7 @@
         font-size: 1.2rem;
         font-weight: 700;
         letter-spacing: 0.32em;
-        color: rgba(255, 255, 255, 0.5);
+        color: rgb(255 255 255 / 50%);
     }
 
     &__counter-value {
@@ -274,7 +318,7 @@
         line-height: 1;
         background: linear-gradient(90deg, var(--mw-gold), var(--mw-blue), #fff, var(--mw-gold));
         background-size: 300% 100%;
-        -webkit-background-clip: text;
+        background-clip: text;
         background-clip: text;
         color: transparent;
         animation: mw-counter-sweep 3.2s linear infinite;
@@ -283,20 +327,41 @@
     &__bar-track {
         position: relative;
         width: 100%;
-        height: 5px;
+        height: 6px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-        overflow: hidden;
+        background: rgb(255 255 255 / 10%);
+        border: 1px solid rgb(255 255 255 / 14%);
+
+        // Not hidden: the leading light below sits proud of the track, the
+        // way the reference has it riding the head of the fill.
+        overflow: visible;
     }
 
     &__bar-fill {
         position: relative;
         height: 100%;
         border-radius: 999px;
-        background: linear-gradient(90deg, var(--mw-gold), var(--mw-blue));
-        box-shadow: 0 0 12px rgba(232, 182, 76, 0.5);
+        background: linear-gradient(90deg, var(--mw-gold), #f0c674 45%, var(--mw-blue));
+        box-shadow:
+            0 0 12px rgb(232 182 76 / 50%),
+            0 0 18px rgb(47 125 255 / 35%);
         transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-        overflow: hidden;
+
+        // The bright head of the bar.
+        &:after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            inset-inline-end: -3px;
+            width: 10px;
+            height: 10px;
+            margin-top: -5px;
+            border-radius: 50%;
+            background: #eaf4ff;
+            box-shadow:
+                0 0 10px rgb(120 180 255 / 95%),
+                0 0 22px rgb(47 125 255 / 70%);
+        }
     }
 
     &__bar-sheen {
@@ -304,15 +369,19 @@
         top: 0;
         bottom: 0;
         width: 26%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+        background: linear-gradient(90deg, transparent, rgb(255 255 255 / 85%), transparent);
         mix-blend-mode: screen;
         animation: mw-bar-sheen 1.8s ease-in-out infinite;
     }
 
     &__status {
         font-size: 1.4rem;
-        letter-spacing: 0.04em;
-        color: rgba(255, 255, 255, 0.7);
+
+        // Set the way the reference sets it - spaced small caps, so it reads
+        // as a system line under the bar rather than a sentence.
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        color: rgb(255 255 255 / 72%);
         text-align: center;
         animation: mw-fade-in 0.4s ease;
     }
@@ -322,6 +391,7 @@
         inset: 0;
         z-index: 3;
         pointer-events: none;
+
         // Nearest plane to camera - largest parallax amplitude of the scene.
         animation: mw-parallax-fg 9s ease-in-out infinite 2.6s;
     }
@@ -332,7 +402,7 @@
         height: 3px;
         border-radius: 50%;
         background: var(--mw-cyan);
-        box-shadow: 0 0 8px 1px rgba(51, 229, 255, 0.7);
+        box-shadow: 0 0 8px 1px rgb(51 229 255 / 70%);
         opacity: 0;
         animation-name: mw-loading-particle-drift;
         animation-timing-function: ease-in-out;
@@ -345,6 +415,7 @@
     from {
         transform: scale(1);
     }
+
     to {
         // Deliberately understated - this should read as "the scene feels
         // alive," not as a noticeable zoom.
@@ -357,6 +428,7 @@
     100% {
         transform: translate3d(0, 0, 0);
     }
+
     50% {
         transform: translate3d(-0.3%, 0.25%, 0);
     }
@@ -367,6 +439,7 @@
     100% {
         transform: translate3d(0, 0, 0);
     }
+
     50% {
         transform: translate3d(0.5%, -0.4%, 0);
     }
@@ -377,6 +450,7 @@
     100% {
         transform: translate3d(0, 0, 0);
     }
+
     50% {
         transform: translate3d(-0.15%, 0.1%, 0);
     }
@@ -387,6 +461,7 @@
     100% {
         transform: translate3d(0, 0, 0);
     }
+
     50% {
         transform: translate3d(1%, -0.8%, 0);
     }
@@ -396,6 +471,7 @@
     from {
         transform: rotate(0deg);
     }
+
     to {
         transform: rotate(360deg);
     }
@@ -405,6 +481,7 @@
     from {
         transform: translate3d(0, 0, 0);
     }
+
     to {
         transform: translate3d(-5%, 6%, 0);
     }
@@ -414,6 +491,7 @@
     from {
         transform: translate3d(0, 0, 0);
     }
+
     to {
         transform: translate3d(5%, -6%, 0);
     }
@@ -424,12 +502,15 @@
         transform: translate3d(0, 0, 0);
         opacity: 0;
     }
+
     15% {
         opacity: 0.8;
     }
+
     85% {
         opacity: 0.5;
     }
+
     100% {
         transform: translate3d(-24px, -40px, 0);
         opacity: 0;
@@ -441,10 +522,12 @@
         opacity: 0;
         transform: translateY(10px);
     }
+
     15% {
         opacity: 1;
         transform: translateY(4px);
     }
+
     100% {
         opacity: 1;
         transform: translateY(-14px);
@@ -454,17 +537,20 @@
 @keyframes mw-loading-dissolve {
     0% {
         opacity: 1;
+
         // Matches .mw-loading's resting transform (scale(1)) so there's no
         // pop when this animation takes over - it's a separate element from
         // .mw-loading__scene's own push-in, not a continuation of it.
         transform: scale(1);
         filter: brightness(1) saturate(1);
     }
+
     35% {
         opacity: 0.9;
         transform: scale(1.03);
         filter: brightness(1.45) saturate(1.2);
     }
+
     100% {
         opacity: 0;
         transform: scale(1.06);
@@ -472,17 +558,40 @@
     }
 }
 
-@keyframes mw-loading-ring-pulse {
+// Rings start small and near the horizon, then race out past the edges of
+// the frame. Brightest in the middle of the run, so they resolve out of the
+// haze rather than popping into existence.
+@keyframes mw-loading-floor {
     0% {
-        transform: scale(0.6);
+        transform: scale(0.12);
         opacity: 0;
     }
-    15% {
-        opacity: 0.7;
+
+    18% {
+        opacity: 0.85;
     }
+
+    70% {
+        opacity: 0.5;
+    }
+
     100% {
-        transform: scale(2.6);
+        transform: scale(1.5);
         opacity: 0;
+    }
+}
+
+// Widens and softens the darkened frame, then closes back in.
+@keyframes mw-loading-aperture {
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.06);
+        opacity: 0.82;
     }
 }
 
@@ -490,15 +599,19 @@
     0% {
         transform: perspective(1000px) rotateX(2deg) rotateY(-3deg) translateY(0);
     }
+
     25% {
         transform: perspective(1000px) rotateX(-1deg) rotateY(2deg) translateY(-6px);
     }
+
     50% {
         transform: perspective(1000px) rotateX(-3deg) rotateY(4deg) translateY(0);
     }
+
     75% {
         transform: perspective(1000px) rotateX(1deg) rotateY(-2deg) translateY(6px);
     }
+
     100% {
         transform: perspective(1000px) rotateX(2deg) rotateY(-3deg) translateY(0);
     }
@@ -510,6 +623,7 @@
         opacity: 0.55;
         transform: scale(1);
     }
+
     50% {
         opacity: 0.85;
         transform: scale(1.06);
@@ -523,9 +637,11 @@
         transform: translateX(-160%) rotate(8deg);
         opacity: 0;
     }
+
     90% {
         opacity: 0.85;
     }
+
     96% {
         transform: translateX(160%) rotate(8deg);
         opacity: 0;
@@ -536,6 +652,7 @@
     from {
         background-position: 0% 50%;
     }
+
     to {
         background-position: 300% 50%;
     }
@@ -545,6 +662,7 @@
     from {
         transform: translateX(-120%);
     }
+
     to {
         transform: translateX(520%);
     }
@@ -554,6 +672,7 @@
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -564,6 +683,7 @@
         animation: none;
         opacity: 0;
     }
+
     .mw-loading__scene,
     .mw-loading__bg,
     .mw-loading__ticks,
@@ -582,21 +702,25 @@
     .mw-loading__status {
         animation: none;
     }
+
     .mw-loading__bg {
         filter: none;
     }
+
     .mw-loading__logo {
         transition: none;
     }
+
     .mw-loading__counter-value {
         background-position: 0% 50%;
     }
+
     .mw-loading__canvas {
         display: none;
     }
 }
 
-@media (max-width: 600px) {
+@media (width <= 600px) {
     .mw-loading__tick {
         font-size: 1rem;
     }

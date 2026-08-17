@@ -135,10 +135,12 @@ const LoadingScreen = ({ ready, onExited }: TLoadingScreenProps) => {
                     <div className='mw-loading__glow mw-loading__glow--gold' />
                     <div className='mw-loading__rays' />
                     <LoadingCanvas progress={current.pct} />
+                    {/* Six so the floor always has rings at several depths at
+                        once - three left visible gaps between sweeps. */}
                     <div className='mw-loading__rings'>
-                        <span className='mw-loading__ring' />
-                        <span className='mw-loading__ring' />
-                        <span className='mw-loading__ring' />
+                        {Array.from({ length: 6 }, (_, i) => (
+                            <span key={i} className='mw-loading__ring' />
+                        ))}
                     </div>
                 </div>
 
