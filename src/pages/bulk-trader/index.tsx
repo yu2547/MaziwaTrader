@@ -54,7 +54,24 @@ const getLastDigit = (quote: number, decimals: number): number => {
     return Number(fixed[fixed.length - 1]);
 };
 
-const DigitGauge = ({ digit, percentage, is_current }: { digit: number; percentage: number; is_current: boolean }) => {
+/**
+ * `rank` marks the two digits worth looking at: 'hot' is the most frequent in
+ * the sample, 'cold' the second most. Without it every ring is the same colour
+ * and finding the top digit means reading ten percentages and comparing them.
+ */
+type TDigitRank = 'hot' | 'second' | null;
+
+const DigitGauge = ({
+    digit,
+    percentage,
+    is_current,
+    rank,
+}: {
+    digit: number;
+    percentage: number;
+    is_current: boolean;
+    rank: TDigitRank;
+}) => {
     const radius = 26;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (Math.min(percentage, 100) / 100) * circumference;
@@ -67,7 +84,7 @@ const DigitGauge = ({ digit, percentage, is_current }: { digit: number; percenta
                     cx='32'
                     cy='32'
                     r={radius}
-                    className='mw-bulk-trader__gauge-fill'
+                    className={`mw-bulk-trader__gauge-fill ${rank ? `mw-bulk-trader__gauge-fill--${rank}` : ''}`}
                     strokeDasharray={circumference}
                     strokeDashoffset={offset}
                     transform='rotate(-90 32 32)'
@@ -156,6 +173,30 @@ const BulkTraderPage = observer(() => {
         setDigits([]);
         setLastTick(null);
 
+        // The percentages have to describe the window the page says it is
+        // describing. Building the sample from live ticks alone meant "Number
+        // of ticks: 1000" was a promise about a sample that started empty and
+        // grew one tick per second - a page open for half a minute reported
+        // digit frequencies over ~37 ticks, where a single occurrence is 2.7%
+        // and three is 8.1%. Those swings look like a market signal and are
+        // nothing but a small denominator. So the window is filled from
+        // history first, and live ticks extend it from there.
+        let cancelled = false;
+
+        feed.getTickHistory(selected_symbol, MAX_TICK_HISTORY)
+            .then(({ prices, pip_size }) => {
+                if (cancelled || !prices.length) return;
+                const history_decimals =
+                    toDecimalPlaces(pip_size) ?? toDecimalPlaces(selected_symbol_info?.pip_size) ?? 2;
+                // ticks_history returns oldest-first; digits[] is newest-first.
+                const seeded = prices.map(price => getLastDigit(price, history_decimals)).reverse();
+                setDigits(prev => [...prev, ...seeded].slice(0, MAX_TICK_HISTORY));
+            })
+            .catch(() => {
+                // Non-fatal: the sample still fills from live ticks, it just
+                // starts empty the way it used to.
+            });
+
         const unsubscribe = feed.subscribeTicks(selected_symbol, tick => {
             setLastTick(tick);
             const tick_decimals =
@@ -164,7 +205,10 @@ const BulkTraderPage = observer(() => {
             setDigits(prev => [digit, ...prev].slice(0, MAX_TICK_HISTORY));
         });
 
-        return () => unsubscribe();
+        return () => {
+            cancelled = true;
+            unsubscribe();
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isConnected, feed, selected_symbol]);
 
@@ -180,6 +224,21 @@ const BulkTraderPage = observer(() => {
     }, [sample]);
 
     const current_digit = digits[0] ?? null;
+
+    // The most and second-most frequent digits over the sample. Ties are
+    // broken by the lower digit purely so the highlight does not flicker
+    // between two equal digits on every tick. Nothing is marked until there
+    // is a sample to rank, and a flat sample (every digit equal) marks
+    // nothing either - calling one of ten identical digits "hottest" would
+    // be inventing a signal.
+    const { hot_digit, second_digit } = useMemo(() => {
+        if (!sample.length) return { hot_digit: null, second_digit: null };
+        const ranked = digit_percentages
+            .map((pct, digit) => ({ pct, digit }))
+            .sort((a, b) => b.pct - a.pct || a.digit - b.digit);
+        if (ranked[0].pct === ranked[ranked.length - 1].pct) return { hot_digit: null, second_digit: null };
+        return { hot_digit: ranked[0].digit, second_digit: ranked[1].pct > 0 ? ranked[1].digit : null };
+    }, [digit_percentages, sample.length]);
 
     const rise_fall_stats = useMemo(() => {
         if (sample.length < 2) return { rise_pct: 0, fall_pct: 0 };
@@ -311,7 +370,13 @@ const BulkTraderPage = observer(() => {
 
                 <div className='mw-bulk-trader__gauges'>
                     {digit_percentages.map((pct, digit) => (
-                        <DigitGauge key={digit} digit={digit} percentage={pct} is_current={digit === current_digit} />
+                        <DigitGauge
+                            key={digit}
+                            digit={digit}
+                            percentage={pct}
+                            is_current={digit === current_digit}
+                            rank={digit === hot_digit ? 'hot' : digit === second_digit ? 'second' : null}
+                        />
                     ))}
                 </div>
 

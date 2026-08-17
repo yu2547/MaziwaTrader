@@ -136,6 +136,22 @@
         transition: stroke-dashoffset 0.4s ease;
     }
 
+    // Green marks the most frequent digit in the sample, blue the second.
+    // Ten identically coloured rings meant finding the top digit was a matter
+    // of reading and comparing ten percentages.
+    &__gauge-fill--hot {
+        stroke: #00a79e;
+        stroke-width: 7;
+    }
+
+    &__gauge-fill--second {
+        stroke: #377cfb;
+        stroke-width: 7;
+    }
+
+    // The tick that just landed still wins the ring - it is the more
+    // time-critical of the two things a ring can say - but it is a passing
+    // state, where hot/second describe the whole window.
     &__gauge--current &__gauge-fill {
         stroke: var(--brand-secondary, #2fb6e0);
     }
