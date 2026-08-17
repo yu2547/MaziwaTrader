@@ -119,52 +119,61 @@
     &__gauge-svg {
         width: 100%;
         height: auto;
-        max-width: 8rem;
+        max-width: 9.4rem;
+        overflow: visible;
     }
 
+    // A pale, heavy ring the arc is drawn over, so every gauge reads as a
+    // dial with a filled portion rather than a floating stroke.
     &__gauge-track {
         fill: none;
-        stroke: var(--general-section-1);
-        stroke-width: 6;
+        stroke: #e6e9ec;
+        stroke-width: 7.5;
     }
 
     &__gauge-fill {
         fill: none;
-        stroke: #4f5f6f;
-        stroke-width: 6;
+        stroke: #6b7280;
+        stroke-width: 7.5;
         stroke-linecap: butt;
-        transition: stroke-dashoffset 0.4s ease;
+
+        // The arc sweeps to its new length rather than jumping, which is what
+        // makes a row of ten dials read as live instead of re-rendered. Eased
+        // out so the movement settles rather than stopping dead.
+        transition:
+            stroke-dashoffset 0.65s cubic-bezier(0.22, 0.61, 0.36, 1),
+            stroke 0.4s ease;
     }
 
     // Green marks the most frequent digit in the sample, blue the second.
     // Ten identically coloured rings meant finding the top digit was a matter
-    // of reading and comparing ten percentages.
+    // of reading and comparing ten percentages. The slow breathe separates
+    // these two from the other eight without adding a third colour - they are
+    // the only dials on the row that move when the numbers are steady.
     &__gauge-fill--hot {
         stroke: #00a79e;
-        stroke-width: 7;
+        animation: mw-gauge-breathe 2.4s ease-in-out infinite;
     }
 
     &__gauge-fill--second {
         stroke: #377cfb;
-        stroke-width: 7;
+        animation: mw-gauge-breathe 2.4s ease-in-out infinite 0.8s;
     }
 
-    // The tick that just landed still wins the ring - it is the more
-    // time-critical of the two things a ring can say - but it is a passing
-    // state, where hot/second describe the whole window.
-    &__gauge--current &__gauge-fill {
-        stroke: var(--brand-secondary, #2fb6e0);
-    }
+    // The current tick is the red arrow under the dial and nothing else.
+    // Recolouring the ring for it as well overwrote whichever ranking that
+    // digit happened to hold, so the hottest digit lost its green for a tick
+    // every time it came up - the one moment it most needed to keep it.
 
     &__gauge-digit {
         fill: var(--text-prominent);
-        font-size: 13px;
+        font-size: 15px;
         font-weight: 700;
     }
 
     &__gauge-pct {
-        fill: var(--text-general);
-        font-size: 9px;
+        fill: var(--text-less-prominent);
+        font-size: 8.5px;
         font-weight: 600;
     }
 
@@ -297,8 +306,30 @@
     }
 }
 
+// Carries the ranked dials without changing their colour or geometry, so the
+// row stays readable at a glance while the two that matter stay alive.
+@keyframes mw-gauge-breathe {
+    0%,
+    100% {
+        opacity: 1;
+        stroke-width: 7.5;
+    }
+
+    50% {
+        opacity: 0.78;
+        stroke-width: 9;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .mw-bulk-trader__gauge-arrow {
+    .mw-bulk-trader__gauge-arrow,
+    .mw-bulk-trader__gauge-fill {
         animation: none !important;
+    }
+
+    // The sweep is the only cue that a value changed at all, so it is
+    // shortened rather than removed.
+    .mw-bulk-trader__gauge-fill {
+        transition-duration: 0.15s;
     }
 }
