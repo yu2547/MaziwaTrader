@@ -66,6 +66,9 @@ const rgba = (c: TRgb, a: number) => `rgba(${c.r | 0}, ${c.g | 0}, ${c.b | 0}, $
 
 // What distant candles/streaks haze toward - a neutral, slightly cool tone
 // so the far end of the tunnel softens rather than just going transparent.
+/** How long one floor ring takes to travel from the horizon to the frame edge. */
+const FLOOR_TRAVEL_MS = 7000;
+
 const HAZE_RGB: TRgb = { r: 92, g: 110, b: 140 };
 const GOLD_RGB: TRgb = { r: 255, g: 176, b: 68 };
 const BLUE_RGB: TRgb = { r: 76, g: 168, b: 255 };
@@ -232,7 +235,12 @@ export type TMarketSceneCanvasProps = {
     variant?: 'default' | 'hero';
 };
 
-const MarketSceneCanvas = ({ energy, ambientTargetSelector, className, variant = 'default' }: TMarketSceneCanvasProps) => {
+const MarketSceneCanvas = ({
+    energy,
+    ambientTargetSelector,
+    className,
+    variant = 'default',
+}: TMarketSceneCanvasProps) => {
     const is_hero = variant === 'hero';
     const canvas_ref = useRef<HTMLCanvasElement>(null);
     const energy_ref = useRef(energy);
@@ -275,6 +283,13 @@ const MarketSceneCanvas = ({ energy, ambientTargetSelector, className, variant =
         const streaksLeft = createStreaks(4);
         const streaksRight = createStreaks(4);
         const floorPulses = createFloorPulses(3);
+
+        // 0-1, advancing. Rings sit at their index offset by this, so the whole
+        // set slides outward and the floor reads as ground travelling past the
+        // camera instead of a static target painted under the logo. Only the
+        // loading screen takes this - the landing hero's floor is unchanged.
+        const is_travelling_floor = !is_hero;
+        let floor_travel = 0;
 
         const resize = () => {
             const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -558,9 +573,17 @@ const MarketSceneCanvas = ({ energy, ambientTargetSelector, className, variant =
             // the transitions feel like the floor's own light shifting
             // rather than a flat opacity fade.
             const ringLineWidth = 1.2 + 0.5 * Math.max(0, brightness - 0.85);
+            if (is_travelling_floor) floor_travel = (floor_travel + dt / FLOOR_TRAVEL_MS) % 1;
             for (let i = 0; i < ringCount; i++) {
-                const r = maxR * ((i + 1) / ringCount);
-                const ringStrength = (0.22 + 0.78 * (i / (ringCount - 1))) * brightness;
+                // Where this ring currently sits between the vanishing point
+                // (0) and the outer edge (1).
+                const travel = is_travelling_floor ? ((i + 1) / ringCount + floor_travel) % 1 : (i + 1) / ringCount;
+                const r = maxR * travel;
+                // Travelling rings have to resolve out of the haze at the
+                // horizon and dissolve again at the edge, or they visibly pop
+                // into and out of existence at both ends of the run.
+                const emerge = is_travelling_floor ? Math.sin(Math.PI * travel) : 1;
+                const ringStrength = (0.22 + 0.78 * travel) * brightness * emerge;
                 ctx.lineWidth = ringLineWidth;
                 ctx.shadowBlur = 7;
 

@@ -134,14 +134,12 @@ const LoadingScreen = ({ ready, onExited }: TLoadingScreenProps) => {
                     <div className='mw-loading__glow mw-loading__glow--blue' />
                     <div className='mw-loading__glow mw-loading__glow--gold' />
                     <div className='mw-loading__rays' />
+                    {/* The floor lives inside the canvas, which draws it in the
+                        same perspective as the candle walls and lights it from
+                        the same source. A second floor in CSS sat at its own
+                        angle and read as a stray target painted under the
+                        logo, so there is only the one now. */}
                     <LoadingCanvas progress={current.pct} />
-                    {/* Six so the floor always has rings at several depths at
-                        once - three left visible gaps between sweeps. */}
-                    <div className='mw-loading__rings'>
-                        {Array.from({ length: 6 }, (_, i) => (
-                            <span key={i} className='mw-loading__ring' />
-                        ))}
-                    </div>
                 </div>
 
                 <div className='mw-loading__ticks' aria-hidden='true'>
