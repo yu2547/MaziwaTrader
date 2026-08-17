@@ -149,6 +149,10 @@ const useManualTrade = () => {
         };
     }, [settle, broadcast]);
 
+    // Places one contract. Deliberately does not touch `is_placing` - a batch
+    // fires several of these at once, and each one clearing the flag as it
+    // finished would re-enable the buttons while the rest were still in
+    // flight. The batch below owns that flag.
     const placeTrade = useCallback(
         async ({ contract_type, symbol, stake, duration, barrier }: TPlaceTradeParams) => {
             const api = api_base.api;
@@ -162,7 +166,6 @@ const useManualTrade = () => {
             }
 
             setErrorMessage(null);
-            setIsPlacing(true);
 
             try {
                 const currency = (api_base.account_info as { currency?: string })?.currency || 'USD';
@@ -221,14 +224,41 @@ const useManualTrade = () => {
                 if (is_mounted.current) setErrorMessage(message);
                 globalObserver.emit('ui.log.error', message);
                 return false;
-            } finally {
-                if (is_mounted.current) setIsPlacing(false);
             }
         },
         [settle]
     );
 
-    return { placeTrade, is_placing, pending_count, error_message };
+    /**
+     * Fires `count` contracts together rather than one after another.
+     *
+     * Sequentially, a batch of 20 took as long as 20 round trips to Deriv and
+     * the later contracts opened against ticks the earlier ones had already
+     * traded through - which is not "20 trades on this signal", it is 20
+     * trades on 20 different signals. They go out concurrently so the whole
+     * batch prices off the same moment.
+     *
+     * One failure no longer cancels the rest. Aborting the batch on the first
+     * error meant a single rejected contract - a momentary price move, one
+     * proposal refused - silently swallowed every trade behind it. Each
+     * contract now stands or falls on its own and the count that actually
+     * opened is reported back.
+     */
+    const placeTrades = useCallback(
+        async (params: TPlaceTradeParams, count: number) => {
+            const attempts = Math.max(1, count);
+            setIsPlacing(true);
+            try {
+                const results = await Promise.all(Array.from({ length: attempts }, () => placeTrade(params)));
+                return results.filter(Boolean).length;
+            } finally {
+                if (is_mounted.current) setIsPlacing(false);
+            }
+        },
+        [placeTrade]
+    );
+
+    return { placeTrade, placeTrades, is_placing, pending_count, error_message };
 };
 
 export default useManualTrade;

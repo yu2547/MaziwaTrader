@@ -223,22 +223,21 @@ const BulkTraderPage = observer(() => {
     const is_logged_in = Boolean(oauth_session?.is_authenticated || client?.is_logged_in);
     const total_risk = stake * trades_per_click;
 
-    const placeSide = async (contract_type: string) => {
-        // Sequential rather than parallel: each contract is priced off a fresh
-        // proposal, and firing them together would race the same account
-        // balance against Deriv's own rate limits.
-        for (let i = 0; i < Math.min(trades_per_click, MAX_TRADES_PER_CLICK); i += 1) {
-            // eslint-disable-next-line no-await-in-loop
-            const placed = await trade.placeTrade({
+    // Every contract in the batch goes out together, so all of them price off
+    // the same moment in the market. Placing them one after another meant the
+    // last contract of a 20-trade batch opened many ticks after the first,
+    // which is not one signal traded 20 times.
+    const placeSide = (contract_type: string) =>
+        trade.placeTrades(
+            {
                 contract_type,
                 symbol: selected_symbol,
                 stake,
                 duration: duration_ticks,
                 ...(config.barrier ? { barrier } : {}),
-            });
-            if (!placed) break;
-        }
-    };
+            },
+            Math.min(trades_per_click, MAX_TRADES_PER_CLICK)
+        );
 
     // The OAuth account is the one that actually gets debited, so its currency
     // wins. ClientStore.currency is only consulted for classic sessions, and

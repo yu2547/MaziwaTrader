@@ -1,7 +1,15 @@
 import { localize } from '@deriv-com/translations';
+import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
 import { doUntilDone, tradeOptionToProposal } from '../utils/helpers';
 import { clearProposals, proposalsReady } from './state/actions';
+
+// A bot cannot buy until every proposal it asked for has come back and been
+// matched to its template. Nothing in that path has a timeout, so if a price
+// never arrives - or arrives in a shape the matcher does not recognise - the
+// run simply sits at "before purchase" forever: no contract, no error, no
+// indication anything is wrong. This is how long to wait before saying so.
+const PROPOSAL_READY_TIMEOUT_MS = 15000;
 
 export default Engine =>
     class Proposal extends Engine {
@@ -64,7 +72,66 @@ export default Engine =>
             this.requestProposals();
         }
 
+        // Reports where the handshake stalled instead of letting the run hang
+        // silently. The three cases are genuinely different problems and the
+        // journal line has to say which one it is, or the next step is another
+        // round of guesswork.
+        startProposalWatchdog() {
+            this.clearProposalWatchdog();
+            this.proposals_matched = false;
+            this.proposal_watchdog = setTimeout(() => {
+                // Stopping the bot inside the window is not a stall, and a run
+                // that has moved past this point does not need telling either.
+                if (this.$scope?.stopped || api_base.is_stopping) return;
+
+                const expected = this.proposal_templates?.length ?? 0;
+                const received = this.data.proposals.length;
+
+                if (this.proposals_matched) {
+                    // Matched, but proposalsReady() is dispatched behind
+                    // startPromise - which only resolves once some message has
+                    // arrived on the socket since the engine started.
+                    globalObserver.emit(
+                        'ui.log.error',
+                        localize(
+                            'Prices arrived but the run never started. The bot is still waiting on the account to report in.'
+                        )
+                    );
+                    return;
+                }
+
+                if (received === 0) {
+                    globalObserver.emit(
+                        'ui.log.error',
+                        localize(
+                            'No prices came back for this contract after {{seconds}}s, so there was nothing to buy. Check the market and trade type are open for trading.',
+                            { seconds: Math.round(PROPOSAL_READY_TIMEOUT_MS / 1000) }
+                        )
+                    );
+                    return;
+                }
+
+                // Prices came back but did not match what was asked for -
+                // the response is missing the fields the matcher keys on.
+                globalObserver.emit(
+                    'ui.log.error',
+                    localize(
+                        '{{received}} of {{expected}} prices came back but could not be matched to this trade, so the bot did not buy.',
+                        { received, expected }
+                    )
+                );
+            }, PROPOSAL_READY_TIMEOUT_MS);
+        }
+
+        clearProposalWatchdog() {
+            if (this.proposal_watchdog) {
+                clearTimeout(this.proposal_watchdog);
+                this.proposal_watchdog = null;
+            }
+        }
+
         requestProposals() {
+            this.startProposalWatchdog();
             // Since there are two proposals (in most cases), an error may be logged twice, to avoid this
             // flip this boolean on error.
             let has_informed_error = false;
@@ -128,7 +195,11 @@ export default Engine =>
                 });
 
                 if (has_equal_proposals) {
-                    this.startPromise.then(() => this.store.dispatch(proposalsReady()));
+                    this.proposals_matched = true;
+                    this.startPromise.then(() => {
+                        this.clearProposalWatchdog();
+                        this.store.dispatch(proposalsReady());
+                    });
                 }
             }
         }
