@@ -89,26 +89,31 @@ $shell-nav-icon: #4da3ff;
     }
 }
 
-// On narrow screens the labels are dropped and the row becomes a compact,
-// swipeable strip of icons. The navigation stays present and reachable on
-// every route - it is never removed, only condensed.
+// On phones the strip keeps its labels and swipes sideways instead. Icons
+// alone were ambiguous - several sections share an icon here, so "Dashboard"
+// and "Trading Bots" were the same glyph with nothing to tell them apart, and
+// there is no hover to fall back on. The row is already horizontally
+// scrollable, so there is no need to make everything fit at once; it just has
+// to be readable and reachable, which it now is on every route.
 @media (width <= 768px) {
     .shell-nav {
-        &__item {
-            padding: 1rem 1.2rem;
-            gap: 0;
+        &__scroller {
+            // Momentum scrolling and snapping make the strip feel like a
+            // native pager rather than a clipped row.
+            -webkit-overflow-scrolling: touch;
+            scroll-snap-type: x proximity;
         }
 
-        &__label {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
+        &__item {
+            gap: 0.6rem;
+            padding: 1rem 1.2rem;
+            font-size: 1.3rem;
+            scroll-snap-align: start;
+
+            svg {
+                width: 18px;
+                height: 18px;
+            }
         }
 
         &__divider {

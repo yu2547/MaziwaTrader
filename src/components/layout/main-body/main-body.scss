@@ -1,3 +1,21 @@
 .main-body {
     flex-grow: 1;
+
+    // The shell is a flex column at 100vh; without this the routed content
+    // refuses to shrink below its natural height and the page grows a
+    // horizontal scrollbar instead of the workspace scrolling inside itself.
+    min-width: 0;
+}
+
+// On phones the execution bar is fixed to the bottom of the viewport, so it
+// is out of flow and covers whatever the workspace ends with. Reserve exactly
+// its height - the bar measures itself and publishes it as
+// --mw-exec-bar-height (execution-bar/index.tsx), so this tracks a bar that
+// grew because the speed switch wrapped or a run started, rather than being a
+// fixed guess that is a dead gap at one width and a covered block at another.
+// The fallback only applies for the frame before the first measurement.
+@media (width <= 768px) {
+    .main-body {
+        padding-bottom: calc(var(--mw-exec-bar-height, 6rem) + env(safe-area-inset-bottom, 0px));
+    }
 }

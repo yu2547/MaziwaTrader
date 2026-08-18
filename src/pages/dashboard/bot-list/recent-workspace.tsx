@@ -97,7 +97,16 @@ const RecentWorkspace = observer(({ workspace, index }: TRecentWorkspace) => {
 
     const handleOpen = async () => {
         await loadFileFromRecent();
-        setActiveTab(DBOT_TABS.BOT_BUILDER);
+        // The Bot Builder panel is lazy-loaded, so switching to it can suspend.
+        // Doing that as a synchronous update makes React throw "A component
+        // suspended while responding to synchronous input", and because that
+        // escapes to the router's root boundary it replaces the entire
+        // application - header, navigation and all - with an error page. Every
+        // other caller of setActiveTab already marks the update as a
+        // transition; this one did not.
+        React.startTransition(() => {
+            setActiveTab(DBOT_TABS.BOT_BUILDER);
+        });
         rudderStackSendDashboardClickEvent({ dashboard_click_name: 'open', subpage_name: 'bot_builder' });
     };
 

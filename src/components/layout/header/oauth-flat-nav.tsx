@@ -11,11 +11,13 @@ import { useStore } from '@/hooks/useStore';
 import { clearStoredSession } from '@/utils/auth/deriv-oauth';
 import { convertFromUsd, useExchangeRates } from '@/utils/currency/exchange-rate';
 import {
+    StandaloneBarsRegularIcon,
     StandaloneCashRegisterRegularIcon,
     StandaloneChevronDownBoldIcon,
     StandaloneRightFromBracketRegularIcon,
 } from '@deriv/quill-icons/Standalone';
 import { useTranslations } from '@deriv-com/translations';
+import MobileDrawer from '../mobile-drawer';
 import SegmentedControl from './segmented-control';
 import './oauth-flat-nav.scss';
 
@@ -42,6 +44,9 @@ const OAuthFlatNav = observer(() => {
     useLiveBalance();
     const [display_currency, setDisplayCurrency] = useState<TDisplayCurrency>('USD');
     const [is_panel_open, setIsPanelOpen] = useState(false);
+    // Phone-width menu. The bar itself is unchanged on desktop, where the
+    // hamburger is not rendered at all.
+    const [is_drawer_open, setIsDrawerOpen] = useState(false);
     const [panel_type, setPanelType] = useState<'real' | 'demo'>('real');
     const [is_list_open, setIsListOpen] = useState(true);
     const { rates } = useExchangeRates();
@@ -127,6 +132,21 @@ const OAuthFlatNav = observer(() => {
     return (
         <header className='mw-premium-nav'>
             <div className='mw-premium-nav__left'>
+                {/* Phone only - hidden at desktop widths by the stylesheet,
+                    where there is room for the full bar and nothing to hide
+                    behind a menu. */}
+                <button
+                    type='button'
+                    className='mw-premium-nav__burger'
+                    onClick={() => setIsDrawerOpen(true)}
+                    aria-label={localize('Menu')}
+                    aria-expanded={is_drawer_open}
+                >
+                    <StandaloneBarsRegularIcon iconSize='sm' />
+                </button>
+
+                <span className='mw-premium-nav__brand'>MaziwaTrader</span>
+
                 <SegmentedControl
                     id='currency'
                     ariaLabel={localize('Display currency')}
@@ -265,6 +285,9 @@ const OAuthFlatNav = observer(() => {
                     )}
                 </div>
             </div>
+
+            {/* Handed the header's own logout, so there is one logout path. */}
+            <MobileDrawer is_open={is_drawer_open} onClose={() => setIsDrawerOpen(false)} onLogout={handleLogout} />
         </header>
     );
 });

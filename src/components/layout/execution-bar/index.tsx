@@ -68,6 +68,34 @@ const ExecutionBar = observer(() => {
     const [orb_position, setOrbPosition] = useState<TPoint | null>(readStoredPosition);
     const [is_dragging, setIsDragging] = useState(false);
     const drag = useRef({ active: false, moved: false, dx: 0, dy: 0 });
+    // A callback ref rather than useRef: the bar does not render on the first
+    // pass (the store is still being built, and the component returns null
+    // until it exists), so an effect keyed on [] measured a ref that was still
+    // null and never ran again once the bar appeared. This re-runs whenever
+    // the node actually mounts.
+    const [bar_element, setBarElement] = useState<HTMLDivElement | null>(null);
+
+    // The bar is fixed, so it is out of flow and sits over whatever the
+    // workspace ends with. The content below reserves exactly its height -
+    // measured rather than guessed at, because the bar is taller when the
+    // FAST/SLOW switch wraps and taller again while a bot is running, and a
+    // hardcoded figure is a dead gap at one width and a covered block at
+    // another.
+    useEffect(() => {
+        if (!bar_element) return undefined;
+
+        const publish = () => {
+            document.documentElement.style.setProperty('--mw-exec-bar-height', `${bar_element.offsetHeight}px`);
+        };
+        publish();
+
+        const observer = new ResizeObserver(publish);
+        observer.observe(bar_element);
+        return () => {
+            observer.disconnect();
+            document.documentElement.style.removeProperty('--mw-exec-bar-height');
+        };
+    }, [bar_element]);
 
     // A window that shrank past the orb would otherwise strand it off-screen.
     useEffect(() => {
@@ -147,7 +175,7 @@ const ExecutionBar = observer(() => {
 
     return (
         <>
-            <div className={`mw-exec-bar ${is_running ? 'mw-exec-bar--running' : ''}`}>
+            <div className={`mw-exec-bar ${is_running ? 'mw-exec-bar--running' : ''}`} ref={setBarElement}>
                 <div className='mw-exec-bar__inner'>
                     <div className='mw-exec-bar__run'>
                         <TradeAnimation className='mw-exec-bar__animation' />
