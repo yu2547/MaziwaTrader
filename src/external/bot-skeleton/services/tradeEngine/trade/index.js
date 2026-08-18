@@ -3,6 +3,7 @@ import { thunk } from 'redux-thunk';
 import { localize } from '@deriv-com/translations';
 import { createError } from '../../../utils/error';
 import { observer as globalObserver } from '../../../utils/observer';
+import { runTrace } from '../../../utils/run-trace'; // TEMP-DIAGNOSTIC
 import { api_base } from '../../api/api-base';
 import { checkBlocksForProposalRequest, doUntilDone } from '../utils/helpers';
 import { expectInitArg } from '../utils/sanitize';
@@ -99,9 +100,15 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
         const [token, options] = expectInitArg(args);
         const { symbol } = options;
 
+        runTrace('4. engine.init', `symbol=${symbol} token=${token === '' ? '(empty/OTP)' : 'present'}`);
+
         this.initArgs = args;
         this.options = options;
         this.startPromise = this.loginAndGetBalance(token);
+        // The single most important line in this trace: everything from
+        // checkProposalReady onward is gated behind this promise, so if it
+        // never settles the run stops here with no error of any kind.
+        this.startPromise.then(() => runTrace('5. startPromise RESOLVED'));
 
         if (!this.checkTicksPromiseExists()) this.watchTicks(symbol);
     }
@@ -112,12 +119,17 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
         }
 
         globalObserver.emit('bot.running');
+        runTrace('6. engine.start');
 
         const validated_trade_options = this.validateTradeOptions(tradeOptions);
 
         this.tradeOptions = { ...validated_trade_options, symbol: this.options.symbol };
         this.store.dispatch(start());
         this.checkLimits(validated_trade_options);
+        runTrace(
+            '7. trade options validated',
+            `${this.tradeOptions.symbol}/${this.tradeOptions.contractTypes ?? '?'} amount=${this.tradeOptions.amount} dur=${this.tradeOptions.duration}${this.tradeOptions.duration_unit}`
+        );
 
         this.makeDirectPurchaseDecision();
     }
@@ -180,10 +192,16 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
         // at all, so there is nothing left for it to disagree with.
         this.is_proposal_subscription_required = has_payout_block || is_basis_payout || api_base.is_otp_transport;
 
+        runTrace(
+            '8. purchase decision',
+            `proposal_path=${this.is_proposal_subscription_required} (payout_block=${has_payout_block} basis_payout=${is_basis_payout} otp=${api_base.is_otp_transport})`
+        );
+
         if (this.is_proposal_subscription_required) {
             this.makeProposals({ ...this.options, ...this.tradeOptions });
             this.checkProposalReady();
         } else {
+            runTrace('9. proposalsReady dispatched', 'direct-buy path, no proposal needed');
             this.store.dispatch(proposalsReady());
         }
     }

@@ -5,6 +5,7 @@ import ApiHelpers from '../services/api/api-helpers';
 import Interpreter from '../services/tradeEngine/utils/interpreter';
 import { compareXml, observer as globalObserver } from '../utils';
 import { getSavedWorkspaces, saveWorkspaceToRecent } from '../utils/local-storage';
+import { resetRunTrace, runTrace } from '../utils/run-trace'; // TEMP-DIAGNOSTIC
 import { isDbotRTL } from '../utils/workspace';
 import main_xml from './xml/main.xml';
 import { forgetAccumulatorsProposalRequest } from './accumulators-proposal-handler';
@@ -257,21 +258,30 @@ class DBot {
      * JavaScript code that's fed to the interpreter.
      */
     runBot() {
-        if (api_base.is_stopping) return;
+        resetRunTrace();
+        runTrace('1. runBot entered', `is_stopping=${api_base.is_stopping}`);
+        if (api_base.is_stopping) {
+            runTrace('1a. runBot ABORTED', 'api_base.is_stopping was true');
+            return;
+        }
 
         try {
             api_base.is_stopping = false;
             const code = this.generateCode();
+            runTrace('2. code generated', `${code.length} chars`);
             if (!this.interpreter.bot.tradeEngine.checkTicksPromiseExists()) this.interpreter = Interpreter();
 
             this.is_bot_running = true;
 
             api_base.setIsRunning(true);
+            runTrace('3. interpreter.run called');
             this.interpreter.run(code).catch(error => {
+                runTrace('X. interpreter.run REJECTED', error?.message ?? String(error), 10);
                 globalObserver.emit('Error', error);
                 this.stopBot();
             });
         } catch (error) {
+            runTrace('X. runBot threw', error?.message ?? String(error), 10);
             globalObserver.emit('Error', error);
 
             if (this.interpreter) {

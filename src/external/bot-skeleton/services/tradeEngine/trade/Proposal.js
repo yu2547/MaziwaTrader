@@ -1,5 +1,6 @@
 import { localize } from '@deriv-com/translations';
 import { observer as globalObserver } from '../../../utils/observer';
+import { runTrace } from '../../../utils/run-trace'; // TEMP-DIAGNOSTIC
 import { api_base } from '../../api/api-base';
 import { doUntilDone, tradeOptionToProposal } from '../utils/helpers';
 import { clearProposals, proposalsReady } from './state/actions';
@@ -136,28 +137,41 @@ export default Engine =>
             // flip this boolean on error.
             let has_informed_error = false;
 
+            runTrace(
+                '10. requesting proposals',
+                `${this.proposal_templates.length} template(s): ${this.proposal_templates.map(t => t.contract_type).join(', ')}`
+            );
+
             Promise.all(
                 this.proposal_templates.map(proposal => {
-                    doUntilDone(() => api_base.api.send(proposal)).catch(error => {
-                        // We intercept ContractBuyValidationError as user may have specified
-                        // e.g. a DIGITUNDER 0 or DIGITOVER 9, while one proposal may be invalid
-                        // the other is valid. We will error on Purchase rather than here.
+                    doUntilDone(() => api_base.api.send(proposal))
+                        .then(response => {
+                            runTrace(
+                                '11. proposal REPLY (send)',
+                                `${proposal.contract_type} id=${response?.proposal?.id ? 'yes' : 'NO'} pt=${response?.passthrough ? 'yes' : 'NO'}`
+                            );
+                            return response;
+                        })
+                        .catch(error => {
+                            // We intercept ContractBuyValidationError as user may have specified
+                            // e.g. a DIGITUNDER 0 or DIGITOVER 9, while one proposal may be invalid
+                            // the other is valid. We will error on Purchase rather than here.
 
-                        if (error?.error?.code === 'ContractBuyValidationError') {
-                            this.data.proposals.push({
-                                ...error.error.echo_req,
-                                ...error.echo_req.passthrough,
-                                error,
-                            });
+                            if (error?.error?.code === 'ContractBuyValidationError') {
+                                this.data.proposals.push({
+                                    ...error.error.echo_req,
+                                    ...error.echo_req.passthrough,
+                                    error,
+                                });
 
+                                return null;
+                            }
+                            if (!has_informed_error) {
+                                has_informed_error = true;
+                                this.$scope.observer.emit('Error', error.error);
+                            }
                             return null;
-                        }
-                        if (!has_informed_error) {
-                            has_informed_error = true;
-                            this.$scope.observer.emit('Error', error.error);
-                        }
-                        return null;
-                    });
+                        });
                 })
             );
         }
@@ -167,6 +181,10 @@ export default Engine =>
             const subscription = api_base.api.onMessage().subscribe(response => {
                 if (response.data.msg_type === 'proposal') {
                     const { passthrough, proposal } = response.data;
+                    runTrace(
+                        '12. proposal on stream',
+                        `id=${proposal?.id ? 'yes' : 'NO'} passthrough=${passthrough ? JSON.stringify(passthrough) : 'ABSENT'}`
+                    );
                     if (proposal && this.data.proposals.findIndex(p => p.id === proposal.id) === -1) {
                         // Add proposals based on the ID returned by the API.
                         this.data.proposals.push({ ...proposal, ...passthrough });
@@ -194,13 +212,27 @@ export default Engine =>
                     );
                 });
 
+                runTrace(
+                    '13. checkProposalReady',
+                    `stored=${proposals.length} templates=${this.proposal_templates.length} matched=${has_equal_proposals}`
+                );
+
                 if (has_equal_proposals) {
                     this.proposals_matched = true;
+                    // Everything past this point waits on startPromise. If
+                    // trace line 14 never appears while 13 says matched=true,
+                    // startPromise is the stall.
                     this.startPromise.then(() => {
+                        runTrace('14. proposalsReady DISPATCHED');
                         this.clearProposalWatchdog();
                         this.store.dispatch(proposalsReady());
                     });
                 }
+            } else {
+                runTrace(
+                    '13. checkProposalReady (no match yet)',
+                    `stored=${proposals.length} templates=${this.proposal_templates ? this.proposal_templates.length : 'none'}`
+                );
             }
         }
 
