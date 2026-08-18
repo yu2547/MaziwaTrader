@@ -68,6 +68,7 @@ const SCAN_MARKETS = [
     'Volatility 90 (1s) Index',
     'Volatility 75 (1s) Index',
     'Volatility 50 (1s) Index',
+    'Volatility 30 (1s) Index',
     'Volatility 25 (1s) Index',
     'Volatility 15 (1s) Index',
     'Volatility 10 (1s) Index',
