@@ -129,20 +129,12 @@ const DrawerHeader = ({ is_clear_stat_disabled, is_mobile, is_drawer_open, onCle
     );
 
 const DrawerContent = ({ active_index, is_drawer_open, active_tour, setActiveTabIndex, ...props }: TDrawerContent) => {
-    const { isDesktop } = useDevice();
-    // Use the useBlockScroll hook to prevent body scrolling when drawer is open on mobile
-
-    React.useEffect(() => {
-        if (!isDesktop && is_drawer_open) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = '';
-        }
-
-        return () => {
-            document.body.style.overflow = '';
-        };
-    }, [is_drawer_open]);
+    // The body used to be locked whenever this was open on a phone, which was
+    // right while the panel covered the whole viewport - there was nothing
+    // behind it to scroll. It is a bottom sheet now, so the workspace stays
+    // visible above it, and locking the body left that workspace on screen but
+    // frozen. Scroll chaining is contained by overscroll-behavior on the sheet
+    // itself (run-panel.scss) rather than by freezing the page.
 
     return (
         <>

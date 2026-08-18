@@ -250,8 +250,14 @@ $exec-bar-gap: 1.2rem;
             cursor: grabbing;
         }
 
+        // Rides above whatever the bar actually measures rather than above a
+        // fixed guess at it - the bar is taller when the speed switch wraps
+        // or a run is under way, and at those heights the fixed offset put
+        // the orb on top of the Run control it is supposed to sit clear of.
+        // The bar publishes its height from execution-bar/index.tsx; the
+        // fallback covers the frame before the first measurement.
         @media (width <= 768px) {
-            bottom: calc(#{$exec-bar-height} + 1.2rem);
+            bottom: calc(var(--mw-exec-bar-height, #{$exec-bar-height}) + 1.2rem + env(safe-area-inset-bottom, 0px));
         }
     }
 

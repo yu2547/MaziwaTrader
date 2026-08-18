@@ -1,18 +1,33 @@
-// A compact utility toggle - no track, no fill, no shadow. Two labels and a
-// thin indicator line are the entire control. It should read at the same
-// visual weight as a plain nav link, not as a separate manufactured object.
+// One joined control rather than two loose labels: a pill track with the
+// active currency sitting on a filled segment inside it.
+// It was previously two bare labels separated by a gap, with an underline
+// under the active one - and the colours were literal darks (#565c6e
+// inactive, #eef3fb active) chosen against a dark bar. The header is painted
+// from theme tokens and follows the light/dark switch, so on the light theme
+// the active label was near-white on near-white: one label visible, one not,
+// which is what made the pair read as two unrelated blocks rather than a
+// switch. Everything here is a token now, so it is legible in both themes.
 .mw-dial {
     position: relative;
     display: inline-flex;
-    align-items: baseline;
-    gap: 0.7rem;
+    align-items: center;
+    gap: 0;
+    padding: 0.2rem;
+    border-radius: 999px;
+    background: var(--general-section-1);
+
+    // The track is the boundary of the control, so nothing inside may paint
+    // outside it - including the sliding indicator.
+    overflow: hidden;
 
     &__option {
         position: relative;
         display: inline-flex;
-        align-items: baseline;
-        padding: 0 0 0.5rem;
+        align-items: center;
+        justify-content: center;
+        padding: 0.4rem 1rem;
         border: none;
+        border-radius: 999px;
         background: transparent;
         cursor: pointer;
     }
@@ -23,28 +38,29 @@
     }
 
     &__label {
+        // Above the indicator, which is painted behind it.
+        position: relative;
+        z-index: 1;
         font-size: 1.2rem;
-        font-weight: 500;
-        color: #565c6e;
+        font-weight: 600;
+        color: var(--text-less-prominent);
         white-space: nowrap;
         transition: color 150ms ease;
 
         .mw-dial__option--active & {
-            color: #eef3fb;
-            font-weight: 600;
+            color: #fff;
         }
     }
 
-    // The one indicator, shared across both options via layoutId so it
-    // slides rather than reappears - the only motion this control has.
+    // Still one element shared between both options via layoutId, so it
+    // slides across rather than reappearing - it is just a filled segment
+    // now instead of a hairline under the text.
     &__underline {
         position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: 2px;
-        border-radius: 1px;
-        background: #2fb6e0;
+        inset: 0;
+        z-index: 0;
+        border-radius: 999px;
+        background: #1a5cff;
     }
 }
 
