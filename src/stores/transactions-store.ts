@@ -1,6 +1,7 @@
 import { action, computed, makeObservable, observable, reaction } from 'mobx';
 import { formatDate, isEnded } from '@/components/shared';
 import { LogTypes } from '@/external/bot-skeleton';
+import { runTrace } from '@/external/bot-skeleton/utils/run-trace'; // TEMP-DIAGNOSTIC
 import { ProposalOpenContract } from '@deriv/api-types';
 import { TPortfolioPosition, TStores } from '@deriv/stores/types';
 import { TContractInfo } from '../components/summary/summary-card.types';
@@ -58,7 +59,26 @@ export default class TransactionsStore {
 
     get transactions(): TTransaction[] {
         const account_id = getActiveAccountId(this.core?.client);
-        if (account_id) return this.elements[account_id] ?? [];
+        if (account_id) {
+            // TEMP-DIAGNOSTIC: reading a real id but finding no bucket for it
+            // means the writer filed the contracts under a different key.
+            // Capped low - this is a computed and runs on every render.
+            if (!this.elements[account_id] && Object.keys(this.elements).length) {
+                runTrace(
+                    'T2. read MISS',
+                    `want='${account_id}' have=[${Object.keys(this.elements)
+                        .map(k => `'${k}'`)
+                        .join(',')}]`,
+                    4
+                );
+            }
+            return this.elements[account_id] ?? [];
+        }
+        // TEMP-DIAGNOSTIC: no id at all, so nothing can ever be returned -
+        // even for contracts this store is holding right now.
+        if (Object.keys(this.elements).length) {
+            runTrace('T2. read BLOCKED', `account_id empty, holding ${Object.keys(this.elements).length} bucket(s)`, 4);
+        }
         return [];
     }
 
@@ -121,6 +141,18 @@ export default class TransactionsStore {
             exit_tick_time: data.exit_tick_time && formatDate(data.exit_tick_time, 'YYYY-M-D HH:mm:ss [GMT]'),
             profit: is_completed ? data.profit : 0,
         };
+
+        // TEMP-DIAGNOSTIC: the getter above refuses to read a falsy key while
+        // this writer accepts one, so a contract stored under '' is invisible
+        // for good - which is what an empty Transactions tab under a closed
+        // contract looks like. `readable` is the whole question.
+        runTrace(
+            'T1. pushTransaction',
+            `account='${current_account}' readable=${!!current_account} buckets=[${Object.keys(this.elements)
+                .map(k => `'${k}'`)
+                .join(',')}]`,
+            6
+        );
 
         if (!this.elements[current_account]) {
             this.elements = {
