@@ -5,28 +5,38 @@
 const CACHE_NAME = 'deriv-bot-v2';
 const OFFLINE_URL = '/offline.html';
 
+// The worker narrates every request it sees, which on a normal load is dozens
+// of lines and is what the application's own logging has to compete with. A
+// service worker has no localStorage, so unlike the app side this cannot be
+// toggled at runtime - flip it here and redeploy when the worker itself is
+// what needs watching. Warnings and errors below are deliberately left alone.
+const DEBUG = false;
+const debug = (...args) => {
+    if (DEBUG) console.log(...args);
+};
+
 // Files to cache immediately on install
 const PRECACHE_URLS = ['/', '/index.html', '/offline.html', '/manifest.json', '/deriv-logo.svg'];
 
-console.log('[SW] Service worker script loaded');
+debug('[SW] Service worker script loaded');
 
 // Install event - cache essential files
 self.addEventListener('install', event => {
-    console.log('[SW] Installing service worker...');
+    debug('[SW] Installing service worker...');
 
     event.waitUntil(
         (async () => {
             try {
                 const cache = await caches.open(CACHE_NAME);
-                console.log('[SW] Caching precache URLs');
+                debug('[SW] Caching precache URLs');
 
                 // Cache essential files
                 await cache.addAll(PRECACHE_URLS);
-                console.log('[SW] Precache URLs cached successfully');
+                debug('[SW] Precache URLs cached successfully');
 
                 // Force activation
                 await self.skipWaiting();
-                console.log('[SW] Service worker installed and skipping waiting');
+                debug('[SW] Service worker installed and skipping waiting');
             } catch (error) {
                 console.error('[SW] Install failed:', error);
                 // Still skip waiting even if caching fails
@@ -38,7 +48,7 @@ self.addEventListener('install', event => {
 
 // Activate event - clean up and take control
 self.addEventListener('activate', event => {
-    console.log('[SW] Activating service worker...');
+    debug('[SW] Activating service worker...');
 
     event.waitUntil(
         (async () => {
@@ -48,7 +58,7 @@ self.addEventListener('activate', event => {
                 await Promise.all(
                     cacheNames.map(cacheName => {
                         if (cacheName !== CACHE_NAME) {
-                            console.log('[SW] Deleting old cache:', cacheName);
+                            debug('[SW] Deleting old cache:', cacheName);
                             return caches.delete(cacheName);
                         }
                     })
@@ -56,7 +66,7 @@ self.addEventListener('activate', event => {
 
                 // Take control of all clients
                 await self.clients.claim();
-                console.log('[SW] Service worker activated and claimed clients');
+                debug('[SW] Service worker activated and claimed clients');
 
                 // Notify all clients that SW is ready
                 const clients = await self.clients.matchAll();
@@ -115,19 +125,19 @@ self.addEventListener('fetch', event => {
         url.pathname.includes('chunk') ||
         url.pathname.includes('.mjs')
     ) {
-        console.log('[SW] Skipping JS/CSS chunk:', url.pathname);
+        debug('[SW] Skipping JS/CSS chunk:', url.pathname);
         return;
     }
 
     // Skip authentication requests
     if (isAuthRequest(url)) {
-        console.log('[SW] Skipping auth request:', url.pathname);
+        debug('[SW] Skipping auth request:', url.pathname);
         return;
     }
 
     // Skip API requests to prevent interference
     if (isApiRequest(url)) {
-        console.log('[SW] Skipping API request:', url.pathname);
+        debug('[SW] Skipping API request:', url.pathname);
         return;
     }
 
@@ -136,7 +146,7 @@ self.addEventListener('fetch', event => {
     // network hiccup gets silently replaced with a synthetic offline
     // response instead of a real failure the app can react to.
     if (url.hostname === 'open.er-api.com') {
-        console.log('[SW] Skipping exchange-rate request:', url.pathname);
+        debug('[SW] Skipping exchange-rate request:', url.pathname);
         return;
     }
 
@@ -157,7 +167,7 @@ async function handleRequest(request) {
     const url = new URL(request.url);
     const pathname = url.pathname;
 
-    console.log('[SW] Handling request:', pathname);
+    debug('[SW] Handling request:', pathname);
 
     try {
         // Handle different types of requests
@@ -179,7 +189,7 @@ async function handleRequest(request) {
 // Handle navigation requests (HTML pages)
 async function handleNavigation(request) {
     try {
-        console.log('[SW] Handling navigation request');
+        debug('[SW] Handling navigation request');
 
         // Try network first for navigation
         const networkResponse = await fetch(request, { timeout: 3000 });
@@ -188,31 +198,31 @@ async function handleNavigation(request) {
             // Cache successful navigation responses
             const cache = await caches.open(CACHE_NAME);
             await cache.put(request, networkResponse.clone());
-            console.log('[SW] Cached navigation response');
+            debug('[SW] Cached navigation response');
         }
 
         return networkResponse;
     } catch (error) {
-        console.log('[SW] Network failed for navigation, trying cache');
+        debug('[SW] Network failed for navigation, trying cache');
 
         // Try cache first
         const cachedResponse = await caches.match(request);
         if (cachedResponse) {
-            console.log('[SW] Serving navigation from cache');
+            debug('[SW] Serving navigation from cache');
             return cachedResponse;
         }
 
         // Try to serve index.html for SPA routing
         const indexResponse = (await caches.match('/')) || (await caches.match('/index.html'));
         if (indexResponse) {
-            console.log('[SW] Serving index.html for SPA routing');
+            debug('[SW] Serving index.html for SPA routing');
             return indexResponse;
         }
 
         // Last resort: offline page
         const offlineResponse = await caches.match(OFFLINE_URL);
         if (offlineResponse) {
-            console.log('[SW] Serving offline page');
+            debug('[SW] Serving offline page');
             return offlineResponse;
         }
 
@@ -223,12 +233,12 @@ async function handleNavigation(request) {
 // Handle static assets (JS, CSS, images, fonts)
 async function handleStaticAsset(request) {
     try {
-        console.log('[SW] Handling static asset:', request.url);
+        debug('[SW] Handling static asset:', request.url);
 
         // Check cache first for static assets
         const cachedResponse = await caches.match(request);
         if (cachedResponse) {
-            console.log('[SW] Serving static asset from cache');
+            debug('[SW] Serving static asset from cache');
             return cachedResponse;
         }
 
@@ -239,12 +249,12 @@ async function handleStaticAsset(request) {
             // Cache successful responses
             const cache = await caches.open(CACHE_NAME);
             await cache.put(request, networkResponse.clone());
-            console.log('[SW] Cached static asset');
+            debug('[SW] Cached static asset');
         }
 
         return networkResponse;
     } catch (error) {
-        console.log('[SW] Static asset failed:', error);
+        debug('[SW] Static asset failed:', error);
 
         // Try cache again as fallback
         const cachedResponse = await caches.match(request);
@@ -259,13 +269,13 @@ async function handleStaticAsset(request) {
 // Handle API requests
 async function handleApiRequest(request) {
     try {
-        console.log('[SW] Handling API request:', request.url);
+        debug('[SW] Handling API request:', request.url);
 
         // Always try network first for API requests
         const networkResponse = await fetch(request, { timeout: 5000 });
         return networkResponse;
     } catch (error) {
-        console.log('[SW] API request failed, returning offline response');
+        debug('[SW] API request failed, returning offline response');
 
         // Return structured offline response for API failures
         return new Response(
@@ -291,7 +301,7 @@ async function handleApiRequest(request) {
 // Handle generic requests
 async function handleGenericRequest(request) {
     try {
-        console.log('[SW] Handling generic request:', request.url);
+        debug('[SW] Handling generic request:', request.url);
 
         // Try network first
         const networkResponse = await fetch(request);
@@ -316,7 +326,7 @@ async function handleGenericRequest(request) {
 
 // Handle offline fallbacks
 async function handleOfflineFallback(request) {
-    console.log('[SW] Providing offline fallback for:', request.url);
+    debug('[SW] Providing offline fallback for:', request.url);
 
     // For HTML requests, serve cached page or offline page
     if (request.headers.get('accept')?.includes('text/html')) {
@@ -534,7 +544,7 @@ function isApiRequest(url) {
 self.addEventListener('message', event => {
     const { type, data } = event.data || {};
 
-    console.log('[SW] Received message:', type, data);
+    debug('[SW] Received message:', type, data);
 
     switch (type) {
         case 'SKIP_WAITING':
@@ -574,10 +584,10 @@ async function clearCache() {
     try {
         const cacheNames = await caches.keys();
         await Promise.all(cacheNames.map(name => caches.delete(name)));
-        console.log('[SW] All caches cleared');
+        debug('[SW] All caches cleared');
     } catch (error) {
         console.error('[SW] Failed to clear cache:', error);
     }
 }
 
-console.log('[SW] Service worker setup complete');
+debug('[SW] Service worker setup complete');

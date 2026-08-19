@@ -1,4 +1,5 @@
 import { BehaviorSubject } from 'rxjs';
+import { createDebugLogger } from '@/utils/debug-log';
 
 /**
  * Live market data over Deriv's public Options WebSocket
@@ -54,12 +55,8 @@ const REQUEST_TIMEOUT_MS = 10000;
 export const feedConnectionState$ = new BehaviorSubject<TFeedConnectionState>('idle');
 export const feedLatencyMs$ = new BehaviorSubject<number | null>(null);
 
-const log = (stage: string, detail?: unknown) => {
-    // eslint-disable-next-line no-console
-    if (detail === undefined) console.info(`[MW-FEED] ${stage}`);
-    // eslint-disable-next-line no-console
-    else console.info(`[MW-FEED] ${stage}`, detail);
-};
+// Progress is opt-in (localStorage mw_debug = '1'); failures always print.
+const { log } = createDebugLogger('[MW-FEED]');
 
 type TPending = { resolve: (value: Record<string, unknown>) => void; reject: (error: Error) => void };
 

@@ -1,5 +1,6 @@
 import { getAppId } from '@/components/shared';
 import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
+import { createDebugLogger } from '@/utils/debug-log';
 
 /**
  * Deriv's documented "Options Setup" REST API + OTP-authenticated WebSocket
@@ -17,17 +18,8 @@ import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
 
 const OPTIONS_API_HOST = 'https://api.derivws.com';
 
-const log = (stage: string, detail?: unknown) => {
-    // eslint-disable-next-line no-console
-    if (detail === undefined) console.info(`[MW-OPTIONS] ${stage}`);
-    // eslint-disable-next-line no-console
-    else console.info(`[MW-OPTIONS] ${stage}`, detail);
-};
-
-const logError = (stage: string, detail?: unknown) => {
-    // eslint-disable-next-line no-console
-    console.error(`[MW-OPTIONS] ${stage}`, detail);
-};
+// Progress is opt-in (localStorage mw_debug = '1'); failures always print.
+const { log, logError } = createDebugLogger('[MW-OPTIONS]');
 
 export type TOptionsApiErrorKind =
     | 'accounts_fetch_failed'

@@ -1,4 +1,5 @@
 import { getAppId } from '@/components/shared';
+import { createDebugLogger } from '@/utils/debug-log';
 import { generateCodeChallenge, generateCodeVerifier, generateState } from './pkce';
 
 /**
@@ -28,17 +29,8 @@ const SESSION_KEY_ACCESS_TOKEN = 'deriv_oauth_access_token';
 const SESSION_KEY_TOKEN_META = 'deriv_oauth_token_meta';
 const SESSION_KEY_SELECTED_ACCOUNT = 'deriv_oauth_selected_account_id';
 
-const log = (stage: string, detail?: unknown) => {
-    // eslint-disable-next-line no-console
-    if (detail === undefined) console.info(`[MW-AUTH] ${stage}`);
-    // eslint-disable-next-line no-console
-    else console.info(`[MW-AUTH] ${stage}`, detail);
-};
-
-const logError = (stage: string, detail?: unknown) => {
-    // eslint-disable-next-line no-console
-    console.error(`[MW-AUTH] ${stage}`, detail);
-};
+// Progress is opt-in (localStorage mw_debug = '1'); failures always print.
+const { log, logError } = createDebugLogger('[MW-AUTH]');
 
 /** Discriminator so the UI can show a specific message per failure mode. */
 export type TDerivOAuthErrorKind =
