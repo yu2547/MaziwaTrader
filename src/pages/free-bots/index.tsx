@@ -56,9 +56,9 @@ const BOTS: Bot[] = [
     },
     {
         id: '6',
-        name: 'Alpha AI Two Predictions',
-        description: 'Dual prediction AI system for higher accuracy in market forecasting.',
-        fileName: 'Alpha_Ai_Two_Predictions__1765711647659.xml',
+        name: 'Alpha Bot Version 2026',
+        description: 'Digits Over on Volatility 100 with staged recovery, profit target and stop loss.',
+        fileName: 'Alpha_Bot_Version_2026.xml',
         category: 'AI Trading',
         icon: '🎯',
     },
