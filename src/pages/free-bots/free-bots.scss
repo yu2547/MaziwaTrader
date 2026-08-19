@@ -15,7 +15,6 @@
         margin-bottom: 12px;
         color: var(--text-general);
         background: linear-gradient(135deg, var(--brand-red-coral) 0%, #ff6b6b 100%);
-        background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
     }
@@ -152,6 +151,53 @@
             box-shadow: 0 8px 30px rgb(0 0 0 / 12%);
             border-color: var(--brand-red-coral);
         }
+
+        // The featured card. It is deliberately the only one carrying a
+        // coloured border and a ribbon - a badge that every card wore would
+        // stop meaning anything.
+        &--premium {
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #2f5fe0;
+
+            &:hover {
+                border-color: #2f5fe0;
+                box-shadow: 0 10px 34px rgb(47 95 224 / 22%);
+            }
+        }
+    }
+
+    // Sits in the corner the category chip normally occupies, which is why
+    // that chip is not rendered on a premium card.
+    &__ribbon {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 0.6rem 1.6rem;
+        border-bottom-left-radius: 10px;
+        background: linear-gradient(135deg, #ffd233 0%, #f5a300 100%);
+        color: #3d2b00;
+        font-size: 1.1rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        line-height: 1.4;
+    }
+
+    &__rating {
+        display: flex;
+        gap: 0.2rem;
+        margin: 0 0 0.8rem;
+        font-size: 1.6rem;
+        line-height: 1;
+    }
+
+    &__star {
+        color: var(--general-section-1);
+
+        &--on {
+            color: #f5a300;
+        }
     }
 
     &__card-header {
@@ -215,6 +261,22 @@
         &:disabled {
             opacity: 0.7;
             cursor: not-allowed;
+        }
+
+        // Blue rather than the catalogue's coral, so the featured card's call
+        // to action is distinguishable at a glance from the other eleven.
+        &--premium {
+            padding: 14px 20px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #2f5fe0 0%, #1e3f9e 100%);
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+
+            &:hover:not(:disabled) {
+                box-shadow: 0 4px 14px rgb(47 95 224 / 42%);
+            }
         }
 
         svg {

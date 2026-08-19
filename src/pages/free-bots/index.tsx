@@ -11,6 +11,15 @@ interface Bot {
     fileName: string;
     category: string;
     icon: string;
+    /**
+     * Marks a bot as featured: the card gets the PREMIUM ribbon, a rating row
+     * and its own call to action. Optional, so the other cards keep exactly
+     * the layout they already had - the badge only means something as long as
+     * it is the exception.
+     */
+    is_premium?: boolean;
+    /** 0-5, shown as stars on premium cards. */
+    rating?: number;
 }
 
 const BOTS: Bot[] = [
@@ -56,11 +65,14 @@ const BOTS: Bot[] = [
     },
     {
         id: '6',
-        name: 'Alpha Bot Version 2026',
-        description: 'Digits Over on Volatility 100 with staged recovery, profit target and stop loss.',
+        name: 'Alpha Version 2026 Edition',
+        description:
+            'Alpha Version 2026 Edition - Premium trading bot with cutting-edge 2026 algorithms. Features advanced market analysis and automated execution on Volatility 100.',
         fileName: 'Alpha_Bot_Version_2026.xml',
         category: 'AI Trading',
-        icon: '🎯',
+        icon: '🤖',
+        is_premium: true,
+        rating: 5,
     },
     {
         id: '7',
@@ -266,15 +278,32 @@ const FreeBots = observer(({ allowed_categories, subtitle, title }: TFreeBotsPro
 
             <div className='free-bots__grid'>
                 {filteredBots.map(bot => (
-                    <div key={bot.id} className='free-bots__card'>
+                    <div key={bot.id} className={`free-bots__card ${bot.is_premium ? 'free-bots__card--premium' : ''}`}>
+                        {bot.is_premium && <span className='free-bots__ribbon'>Premium</span>}
                         <div className='free-bots__card-header'>
                             <span className='free-bots__card-icon'>{bot.icon}</span>
-                            <span className='free-bots__card-category'>{bot.category}</span>
+                            {/* The ribbon already occupies this corner on a
+                                premium card, and two badges side by side read
+                                as clutter rather than emphasis. */}
+                            {!bot.is_premium && <span className='free-bots__card-category'>{bot.category}</span>}
                         </div>
                         <h3 className='free-bots__card-title'>{bot.name}</h3>
+                        {bot.is_premium && bot.rating ? (
+                            <div className='free-bots__rating' role='img' aria-label={`Rated ${bot.rating} out of 5`}>
+                                {Array.from({ length: 5 }, (_, index) => (
+                                    <span
+                                        key={index}
+                                        aria-hidden='true'
+                                        className={`free-bots__star ${index < (bot.rating ?? 0) ? 'free-bots__star--on' : ''}`}
+                                    >
+                                        ★
+                                    </span>
+                                ))}
+                            </div>
+                        ) : null}
                         <p className='free-bots__card-description'>{bot.description}</p>
                         <button
-                            className='free-bots__card-btn'
+                            className={`free-bots__card-btn ${bot.is_premium ? 'free-bots__card-btn--premium' : ''}`}
                             onClick={() => loadBot(bot)}
                             disabled={loadingBotId === bot.id}
                         >
@@ -282,17 +311,23 @@ const FreeBots = observer(({ allowed_categories, subtitle, title }: TFreeBotsPro
                                 <span className='free-bots__card-btn-loading'>Loading...</span>
                             ) : (
                                 <>
-                                    <span>Load Bot</span>
-                                    <svg
-                                        width='16'
-                                        height='16'
-                                        viewBox='0 0 24 24'
-                                        fill='none'
-                                        stroke='currentColor'
-                                        strokeWidth='2'
-                                    >
-                                        <path d='M5 12h14M12 5l7 7-7 7' />
-                                    </svg>
+                                    <span>{bot.is_premium ? 'Load Premium Bot' : 'Load Bot'}</span>
+                                    {/* The premium button is a full-width label
+                                        rather than a label plus arrow - the
+                                        arrow reads as "next" and competes with
+                                        the wording. */}
+                                    {!bot.is_premium && (
+                                        <svg
+                                            width='16'
+                                            height='16'
+                                            viewBox='0 0 24 24'
+                                            fill='none'
+                                            stroke='currentColor'
+                                            strokeWidth='2'
+                                        >
+                                            <path d='M5 12h14M12 5l7 7-7 7' />
+                                        </svg>
+                                    )}
                                 </>
                             )}
                         </button>
