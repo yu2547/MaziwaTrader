@@ -266,7 +266,15 @@ export default class AppStore {
                 if (!is_socket_opened) return;
                 this.api_helpers_store = {
                     server_time: this.root_store.common.server_time,
-                    ws: api_base.api,
+                    // A getter, not a copy. This object outlives the socket it
+                    // was built beside - api_base replaces its connection on
+                    // reconnect and on an account switch - and ApiHelpers
+                    // consumers each kept their own copy of this value. On an
+                    // OTP session the copy was taken before the trading socket
+                    // existed, so it was null forever after.
+                    get ws() {
+                        return api_base.api;
+                    },
                 };
 
                 if (!ApiHelpers?.instance) {
@@ -345,7 +353,9 @@ export default class AppStore {
 
         this.api_helpers_store = {
             server_time: this.core.common.server_time,
-            ws: api_base.api,
+            get ws() {
+                return api_base.api;
+            },
         };
     };
 
