@@ -15,7 +15,6 @@ import {
     unrecoverable_errors,
 } from '@/external/bot-skeleton';
 import { getSelectedTradeType } from '@/external/bot-skeleton/scratch/utils';
-import { runTrace } from '@/external/bot-skeleton/utils/run-trace'; // TEMP-DIAGNOSTIC
 import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
 // import { journalError, switch_account_notification } from '@/utils/bot-notifications';
 import GTM from '@/utils/gtm';
@@ -197,7 +196,6 @@ export default class RunPanelStore {
         const { summary_card, self_exclusion } = this.root_store;
         const { client, ui } = this.core;
         const is_ios = mobileOSDetect() === 'iOS';
-        runTrace('0. onRunButtonClick entered', `logged_in=${client.is_logged_in} otp=${api_base.is_otp_transport}`);
         this.dbot.saveRecentWorkspace();
         this.dbot.unHighlightAllBlocks();
         // client.is_logged_in only ever reflects the classic AuthWrapper flow
@@ -227,7 +225,6 @@ export default class RunPanelStore {
                     return;
                 }
             } else {
-                runTrace('0a. EXIT: no stored token, login dialog shown');
                 this.showLoginDialog();
                 return;
             }
@@ -297,7 +294,6 @@ export default class RunPanelStore {
         if (is_ios || isSafari()) this.preloadAudio();
 
         if (!self_exclusion.should_bot_run) {
-            runTrace('0b. EXIT: self-exclusion blocked the run');
             self_exclusion.setIsRestricted(true);
             return;
         }
@@ -306,7 +302,6 @@ export default class RunPanelStore {
         this.registerBotListeners();
 
         if (!this.dbot.shouldRunBot()) {
-            runTrace('0c. EXIT: shouldRunBot() returned false', 'a before-run check returned falsy');
             this.unregisterBotListeners();
             return;
         }

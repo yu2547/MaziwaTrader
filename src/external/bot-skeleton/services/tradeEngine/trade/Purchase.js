@@ -1,5 +1,4 @@
 import { LogTypes } from '../../../constants/messages';
-import { runTrace } from '../../../utils/run-trace'; // TEMP-DIAGNOSTIC
 import { api_base } from '../../api/api-base';
 import { contractStatus, info, log } from '../utils/broadcast';
 import { doUntilDone, getUUID, recoverFromError, tradeOptionToBuy } from '../utils/helpers';
@@ -14,19 +13,12 @@ export default Engine =>
         purchase(contract_type) {
             // Prevent calling purchase twice
             if (this.store.getState().scope !== BEFORE_PURCHASE) {
-                runTrace('15a. purchase SKIPPED', `scope=${this.store.getState().scope} (expected ${BEFORE_PURCHASE})`);
                 return Promise.resolve();
             }
-
-            runTrace(
-                '15. purchase entered',
-                `${contract_type} proposal_path=${this.is_proposal_subscription_required}`
-            );
 
             const onSuccess = response => {
                 // Don't unnecessarily send a forget request for a purchased contract.
                 const { buy } = response;
-                runTrace('17. BUY ACCEPTED', `contract_id=${buy?.contract_id} price=${buy?.buy_price}`, 10);
 
                 contractStatus({
                     id: 'contract.purchase_received',
@@ -54,13 +46,8 @@ export default Engine =>
 
             if (this.is_proposal_subscription_required) {
                 const { id, askPrice } = this.selectProposal(contract_type);
-                runTrace('16. buy by proposal id', `price=${askPrice}`);
 
-                const action = () =>
-                    api_base.api.send({ buy: id, price: askPrice }).catch(error => {
-                        runTrace('X. BUY REJECTED', error?.error?.code ?? error?.message ?? String(error), 10);
-                        throw error;
-                    });
+                const action = () => api_base.api.send({ buy: id, price: askPrice });
 
                 this.isSold = false;
 

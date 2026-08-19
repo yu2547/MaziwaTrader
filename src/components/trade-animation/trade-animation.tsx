@@ -4,7 +4,6 @@ import { observer } from 'mobx-react-lite';
 import ContractResultOverlay from '@/components/contract-result-overlay';
 import { DBOT_TABS } from '@/constants/bot-contents';
 import { contract_stages } from '@/constants/contract-stage';
-import { runTrace } from '@/external/bot-skeleton/utils/run-trace'; // TEMP-DIAGNOSTIC
 import { useApiBase } from '@/hooks/useApiBase';
 import { useStore } from '@/hooks/useStore';
 import { LabelPairedPlayLgFillIcon, LabelPairedSquareLgFillIcon } from '@deriv/quill-icons/LabelPaired';
@@ -222,16 +221,18 @@ const TradeAnimation = observer(({ className, should_show_overlay }: TTradeAnima
                             onStopBotClick();
                             return;
                         }
-                        // TEMP-DIAGNOSTIC: onRunButtonClick is async and was
-                        // called with nothing attached, so anything it threw
-                        // became an unhandled rejection - no dialog, no journal
-                        // line, no console entry the user would find. A run
-                        // that died that way looked exactly like a run that
-                        // never started. This only reports; the outcome is
-                        // unchanged.
-                        Promise.resolve(onRunButtonClick()).catch(error =>
-                            runTrace('X. onRunButtonClick THREW', error?.message ?? String(error), 10)
-                        );
+                        // onRunButtonClick is async and used to be called with
+                        // nothing attached, so anything it threw became an
+                        // unhandled rejection - no dialog, no journal line,
+                        // nothing a user would ever find. A run that died that
+                        // way was indistinguishable from a run that never
+                        // started, which cost a long time to diagnose once.
+                        // The outcome is unchanged; the failure is just no
+                        // longer silent.
+                        Promise.resolve(onRunButtonClick()).catch(error => {
+                            // eslint-disable-next-line no-console
+                            console.error('Run failed to start:', error);
+                        });
                         // Cast to any to avoid TypeScript error with subpage_name
                         rudderStackSendRunBotEvent({ subpage_name: safeActiveTab } as any);
                     }}

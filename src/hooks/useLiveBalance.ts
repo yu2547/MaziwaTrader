@@ -61,13 +61,8 @@ const useLiveBalance = () => {
         let subscription: { unsubscribe?: () => void } | undefined;
         let is_cancelled = false;
 
-        const apply = (payload: unknown, source: string) => {
+        const apply = (payload: unknown) => {
             const parsed = readBalance(payload);
-            // TEMPORARY: logs the shape of the reply so the field mapping can
-            // be confirmed against the real response. Prints a balance and a
-            // currency only - never the access token. Remove once verified.
-            // eslint-disable-next-line no-console
-            console.info('[MW-BALANCE]', source, 'parsed:', parsed, 'raw:', payload);
             if (parsed) oauth_session.setLiveBalance(parsed.balance, parsed.currency);
         };
 
@@ -84,17 +79,22 @@ const useLiveBalance = () => {
             // a change that may never come.
             api.send({ balance: 1 })
                 .then((response: unknown) => {
-                    if (!is_cancelled) apply(response, 'read');
+                    if (!is_cancelled) apply(response);
                 })
                 .catch((error: unknown) => {
+                    // This failing is exactly what left the header reading
+                    // "Loading..." forever, so it stays visible rather than
+                    // being swallowed. Code and message only - the error echoes
+                    // the request, and nothing else in it is worth printing.
+                    const detail = (error as { error?: { code?: string; message?: string } })?.error;
                     // eslint-disable-next-line no-console
-                    console.info('[MW-BALANCE] read failed', error);
+                    console.warn('Balance read failed:', detail?.code ?? 'unknown', detail?.message ?? error);
                 });
 
             // Everything after the first value.
             subscription = api.onMessage?.().subscribe(({ data }: { data: Record<string, unknown> }) => {
                 if (data?.msg_type !== 'balance') return;
-                apply(data, 'stream');
+                apply(data);
             });
         };
 
