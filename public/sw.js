@@ -1,5 +1,8 @@
 // Comprehensive Service Worker for Deriv Bot Offline Functionality
-const CACHE_NAME = 'deriv-bot-v1';
+// Bumped with the cross-origin skip below: the activate handler deletes every
+// cache whose name does not match, so renaming here discards the entries the
+// old worker stored - including the half-failed third-party ones.
+const CACHE_NAME = 'deriv-bot-v2';
 const OFFLINE_URL = '/offline.html';
 
 // Files to cache immediately on install
@@ -82,6 +85,24 @@ self.addEventListener('fetch', event => {
 
     // Skip chrome-extension and other non-http requests
     if (!request.url.startsWith('http')) {
+        return;
+    }
+
+    // Skip anything not served by this origin.
+    //
+    // Third-party assets are not ours to cache, and under this app's Content
+    // Security Policy the worker cannot even fetch most of them: a request it
+    // makes here is governed by connect-src, which does not list the font and
+    // analytics hosts that font-src and img-src do allow the page itself to
+    // use. Google Fonts was the worst of it - the pathname ends in .woff2, so
+    // it routed to handleStaticAsset, whose fetch was refused, which threw,
+    // which fell through to the offline fallback, and every font request
+    // produced four console errors. Several hundred of them buried the
+    // application's own logging.
+    //
+    // Letting these go straight to the network is also simply correct: the
+    // browser caches them perfectly well on its own.
+    if (url.origin !== self.location.origin) {
         return;
     }
 
