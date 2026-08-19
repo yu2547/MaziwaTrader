@@ -58,7 +58,15 @@
         <div id="modal_root" class="modal-root"></div>
         <div id="popup_root" class="popup-root"></div>
         <div id="root"></div>
-        <!-- LiveChat script -->
+        <!--
+            LiveChat script.
+
+            CSP: script-src in vercel.json allows this by the sha256 hash of
+            its exact contents, so ANY edit below - even whitespace - silently
+            stops it running in production with "Executing inline script
+            violates the following Content Security Policy directive". The
+            browser prints the hash it wanted; put that in vercel.json.
+        -->
         <script type="text/javascript" defer>
             window.__lc = window.__lc || {};
             window.__lc.license = 12049137;
@@ -102,7 +110,9 @@
         </script>
         <!-- End LiveChat script -->
 
-        <!-- Browser Service Worker Prevention -->
+        <!-- Browser Service Worker Prevention.
+             Allowed by sha256 hash in vercel.json - see the note above the
+             LiveChat script before editing anything in here. -->
         <script>
             // Check browser compatibility and prevent service worker issues
             const userAgent = navigator.userAgent.toLowerCase();
