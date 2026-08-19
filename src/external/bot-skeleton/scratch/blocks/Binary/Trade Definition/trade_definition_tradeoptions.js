@@ -249,8 +249,19 @@ window.Blockly.Blocks.trade_definition_tradeoptions = {
     updateAmountLimits() {
         const { account_limits } = ApiHelpers?.instance ?? {};
         if (!account_limits) return;
-        const { currency, landing_company_shortcode } = DBotStore.instance.client;
+        const { landing_company_shortcode } = DBotStore.instance.client;
+        // Same precedence as the code generator below: the connected account's
+        // currency, then ClientStore. Reading ClientStore first here asked for
+        // stake limits in AUD on a USD account.
+        const currency = api_base.account_info?.currency || DBotStore.instance.client?.currency;
         if (isAuthorizing$.getValue()) return;
+
+        // The label is defined as CURRENCY[0] from a static list - which is
+        // AUD - so the block read "Stake: AUD" regardless of the account. The
+        // generated code has always used the real currency, so this was only
+        // ever a wrong label, but it is the one the user reads before pressing
+        // Run.
+        if (currency) this.getField('CURRENCY_LIST')?.setValue(getCurrencyDisplayCode(currency));
         account_limits.getStakePayoutLimits(currency, landing_company_shortcode, this.selected_market).then(limits => {
             const unsupported_trade_types = ['multiplier', 'accumulator'];
             if (unsupported_trade_types.includes(this.selected_trade_type)) return;
