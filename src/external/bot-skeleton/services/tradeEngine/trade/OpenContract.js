@@ -1,4 +1,8 @@
 import { getRoundedNumber } from '@/components/shared';
+import { localize } from '@deriv-com/translations';
+import { config } from '../../../constants/config';
+import { MessageTypes } from '../../../constants/messages';
+import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
 import { contract as broadcastContract, contractStatus } from '../utils/broadcast';
 import { openContractReceived, sell } from './state/actions';
@@ -34,6 +38,18 @@ export default Engine =>
                         this.contractId = '';
                         clearTimeout(this.transaction_recovery_timeout);
                         this.updateTotals(contract);
+
+                        // Real results are what let Virtual Hook go back to
+                        // watching. Counted here rather than at purchase,
+                        // because only a settled contract has a result.
+                        if (this.virtual_hook?.recordRealResult(Number(contract.profit) > 0)) {
+                            globalObserver.emit('ui.log.notify', {
+                                message: localize('Virtual Hook re-armed - watching again before the next real trade.'),
+                                message_type: MessageTypes.NOTIFY,
+                                className: 'journal__text',
+                                sound: config().lists.NOTIFICATION_SOUND[0][1],
+                            });
+                        }
                         contractStatus({
                             id: 'contract.sold',
                             data: contract.transaction_ids.sell,

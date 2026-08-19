@@ -1,7 +1,11 @@
-import { LogTypes } from '../../../constants/messages';
+import { localize } from '@deriv-com/translations';
+import { config } from '../../../constants/config';
+import { LogTypes, MessageTypes } from '../../../constants/messages';
+import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
 import { contractStatus, info, log } from '../utils/broadcast';
 import { doUntilDone, getUUID, recoverFromError, tradeOptionToBuy } from '../utils/helpers';
+import { canEvaluateVirtually } from '../utils/virtual-hook-runner';
 import { purchaseSuccessful } from './state/actions';
 import { BEFORE_PURCHASE } from './state/constants';
 
@@ -14,6 +18,19 @@ export default Engine =>
             // Prevent calling purchase twice
             if (this.store.getState().scope !== BEFORE_PURCHASE) {
                 return Promise.resolve();
+            }
+
+            // Virtual Hook: while it is watching, this contract is scored on
+            // paper and no `buy` is sent. Returning to the before-purchase
+            // scope afterwards puts the bot back here for the next tick,
+            // without a contract ever existing - so nothing reaches
+            // Transactions, Summary or the balance.
+            if (this.virtual_hook?.isWatching()) {
+                const { duration, duration_unit, prediction } = this.tradeOptions ?? {};
+                if (canEvaluateVirtually(contract_type, duration_unit)) {
+                    return this.runVirtualContract(contract_type, Number(duration) || 1, prediction);
+                }
+                this.virtual_hook.standDown(contract_type);
             }
 
             const onSuccess = response => {
@@ -114,6 +131,63 @@ export default Engine =>
                 delayIndex++
             ).then(onSuccess);
         }
+        /**
+         * Scores one paper contract off the live tick stream, then hands the
+         * bot back to the before-purchase scope so the next tick is
+         * considered. No request is sent and no contract is created.
+         */
+        async runVirtualContract(contract_type, duration, prediction) {
+            const pip_size = this.getPipSize();
+            const entry_tick = await this.getLastTick();
+
+            const nextTick = () =>
+                new Promise(resolve => {
+                    const previous = this.data?.virtual_last_epoch;
+                    const poll = setInterval(async () => {
+                        const tick = await this.getLastTick(true).catch(() => null);
+                        if (!tick || tick.epoch === previous) return;
+                        clearInterval(poll);
+                        if (this.data) this.data.virtual_last_epoch = tick.epoch;
+                        resolve(tick.quote);
+                    }, 400);
+                    // A stalled feed must not hold the bot here forever.
+                    setTimeout(() => {
+                        clearInterval(poll);
+                        resolve(null);
+                    }, 60000);
+                });
+
+            const is_win = await this.virtual_hook.score({
+                contract_type,
+                prediction,
+                duration,
+                pip_size,
+                entry_tick,
+                nextTick,
+            });
+
+            if (is_win === null) {
+                // Could not be scored - stand down rather than invent a result.
+                this.virtual_hook.standDown(contract_type);
+            } else {
+                // Its own journal line rather than a contract log type - this
+                // is not a trade, and it must not read like one.
+                globalObserver.emit('ui.log.notify', {
+                    message: this.virtual_hook.isWatching()
+                        ? localize('Virtual trade {{result}} - no money at risk.', {
+                              result: is_win ? localize('won') : localize('lost'),
+                          })
+                        : localize('Virtual trade lost. Trading for real from the next entry.'),
+                    message_type: MessageTypes.NOTIFY,
+                    className: 'journal__text',
+                    sound: config().lists.NOTIFICATION_SOUND[0][1],
+                });
+            }
+
+            this.observer.emit('REVERT', 'before');
+            return Promise.resolve();
+        }
+
         getPurchaseReference = () => purchase_reference;
         regeneratePurchaseReference = () => {
             purchase_reference = getUUID();

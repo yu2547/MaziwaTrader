@@ -362,6 +362,36 @@ const hasBlockOfType = (targetType, workspace) => {
     return allBlocks.some(block => block.type === targetType && !!block.parentBlock_);
 };
 
+/**
+ * Virtual Hook settings off the trade-parameters block. They live in
+ * block.data as JSON (see utils/virtual-hook.ts) so they travel with the
+ * strategy's XML; the token deliberately does not live there.
+ */
+export const readVirtualHookFromWorkspace = () => {
+    const disabled = { enabled: false, max_virtual_loss_steps: 1, required_real_wins: 1, virtual_stake: 0 };
+    try {
+        const workspace = window.Blockly?.derivWorkspace;
+        const block = workspace?.getAllBlocks()?.find(candidate => candidate.type === 'trade_definition_market');
+        if (!block) return disabled;
+
+        // The checkbox on the block face is the switch a user actually sees,
+        // so it wins over whatever the stored settings claim.
+        const is_checked = block.getFieldValue?.('VIRTUAL_HOOK') === 'TRUE';
+        if (!is_checked || !block.data) return disabled;
+
+        const stored = JSON.parse(block.data)?.vh ?? {};
+        return {
+            enabled: true,
+            max_virtual_loss_steps: Math.max(1, Math.floor(Number(stored.max_virtual_loss_steps)) || 1),
+            required_real_wins: Math.max(1, Math.floor(Number(stored.required_real_wins)) || 1),
+            virtual_stake: Math.max(0, Number(stored.virtual_stake) || 0),
+        };
+    } catch {
+        // A malformed setting must not be able to stop a bot from running.
+        return disabled;
+    }
+};
+
 export const checkBlocksForProposalRequest = () => {
     const workspace = window.Blockly.derivWorkspace;
     const has_payout_block = hasBlockOfType('payout', workspace);

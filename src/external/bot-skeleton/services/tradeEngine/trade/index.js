@@ -1,11 +1,14 @@
 import { applyMiddleware, createStore } from 'redux';
 import { thunk } from 'redux-thunk';
 import { localize } from '@deriv-com/translations';
+import { config } from '../../../constants/config';
+import { MessageTypes } from '../../../constants/messages';
 import { createError } from '../../../utils/error';
 import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
-import { checkBlocksForProposalRequest, doUntilDone } from '../utils/helpers';
+import { checkBlocksForProposalRequest, doUntilDone, readVirtualHookFromWorkspace } from '../utils/helpers';
 import { expectInitArg } from '../utils/sanitize';
+import VirtualHookRunner from '../utils/virtual-hook-runner';
 import { proposalsReady, start } from './state/actions';
 import * as constants from './state/constants';
 import rootReducer from './state/reducers';
@@ -74,6 +77,8 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
         };
         this.subscription_id_for_accumulators = null;
         this.is_proposal_requested_for_accumulators = false;
+        // Constructed disabled; start() configures it from the workspace.
+        this.virtual_hook = new VirtualHookRunner();
         this.store = createStore(rootReducer, applyMiddleware(thunk));
 
         // observeBalance/observeProposals/observeOpenContract (called by observe()
@@ -118,6 +123,22 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
         this.tradeOptions = { ...validated_trade_options, symbol: this.options.symbol };
         this.store.dispatch(start());
         this.checkLimits(validated_trade_options);
+
+        // Read once per run, from the block the user actually ticked. Disabled
+        // is the default and costs nothing, so a bot without the hook behaves
+        // exactly as it did before this existed.
+        this.virtual_hook.configure(readVirtualHookFromWorkspace());
+        if (this.virtual_hook.is_enabled) {
+            globalObserver.emit('ui.log.notify', {
+                message: localize(
+                    'Virtual Hook on: watching for {{steps}} virtual loss(es) before trading real money.',
+                    { steps: this.virtual_hook.settings.max_virtual_loss_steps }
+                ),
+                message_type: MessageTypes.NOTIFY,
+                className: 'journal__text',
+                sound: config().lists.NOTIFICATION_SOUND[0][1],
+            });
+        }
 
         this.makeDirectPurchaseDecision();
     }
