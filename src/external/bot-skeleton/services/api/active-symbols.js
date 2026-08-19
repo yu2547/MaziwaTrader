@@ -64,10 +64,41 @@ const humanizeCode = code =>
         .replace(/\b\w/g, character => character.toUpperCase());
 
 /**
- * Fills in the classic field names when the Options shape is detected, and
- * passes classic responses through untouched - the check is per-symbol on
- * whether the classic key is already there, so a mixed or changed response
- * cannot break either transport.
+ * Volatility instruments follow a strict code pattern, so their names can be
+ * derived rather than listed: the authenticated response omits symbol names
+ * entirely and the dropdown fell back to showing the raw code - "1HZ100V"
+ * where the instrument is Volatility 100 (1s) Index. Deriving also means a
+ * volatility Deriv adds later is named correctly without a code change.
+ */
+const deriveSymbolName = code => {
+    const one_second = /^1HZ(\d+)V$/.exec(code ?? '');
+    if (one_second) return `Volatility ${one_second[1]} (1s) Index`;
+
+    const standard = /^R_(\d+)$/.exec(code ?? '');
+    if (standard) return `Volatility ${standard[1]} Index`;
+
+    // Forex and crypto are coded the same way - a prefix and two currency
+    // codes - and would otherwise read as "frxAUDCAD" in the dropdown.
+    const pair = /^(?:frx|cry)([A-Z]{3})([A-Z]{3})$/.exec(code ?? '');
+    if (pair) return `${pair[1]}/${pair[2]}`;
+
+    return null;
+};
+
+/**
+ * Brings both transports to one set of names.
+ *
+ * The maps above take precedence over whatever the response carries, rather
+ * than only filling gaps. The two transports disagree: the authenticated one
+ * calls the same market "Synthetic Index" and its submarket "Random Index",
+ * which are Deriv's older internal labels, while the platform - and the rest
+ * of this app - calls them Derived and Continuous Indices. Letting the
+ * response win meant the market dropdown read differently depending on which
+ * socket happened to be connected.
+ *
+ * Only the naming is normalised. Codes, market/submarket keys and trading
+ * state are passed through untouched, so nothing downstream that matches on
+ * `market === 'synthetic_index'` is affected.
  */
 export const normalizeActiveSymbols = (symbols = []) =>
     symbols.map(symbol => {
@@ -78,10 +109,10 @@ export const normalizeActiveSymbols = (symbols = []) =>
         return {
             ...symbol,
             symbol: code,
-            display_name: symbol.display_name ?? symbol.underlying_symbol_name ?? code,
-            market_display_name: symbol.market_display_name ?? MARKET_DISPLAY_NAMES[market] ?? humanizeCode(market),
+            display_name: deriveSymbolName(code) ?? symbol.display_name ?? symbol.underlying_symbol_name ?? code,
+            market_display_name: MARKET_DISPLAY_NAMES[market] ?? symbol.market_display_name ?? humanizeCode(market),
             submarket_display_name:
-                symbol.submarket_display_name ?? SUBMARKET_DISPLAY_NAMES[submarket] ?? humanizeCode(submarket),
+                SUBMARKET_DISPLAY_NAMES[submarket] ?? symbol.submarket_display_name ?? humanizeCode(submarket),
             pip: symbol.pip ?? symbol.pip_size,
         };
     });
