@@ -1,0 +1,137 @@
+// Above the Blockly workspace and its flyout, and above the run panel, since
+// it is opened from a block sitting under both.
+.mw-vh {
+    position: fixed;
+    inset: 0;
+    z-index: 10060;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &__overlay {
+        position: absolute;
+        inset: 0;
+        background: rgb(0 0 0 / 45%);
+    }
+
+    &__dialog {
+        position: relative;
+        width: min(52rem, calc(100vw - 3.2rem));
+        max-height: calc(100vh - 6.4rem);
+        display: flex;
+        flex-direction: column;
+        border-radius: 12px;
+        background: var(--general-main-1);
+        box-shadow: 0 20px 60px rgb(0 0 0 / 35%);
+        overflow: hidden;
+    }
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.6rem;
+        padding: 2rem 2.4rem 1.2rem;
+    }
+
+    &__title {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--text-prominent);
+    }
+
+    &__close {
+        width: 3.2rem;
+        height: 3.2rem;
+        border: none;
+        border-radius: 50%;
+        background: transparent;
+        font-size: 1.6rem;
+        color: var(--text-general);
+        cursor: pointer;
+
+        &:hover {
+            background: var(--general-section-1);
+        }
+    }
+
+    &__body {
+        flex: 1;
+        padding: 0.8rem 2.4rem 1.6rem;
+        overflow-y: auto;
+    }
+
+    &__row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.6rem;
+        padding: 1.2rem 0;
+    }
+
+    &__label {
+        font-size: 1.4rem;
+        color: var(--text-general);
+    }
+
+    &__input {
+        width: 20rem;
+        max-width: 50%;
+        padding: 0.9rem 1.2rem;
+        border: 1px solid var(--border-normal);
+        border-radius: 6px;
+        background: var(--general-main-1);
+        font-size: 1.4rem;
+        color: var(--text-prominent);
+
+        &:focus {
+            outline: 2px solid #1a5cff;
+            outline-offset: -1px;
+        }
+    }
+
+    &__checkbox {
+        width: 2rem;
+        height: 2rem;
+        cursor: pointer;
+    }
+
+    &__note {
+        margin: 0.4rem 0 0;
+        font-size: 1.2rem;
+        line-height: 1.5;
+        color: var(--text-less-prominent);
+    }
+
+    &__footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1.2rem;
+        padding: 1.6rem 2.4rem 2rem;
+        border-top: 1px solid var(--general-section-1);
+    }
+
+    &__btn {
+        padding: 1rem 2rem;
+        border: 1px solid var(--border-normal);
+        border-radius: 6px;
+        background: var(--general-main-1);
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: var(--text-general);
+        cursor: pointer;
+
+        &--primary {
+            border-color: #1a5cff;
+            background: #1a5cff;
+            color: #fff;
+        }
+    }
+}
+
+@media (width <= 600px) {
+    .mw-vh__input {
+        width: 14rem;
+    }
+}

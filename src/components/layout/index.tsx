@@ -5,6 +5,7 @@ import { observer } from 'mobx-react-lite';
 import { Outlet, useLocation } from 'react-router-dom';
 import PWAUpdateNotification from '@/components/pwa-update-notification';
 import RunPanel from '@/components/run-panel';
+import VirtualHookModal from '@/components/virtual-hook-modal';
 import { api_base } from '@/external/bot-skeleton';
 import { V2GetActiveToken } from '@/external/bot-skeleton/services/api/appId';
 import { useOfflineDetection } from '@/hooks/useOfflineDetection';
@@ -280,6 +281,11 @@ const Layout = observer(() => {
                 <>
                     <RunPanel />
                     <ExecutionBar />
+                    {/* Opened by the trade-parameters block's VH Settings
+                        button. Lives in the shell rather than the Bot Builder
+                        page so it is mounted whenever a workspace can exist,
+                        and renders nothing until the block asks for it. */}
+                    <VirtualHookModal />
                 </>
             )}
             {!isCallbackPage && !isLandingPage && isDesktop && <Footer />}
