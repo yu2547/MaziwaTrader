@@ -129,8 +129,15 @@ const useTMB = (): UseTMBReturn => {
                 method: 'GET',
                 credentials: 'include',
                 headers: {
+                    // Accept only. Content-Type on a GET describes a body that
+                    // does not exist, and it is not a CORS-safelisted header,
+                    // so it turned this into a preflighted request - which
+                    // oauth.deriv.com answers with a redirect, and a redirect
+                    // is not allowed for a preflight. That is the "Failed to
+                    // get active sessions: TypeError: Failed to fetch" on every
+                    // page load. Without it this is a simple request and no
+                    // preflight is sent.
                     Accept: 'application/json',
-                    'Content-Type': 'application/json',
                 },
             });
 

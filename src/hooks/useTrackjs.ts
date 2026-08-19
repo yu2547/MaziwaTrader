@@ -12,6 +12,11 @@ const useTrackjs = () => {
 
     const initTrackJS = (loginid: string) => {
         try {
+            // No token configured for this deployment, so installing only gets
+            // us TrackJS complaining "missing token" on a loop in the console
+            // while reporting nothing. Skip it until a token exists.
+            if (!TRACKJS_TOKEN) return;
+
             if (!TrackJS.isInstalled()) {
                 TrackJS.install({
                     application: 'standalone-deriv-bot',
