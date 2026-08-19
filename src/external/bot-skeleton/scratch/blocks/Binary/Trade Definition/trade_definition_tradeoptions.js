@@ -640,13 +640,22 @@ window.Blockly.JavaScript.javascriptGenerator.forBlock.trade_definition_tradeopt
             'AMOUNT',
             window.Blockly.JavaScript.javascriptGenerator.ORDER_ATOMIC
         ) || '0';
+    // The currency of the account that is actually connected wins.
+    //
     // DBotStore.instance.client is the legacy ClientStore, which an OAuth/OTP
-    // session never populates - so this was empty and the block fell back to
-    // its default currency (AUD) while the account was actually USD. That is
-    // not cosmetic: the value goes straight into the proposal request, so a
-    // mismatched currency makes the quote fail. api_base.account_info carries
-    // the real currency of whichever transport is connected.
-    const currency = DBotStore.instance.client?.currency || api_base.account_info?.currency || 'USD';
+    // session never populates - but it is not empty either: it holds a default
+    // of AUD. Reading it first therefore did not fall through, it returned
+    // 'AUD' for a USD account, and this value goes straight into the proposal
+    // and the buy. Deriv priced the contract in AUD, the account held none,
+    // and the purchase came back InsufficientBalance on an account with five
+    // figures in it - confirmed from a live run: `buy by proposal id
+    // price=100` followed by `BUY REJECTED InsufficientBalance`, with
+    // logged_in=false otp=true.
+    //
+    // api_base.account_info is set from the authorised connection on both
+    // transports, so it is the right source for either kind of session;
+    // ClientStore stays as the fallback.
+    const currency = api_base.account_info?.currency || DBotStore.instance.client?.currency || 'USD';
     const duration_type = block.getFieldValue('DURATIONTYPE_LIST') || '0';
     const duration_value =
         window.Blockly.JavaScript.javascriptGenerator.valueToCode(
