@@ -4,8 +4,7 @@ import { formatDate } from '@/components/shared';
 import { LogTypes, MessageTypes } from '@/external/bot-skeleton';
 import { config } from '@/external/bot-skeleton/constants/config';
 import { localize } from '@deriv-com/translations';
-import { getActiveAccountId } from '../utils/active-account-id';
-import { isDebugEnabled } from '../utils/debug-log';
+import { getActiveAccountId, getActiveAccountLabel } from '../utils/active-account-id';
 import { isCustomJournalMessage } from '../utils/journal-notifications';
 import { getStoredItemsByKey, getStoredItemsByUser, setStoredItemsByKey } from '../utils/session-storage';
 import { getSetting, storeSetting } from '../utils/settings';
@@ -104,8 +103,6 @@ export default class JournalStore {
     ];
     journal_filters: string[] = [];
     unfiltered_messages: TMessageItem[] = [];
-    /** TEMP-DIAGNOSTIC: caps the read log so a computed cannot flood output. */
-    read_log_count = 0;
 
     restoreStoredJournals() {
         const client = this.core.client as RootStore['client'];
@@ -164,12 +161,18 @@ export default class JournalStore {
         extra: { current_currency?: string; currency?: string } = {}
     ) {
         const { client } = this.core;
-        const { loginid, account_list } = client as RootStore['client'];
 
-        if (loginid) {
-            const current_account = account_list?.find(account => account?.loginid === loginid);
-            extra.current_currency = current_account?.is_virtual ? 'Demo' : current_account?.currency;
+        // "Demo" or the currency, resolved from whichever transport is live.
+        // Reading it off client.account_list alone meant an OAuth session -
+        // which never populates that list - both lost the account name on
+        // every entry and had its welcome message dropped by the guard below.
+        const account_label = getActiveAccountLabel(client as RootStore['client']);
+
+        if (account_label) {
+            extra.current_currency = account_label;
         } else if (message === LogTypes.WELCOME) {
+            // Still no account. A welcome line that names no account is worse
+            // than none, and the reaction pushes one once the account lands.
             return;
         }
 
@@ -179,18 +182,6 @@ export default class JournalStore {
 
         this.unfiltered_messages.unshift({ date, time, message, message_type, className, unique_id, extra });
         this.unfiltered_messages = this.unfiltered_messages.slice(); // force array update
-
-        // TEMP-DIAGNOSTIC (localStorage mw_debug = '1'): a message reached the
-        // journal. If the panel is empty and none of these ever print, the
-        // observer listeners are not registered and nothing is arriving - a
-        // different problem from messages arriving and being filtered out.
-        if (isDebugEnabled()) {
-            // eslint-disable-next-line no-console
-            console.info(
-                `[MW-JOURNAL] PUSH type='${message_type}' total=${this.unfiltered_messages.length} ` +
-                    `filters=[${this.journal_filters.join(',')}]`
-            );
-        }
     }
 
     get filtered_messages() {
@@ -200,20 +191,6 @@ export default class JournalStore {
                 message =>
                     this.journal_filters.length && this.journal_filters.some(filter => message.message_type === filter)
             );
-
-        // TEMP-DIAGNOSTIC (localStorage mw_debug = '1'): the read side, paired
-        // with PUSH above. `held` greater than zero while `shown` is zero means
-        // the messages are there and the saved filter set is hiding them -
-        // journal_filters is restored from a persisted setting, so an empty or
-        // stale one silently blanks the panel. Capped, since this is a computed.
-        if (isDebugEnabled() && this.read_log_count < 30) {
-            this.read_log_count += 1;
-            // eslint-disable-next-line no-console
-            console.info(
-                `[MW-JOURNAL] read #${this.read_log_count} held=${this.unfiltered_messages.length} ` +
-                    `shown=${rows.length} filters=[${this.journal_filters.join(',')}]`
-            );
-        }
 
         return rows;
     }
@@ -238,6 +215,7 @@ export default class JournalStore {
 
     registerReactions() {
         const client = this.core.client as RootStore['client'];
+        const { oauth_session } = this.root_store;
 
         // Write journal messages to session storage on each change in unfiltered messages.
         const disposeWriteJournalMessageListener = reaction(
@@ -249,22 +227,47 @@ export default class JournalStore {
             }
         );
 
-        // Attempt to load cached journal messages on client loginid change.
+        // Load the cached journal and greet the user once the active account
+        // resolves.
+        //
+        // This used to watch client.loginid and then await a matching entry in
+        // client.account_list. An OAuth session populates neither, so that
+        // `when` never resolved and neither welcome message was ever pushed -
+        // the panel stayed empty on load until the first bot log arrived.
         const disposeJournalMessageListener = reaction(
-            () => client?.loginid,
-            async loginid => {
-                await when(() => {
-                    const has_account = client.account_list?.find(
-                        (account: TAccountList[number]) => account.loginid === loginid
+            () => {
+                // Both observables are read unconditionally on purpose. MobX
+                // only tracks what the expression actually reads, so a
+                // short-circuiting `||` would stop tracking whichever side came
+                // second and the reaction would never re-run on an account
+                // switch.
+                const oauth_account_id = oauth_session?.account_id ?? '';
+                const classic_loginid = client?.loginid ?? '';
+                return getActiveAccountId(client) || oauth_account_id || classic_loginid;
+            },
+            async account_id => {
+                if (!account_id) return;
+
+                // A classic session fills account_list a moment after loginid,
+                // and the welcome line names the account, so it is still worth
+                // waiting for there. An OAuth session carries its account on
+                // oauth_session instead and must not wait on a list that will
+                // never arrive.
+                if (!oauth_session?.account_id && client?.loginid) {
+                    await when(
+                        () =>
+                            !!client.account_list?.find(
+                                (account: TAccountList[number]) => account.loginid === client.loginid
+                            )
                     );
-                    return !!has_account;
-                });
-                this.unfiltered_messages = getStoredItemsByUser(this.JOURNAL_CACHE, loginid, []);
-                if (this.unfiltered_messages.length === 0) {
-                    this.pushMessage(LogTypes.WELCOME, MessageTypes.SUCCESS, 'journal__text');
-                } else if (this.unfiltered_messages.length > 0) {
-                    this.pushMessage(LogTypes.WELCOME_BACK, MessageTypes.SUCCESS, 'journal__text');
                 }
+
+                this.unfiltered_messages = getStoredItemsByUser(this.JOURNAL_CACHE, account_id, []);
+                this.pushMessage(
+                    this.unfiltered_messages.length === 0 ? LogTypes.WELCOME : LogTypes.WELCOME_BACK,
+                    MessageTypes.SUCCESS,
+                    'journal__text'
+                );
             },
             { fireImmediately: true } // For initial welcome message
         );

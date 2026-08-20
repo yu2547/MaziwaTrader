@@ -38,3 +38,24 @@ export const getActiveAccountId = (client?: { loginid?: string | null } | null):
  */
 export const getActiveCurrency = (client?: { currency?: string | null } | null): string =>
     (api_base?.is_otp_transport ? api_base?.otp_account?.currency : '') || client?.currency || '';
+
+/**
+ * How that account should be named in a message - "Demo" for a virtual
+ * account, otherwise its currency. The journal writes this into every entry.
+ *
+ * Classic sessions get it from ClientStore's account_list, which an OAuth
+ * session never populates, so those entries were left with no account label
+ * at all.
+ */
+export const getActiveAccountLabel = (
+    client?: { loginid?: string | null; currency?: string | null; account_list?: unknown } | null
+): string => {
+    if (api_base?.is_otp_transport && api_base?.otp_account) {
+        return api_base.otp_account.account_type === 'demo' ? 'Demo' : api_base.otp_account.currency;
+    }
+
+    const account_list = (client?.account_list ?? []) as Array<{ loginid?: string; is_virtual?: boolean }>;
+    const current = account_list.find(account => account?.loginid === client?.loginid);
+    if (current) return current.is_virtual ? 'Demo' : (client?.currency ?? '');
+    return client?.currency ?? '';
+};
