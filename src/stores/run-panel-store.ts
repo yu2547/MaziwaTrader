@@ -763,7 +763,12 @@ export default class RunPanelStore {
         journal.onError(data);
         if (journal.journal_filters.some(filter => filter === MessageTypes.ERROR)) {
             this.toggleDrawer(true);
-            this.setActiveTabIndex(run_panel.JOURNAL);
+            // Deliberately does NOT switch the tab. This ran on every
+            // ui.log.error, so the first error after pressing Run threw the
+            // user from Transactions onto Journal - which is what "Run takes
+            // me to the Journal" actually was. The error is still recorded
+            // above and the panel is still opened; where the user is looking
+            // is left to the user, and Journal is one click away.
             ui.setPromptHandler(false);
         } else {
             // TODO: fix notifications
@@ -807,27 +812,42 @@ export default class RunPanelStore {
 
     onMount = () => {
         const { journal } = this.root_store;
-        observer.register('ui.log.error', this.showErrorMessage);
-        observer.register('ui.log.notify', journal.onNotify);
-        observer.register('ui.log.success', journal.onLogSuccess);
-        observer.register('client.invalid_token', this.handleInvalidToken);
+
+        // The trailing `true` is observer.register's own unregisterAllBefore -
+        // it clears the event first, making this idempotent. Needed because
+        // onUnmount now leaves these in place while a bot is running, so a
+        // remount mid-run would otherwise register a second set and write
+        // every journal line twice (register pushes onto a list; it does not
+        // deduplicate).
+        observer.register('ui.log.error', this.showErrorMessage, false, null, true);
+        observer.register('ui.log.notify', journal.onNotify, false, null, true);
+        observer.register('ui.log.success', journal.onLogSuccess, false, null, true);
+        observer.register('client.invalid_token', this.handleInvalidToken, false, null, true);
     };
 
     onUnmount = () => {
         const { journal, summary_card, transactions } = this.root_store;
 
+        // A running bot keeps its listeners. These four were torn down
+        // unconditionally, so anything that unmounted this panel mid-run
+        // silently detached the Journal from the engine - and since the engine
+        // reports everything through ui.log.*, the panel then sat showing its
+        // loading skeleton forever while the bot traded on invisibly.
+        //
+        // The guard below already existed for the bot listeners, for exactly
+        // this reason. The journal ones were simply outside it.
         if (!this.is_running) {
             this.unregisterBotListeners();
             this.disposeReactionsFn();
             journal.disposeReactionsFn();
             summary_card.disposeReactionsFn();
             transactions.disposeReactionsFn();
-        }
 
-        observer.unregisterAll('ui.log.error');
-        observer.unregisterAll('ui.log.notify');
-        observer.unregisterAll('ui.log.success');
-        observer.unregisterAll('client.invalid_token');
+            observer.unregisterAll('ui.log.error');
+            observer.unregisterAll('ui.log.notify');
+            observer.unregisterAll('ui.log.success');
+            observer.unregisterAll('client.invalid_token');
+        }
     };
 
     handleInvalidToken = async () => {
