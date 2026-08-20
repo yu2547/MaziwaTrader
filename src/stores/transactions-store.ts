@@ -6,6 +6,7 @@ import { TPortfolioPosition, TStores } from '@deriv/stores/types';
 import { TContractInfo } from '../components/summary/summary-card.types';
 import { transaction_elements } from '../constants/transactions';
 import { getActiveAccountId } from '../utils/active-account-id';
+import { isDebugEnabled } from '../utils/debug-log';
 import { getStoredItemsByKey, getStoredItemsByUser, setStoredItemsByKey } from '../utils/session-storage';
 import RootStore from './root-store';
 
@@ -55,11 +56,33 @@ export default class TransactionsStore {
     recovered_transactions: number[] = [];
     is_called_proposal_open_contract = false;
     is_transaction_details_modal_open = false;
+    /** TEMP-DIAGNOSTIC: caps the read log so a computed cannot flood output. */
+    read_log_count = 0;
 
     get transactions(): TTransaction[] {
         const account_id = getActiveAccountId(this.core?.client);
-        if (account_id) return this.elements[account_id] ?? [];
-        return [];
+        const rows = account_id ? (this.elements[account_id] ?? []) : [];
+
+        // TEMP-DIAGNOSTIC (localStorage mw_debug = '1').
+        //
+        // Logs every evaluation, not just failures. The previous probe only
+        // reported when the read went wrong, which cannot distinguish "the
+        // read is fine" from "this computed never re-ran" - and a computed
+        // that never re-runs is exactly what an empty panel above a populated
+        // store looks like. Silence was read as success; it was not evidence
+        // either way.
+        if (isDebugEnabled() && this.read_log_count < 40) {
+            this.read_log_count += 1;
+            // eslint-disable-next-line no-console
+            console.info(
+                `[MW-TX] read #${this.read_log_count} account='${account_id}' rows=${rows.length} ` +
+                    `buckets=[${Object.keys(this.elements)
+                        .map(k => `'${k}':${this.elements[k]?.length ?? 0}`)
+                        .join(',')}]`
+            );
+        }
+
+        return rows;
     }
 
     get statistics() {
@@ -175,6 +198,17 @@ export default class TransactionsStore {
         }
 
         this.elements = { ...this.elements }; // force update
+
+        // TEMP-DIAGNOSTIC: the write side, printed in the same shape as the
+        // read side above so one run shows both. If a write lands and no read
+        // follows it, the store is fine and the component is not observing.
+        if (isDebugEnabled()) {
+            // eslint-disable-next-line no-console
+            console.info(
+                `[MW-TX] WRITE account='${current_account}' now=${this.elements[current_account]?.length ?? 0} ` +
+                    `buy_id=${data.transaction_ids?.buy ?? 'none'} completed=${is_completed}`
+            );
+        }
     }
 
     clear() {
