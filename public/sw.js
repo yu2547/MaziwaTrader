@@ -129,6 +129,17 @@ self.addEventListener('fetch', event => {
         return;
     }
 
+    // Skip Range requests entirely - media elements fetch audio and video
+    // this way, and the server answers 206 Partial Content. The Cache API
+    // refuses to store a partial response: cache.put() throws, the perfectly
+    // good 206 was thrown away with it, and the offline fallback handed the
+    // <audio> element a fabricated 503 - which is where every "NotSupported-
+    // Error: The element has no supported sources" came from. The browser
+    // handles range caching natively; the worker has no business in between.
+    if (request.headers.has('range')) {
+        return;
+    }
+
     // Skip authentication requests
     if (isAuthRequest(url)) {
         debug('[SW] Skipping auth request:', url.pathname);
@@ -186,6 +197,22 @@ async function handleRequest(request) {
     }
 }
 
+// Store a response in the cache without ever being the reason a request
+// fails. Only a full 200 is cacheable - `response.ok` is true for the whole
+// 2xx range, and passing a 206 to cache.put() does not store nothing, it
+// throws, which used to unwind a handler that was already holding a good
+// response. A cache write failing for any other reason (quota, eviction
+// race) is equally not the caller's problem.
+async function cacheSafely(request, response) {
+    if (response.status !== 200) return;
+    try {
+        const cache = await caches.open(CACHE_NAME);
+        await cache.put(request, response.clone());
+    } catch (error) {
+        debug('[SW] Cache write failed (response still served):', error);
+    }
+}
+
 // Handle navigation requests (HTML pages)
 async function handleNavigation(request) {
     try {
@@ -194,12 +221,7 @@ async function handleNavigation(request) {
         // Try network first for navigation
         const networkResponse = await fetch(request, { timeout: 3000 });
 
-        if (networkResponse.ok) {
-            // Cache successful navigation responses
-            const cache = await caches.open(CACHE_NAME);
-            await cache.put(request, networkResponse.clone());
-            debug('[SW] Cached navigation response');
-        }
+        await cacheSafely(request, networkResponse);
 
         return networkResponse;
     } catch (error) {
@@ -245,12 +267,7 @@ async function handleStaticAsset(request) {
         // Try network
         const networkResponse = await fetch(request);
 
-        if (networkResponse.ok) {
-            // Cache successful responses
-            const cache = await caches.open(CACHE_NAME);
-            await cache.put(request, networkResponse.clone());
-            debug('[SW] Cached static asset');
-        }
+        await cacheSafely(request, networkResponse);
 
         return networkResponse;
     } catch (error) {
@@ -306,11 +323,7 @@ async function handleGenericRequest(request) {
         // Try network first
         const networkResponse = await fetch(request);
 
-        if (networkResponse.ok) {
-            // Cache successful responses
-            const cache = await caches.open(CACHE_NAME);
-            await cache.put(request, networkResponse.clone());
-        }
+        await cacheSafely(request, networkResponse);
 
         return networkResponse;
     } catch (error) {

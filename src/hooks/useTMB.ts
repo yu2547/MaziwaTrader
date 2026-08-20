@@ -69,6 +69,18 @@ const useTMB = (): UseTMBReturn => {
     const activeSessionsRef = useRef<TMBWebsocketTokens | undefined>(undefined);
 
     const getActiveSessions = useCallback(async (): Promise<TMBWebsocketTokens | undefined> => {
+        // oauth.deriv.com answers CORS only for Deriv's own domains. From any
+        // other origin the browser blocks the response - "No 'Access-Control-
+        // Allow-Origin' header is present" - so this call cannot ever succeed
+        // here, whatever headers it sends. It failed on every page load,
+        // logged two errors, and the app then carried on with its own OAuth
+        // flow exactly as if the call had never been made. Skip it instead of
+        // firing it: same outcome, no noise. Deriv-family deployments are
+        // unaffected.
+        if (!domains.includes(currentDomain)) {
+            return undefined;
+        }
+
         try {
             const configServerUrl = localStorage.getItem('config.server_url');
             if (configServerUrl) {
@@ -151,7 +163,7 @@ const useTMB = (): UseTMBReturn => {
             console.error('Failed to get active sessions:', error);
             return undefined;
         }
-    }, []);
+    }, [domains, currentDomain]);
 
     const processTokens = useCallback((tokens: TokenItem[]) => {
         const accountsList: Record<string, string> = {};

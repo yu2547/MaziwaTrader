@@ -117,7 +117,10 @@ export default class JournalStore {
     playAudio = (sound: string) => {
         if (sound !== config().lists.NOTIFICATION_SOUND[0][1]) {
             const audio = document.getElementById(sound) as HTMLAudioElement;
-            audio.play();
+            // play() returns a promise that rejects when autoplay is not
+            // allowed yet or the source failed to load. A missed notification
+            // sound is not worth an uncaught rejection in the console.
+            audio?.play().catch(() => {});
         }
     };
 
