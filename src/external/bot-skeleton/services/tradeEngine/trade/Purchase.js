@@ -143,24 +143,39 @@ export default Engine =>
          */
         async runVirtualContract(contract_type, duration, prediction) {
             const pip_size = this.getPipSize();
-            const entry_tick = await this.getLastTick();
 
+            // Raw, because the epoch is what marks "the tick we started from".
+            // Seeding the baseline from the entry tick is the whole point: with
+            // no baseline the first poll returns the tick that is already
+            // there - the entry tick itself - and a one-tick contract would be
+            // scored against its own entry. For rise/fall that is `X > X`,
+            // false every time, so the hook would count losses that never
+            // happened and commit real money early.
+            const entry = await this.getLastTick(true).catch(() => null);
+            if (!entry) return this.finishVirtualContract(null, contract_type);
+            let last_epoch = entry.epoch;
+
+            // Held per contract rather than on this.data, so two runs can never
+            // inherit each other's position in the tick stream.
             const nextTick = () =>
                 new Promise(resolve => {
-                    const previous = this.data?.virtual_last_epoch;
+                    let timer;
                     const poll = setInterval(async () => {
                         const tick = await this.getLastTick(true).catch(() => null);
-                        if (!tick || tick.epoch === previous) return;
+                        if (!tick || tick.epoch === last_epoch) return;
                         clearInterval(poll);
-                        if (this.data) this.data.virtual_last_epoch = tick.epoch;
+                        clearTimeout(timer);
+                        last_epoch = tick.epoch;
                         resolve(tick.quote);
-                    }, 400);
+                    }, 300);
                     // A stalled feed must not hold the bot here forever.
-                    setTimeout(() => {
+                    timer = setTimeout(() => {
                         clearInterval(poll);
                         resolve(null);
                     }, 60000);
                 });
+
+            const entry_tick = entry.quote;
 
             const is_win = await this.virtual_hook.score({
                 contract_type,
@@ -171,6 +186,18 @@ export default Engine =>
                 nextTick,
             });
 
+            return this.finishVirtualContract(is_win, contract_type);
+        }
+
+        /**
+         * Reports one virtual result and hands the bot back to the
+         * before-purchase scope. Shared so every exit from a virtual contract -
+         * scored, unscoreable, or no entry tick at all - returns control the
+         * same way. An exit that forgot to REVERT would leave the bot sitting
+         * in before-purchase with nothing driving it, which looks exactly like
+         * the silent stall this engine has already been debugged for once.
+         */
+        finishVirtualContract(is_win, contract_type) {
             if (is_win === null) {
                 // Could not be scored - stand down rather than invent a result.
                 this.virtual_hook.standDown(contract_type);
