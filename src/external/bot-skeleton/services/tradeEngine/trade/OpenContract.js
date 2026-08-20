@@ -5,6 +5,7 @@ import { MessageTypes } from '../../../constants/messages';
 import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
 import { contract as broadcastContract, contractStatus } from '../utils/broadcast';
+import { markTiming, reportTiming } from '../utils/run-timing';
 import { openContractReceived, sell } from './state/actions';
 
 export default Engine =>
@@ -35,6 +36,8 @@ export default Engine =>
                     });
 
                     if (this.isSold) {
+                        markTiming('settled');
+                        reportTiming();
                         this.contractId = '';
                         clearTimeout(this.transaction_recovery_timeout);
                         this.updateTotals(contract);

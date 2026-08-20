@@ -2,6 +2,7 @@ import { localize } from '@deriv-com/translations';
 import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
 import { doUntilDone, tradeOptionToProposal } from '../utils/helpers';
+import { markTiming } from '../utils/run-timing';
 import { clearProposals, proposalsReady } from './state/actions';
 
 // A bot cannot buy until every proposal it asked for has come back and been
@@ -131,6 +132,7 @@ export default Engine =>
         }
 
         requestProposals() {
+            markTiming('proposals_requested');
             this.startProposalWatchdog();
             // Since there are two proposals (in most cases), an error may be logged twice, to avoid this
             // flip this boolean on error.
@@ -195,6 +197,7 @@ export default Engine =>
                 });
 
                 if (has_equal_proposals) {
+                    markTiming('proposals_ready');
                     this.proposals_matched = true;
                     // Everything past this point waits on startPromise, which
                     // only settles once a message has arrived on the socket

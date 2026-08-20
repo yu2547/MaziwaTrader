@@ -5,6 +5,7 @@ import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
 import { contractStatus, info, log } from '../utils/broadcast';
 import { doUntilDone, getUUID, recoverFromError, tradeOptionToBuy } from '../utils/helpers';
+import { markTiming } from '../utils/run-timing';
 import { canEvaluateVirtually } from '../utils/virtual-hook-runner';
 import { purchaseSuccessful } from './state/actions';
 import { BEFORE_PURCHASE } from './state/constants';
@@ -34,6 +35,7 @@ export default Engine =>
             }
 
             const onSuccess = response => {
+                markTiming('buy_accepted');
                 // Don't unnecessarily send a forget request for a purchased contract.
                 const { buy } = response;
 
@@ -64,7 +66,10 @@ export default Engine =>
             if (this.is_proposal_subscription_required) {
                 const { id, askPrice } = this.selectProposal(contract_type);
 
-                const action = () => api_base.api.send({ buy: id, price: askPrice });
+                const action = () => {
+                    markTiming('buy_sent');
+                    return api_base.api.send({ buy: id, price: askPrice });
+                };
 
                 this.isSold = false;
 
