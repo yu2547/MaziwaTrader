@@ -5,6 +5,7 @@ import { LogTypes, MessageTypes } from '@/external/bot-skeleton';
 import { config } from '@/external/bot-skeleton/constants/config';
 import { localize } from '@deriv-com/translations';
 import { getActiveAccountId } from '../utils/active-account-id';
+import { isDebugEnabled } from '../utils/debug-log';
 import { isCustomJournalMessage } from '../utils/journal-notifications';
 import { getStoredItemsByKey, getStoredItemsByUser, setStoredItemsByKey } from '../utils/session-storage';
 import { getSetting, storeSetting } from '../utils/settings';
@@ -103,6 +104,8 @@ export default class JournalStore {
     ];
     journal_filters: string[] = [];
     unfiltered_messages: TMessageItem[] = [];
+    /** TEMP-DIAGNOSTIC: caps the read log so a computed cannot flood output. */
+    read_log_count = 0;
 
     restoreStoredJournals() {
         const client = this.core.client as RootStore['client'];
@@ -176,18 +179,43 @@ export default class JournalStore {
 
         this.unfiltered_messages.unshift({ date, time, message, message_type, className, unique_id, extra });
         this.unfiltered_messages = this.unfiltered_messages.slice(); // force array update
+
+        // TEMP-DIAGNOSTIC (localStorage mw_debug = '1'): a message reached the
+        // journal. If the panel is empty and none of these ever print, the
+        // observer listeners are not registered and nothing is arriving - a
+        // different problem from messages arriving and being filtered out.
+        if (isDebugEnabled()) {
+            // eslint-disable-next-line no-console
+            console.info(
+                `[MW-JOURNAL] PUSH type='${message_type}' total=${this.unfiltered_messages.length} ` +
+                    `filters=[${this.journal_filters.join(',')}]`
+            );
+        }
     }
 
     get filtered_messages() {
-        return (
-            this.unfiltered_messages
-                // filter messages based on filtered-checkbox
-                .filter(
-                    message =>
-                        this.journal_filters.length &&
-                        this.journal_filters.some(filter => message.message_type === filter)
-                )
-        );
+        const rows = this.unfiltered_messages
+            // filter messages based on filtered-checkbox
+            .filter(
+                message =>
+                    this.journal_filters.length && this.journal_filters.some(filter => message.message_type === filter)
+            );
+
+        // TEMP-DIAGNOSTIC (localStorage mw_debug = '1'): the read side, paired
+        // with PUSH above. `held` greater than zero while `shown` is zero means
+        // the messages are there and the saved filter set is hiding them -
+        // journal_filters is restored from a persisted setting, so an empty or
+        // stale one silently blanks the panel. Capped, since this is a computed.
+        if (isDebugEnabled() && this.read_log_count < 30) {
+            this.read_log_count += 1;
+            // eslint-disable-next-line no-console
+            console.info(
+                `[MW-JOURNAL] read #${this.read_log_count} held=${this.unfiltered_messages.length} ` +
+                    `shown=${rows.length} filters=[${this.journal_filters.join(',')}]`
+            );
+        }
+
+        return rows;
     }
 
     get checked_filters() {
