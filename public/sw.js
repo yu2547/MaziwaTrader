@@ -1,8 +1,9 @@
 // Comprehensive Service Worker for Deriv Bot Offline Functionality
-// Bumped with the cross-origin skip below: the activate handler deletes every
-// cache whose name does not match, so renaming here discards the entries the
-// old worker stored - including the half-failed third-party ones.
-const CACHE_NAME = 'deriv-bot-v2';
+//
+// Renaming this discards everything the previous worker stored, because the
+// activate handler deletes every cache whose name does not match. v3 exists to
+// purge a poisoned v2: see PRECACHE_URLS below.
+const CACHE_NAME = 'deriv-bot-v3';
 const OFFLINE_URL = '/offline.html';
 
 // The worker narrates every request it sees, which on a normal load is dozens
@@ -15,8 +16,19 @@ const debug = (...args) => {
     if (DEBUG) console.log(...args);
 };
 
-// Files to cache immediately on install
-const PRECACHE_URLS = ['/', '/index.html', '/offline.html', '/manifest.json', '/deriv-logo.svg'];
+// Files to cache immediately on install.
+//
+// The app shell - '/' and '/index.html' - is deliberately NOT here, and must
+// never be added back. Script filenames carry a content hash, so the shell is
+// the one document that names the current build. Caching it under a name that
+// does not change per deploy froze users on whatever build they first
+// installed: the cached HTML kept asking for the old hashed chunks, the worker
+// passes .js straight through, and the server still had those files, so the
+// stale app loaded perfectly and silently. Every fix shipped after that first
+// install was invisible to anyone holding this cache.
+//
+// Only genuinely build-independent files belong here.
+const PRECACHE_URLS = ['/offline.html', '/manifest.json', '/deriv-logo.svg'];
 
 debug('[SW] Service worker script loaded');
 
@@ -218,33 +230,18 @@ async function handleNavigation(request) {
     try {
         debug('[SW] Handling navigation request');
 
-        // Try network first for navigation
-        const networkResponse = await fetch(request, { timeout: 3000 });
-
-        await cacheSafely(request, networkResponse);
-
-        return networkResponse;
+        // Network only, and deliberately not cached. The shell names the
+        // current build's hashed chunks, so a stored copy goes stale the next
+        // time anything ships and pins whoever holds it to a dead build. A
+        // reachable network is the only source that can answer this correctly.
+        return await fetch(request);
     } catch (error) {
-        debug('[SW] Network failed for navigation, trying cache');
+        debug('[SW] Network failed for navigation, serving offline page');
 
-        // Try cache first
-        const cachedResponse = await caches.match(request);
-        if (cachedResponse) {
-            debug('[SW] Serving navigation from cache');
-            return cachedResponse;
-        }
-
-        // Try to serve index.html for SPA routing
-        const indexResponse = (await caches.match('/')) || (await caches.match('/index.html'));
-        if (indexResponse) {
-            debug('[SW] Serving index.html for SPA routing');
-            return indexResponse;
-        }
-
-        // Last resort: offline page
+        // Genuinely offline. The offline page is build-independent, so it is
+        // safe to serve from cache - unlike the app shell, which is not.
         const offlineResponse = await caches.match(OFFLINE_URL);
         if (offlineResponse) {
-            debug('[SW] Serving offline page');
             return offlineResponse;
         }
 
@@ -341,15 +338,10 @@ async function handleGenericRequest(request) {
 async function handleOfflineFallback(request) {
     debug('[SW] Providing offline fallback for:', request.url);
 
-    // For HTML requests, serve cached page or offline page
+    // For HTML requests, serve the offline page. It deliberately does not fall
+    // back to a cached app shell first - see PRECACHE_URLS for why serving a
+    // stored shell is worse than showing an honest offline page.
     if (request.headers.get('accept')?.includes('text/html')) {
-        // Try to serve cached index.html
-        const cachedIndex = (await caches.match('/')) || (await caches.match('/index.html'));
-        if (cachedIndex) {
-            return cachedIndex;
-        }
-
-        // Serve offline page
         const offlineResponse = await caches.match(OFFLINE_URL);
         if (offlineResponse) {
             return offlineResponse;
