@@ -1,5 +1,7 @@
 import { action, computed, makeObservable, observable } from 'mobx';
 import { getStoredSelectedAccountId, storeSelectedAccountId } from '@/utils/auth/deriv-oauth';
+// MAZIWA-EXEC (temporary diagnostic)
+import { EXEC_STAGE, execTrace, execTraceFail } from '@/utils/exec-trace';
 import type { TOptionsAccount } from '@/utils/options-trading/options-trading-api';
 
 /**
@@ -115,9 +117,23 @@ export default class OAuthSessionStore {
      */
     setLiveBalance = (balance: unknown, currency: unknown) => {
         const value = typeof balance === 'string' ? Number(balance) : balance;
-        if (typeof value !== 'number' || Number.isNaN(value)) return;
+        if (typeof value !== 'number' || Number.isNaN(value)) {
+            // MAZIWA-EXEC (temporary diagnostic) - a balance message arrived
+            // in a shape this rejected, which reads downstream as "no balance
+            // update" while the socket is in fact delivering them.
+            execTraceFail(EXEC_STAGE.BALANCE_UPDATED, { rejected: true, received_type: typeof balance });
+            return;
+        }
+        const previous = this.live_balance;
         this.live_balance = value;
         if (typeof currency === 'string' && currency) this.live_currency = currency;
+
+        // MAZIWA-EXEC (temporary diagnostic)
+        execTrace(EXEC_STAGE.BALANCE_UPDATED, {
+            balance: value,
+            currency: this.live_currency,
+            delta: previous === null ? 'first' : Number((value - previous).toFixed(2)),
+        });
     };
 
     /** Back to "not received yet" - used when the account or socket changes. */

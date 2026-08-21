@@ -17,6 +17,8 @@ import {
 import { getSelectedTradeType } from '@/external/bot-skeleton/scratch/utils';
 import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
 // import { journalError, switch_account_notification } from '@/utils/bot-notifications';
+// MAZIWA-EXEC (temporary diagnostic)
+import { EXEC_STAGE, execTrace } from '@/utils/exec-trace';
 import GTM from '@/utils/gtm';
 import { helpers } from '@/utils/store-helpers';
 import { Buy, ProposalOpenContract } from '@deriv/api-types';
@@ -319,6 +321,14 @@ export default class RunPanelStore {
 
             summary_card.clear();
             this.setContractStage(contract_stages.STARTING);
+            // MAZIWA-EXEC (temporary diagnostic)
+            execTrace(EXEC_STAGE.BOT_STARTED, {
+                run_id: this.run_id,
+                transport: api_base.is_otp_transport ? 'otp' : 'classic',
+                account_id: api_base.otp_account?.account_id,
+                account_type: api_base.otp_account?.account_type,
+                currency: api_base.account_info?.currency,
+            });
             this.dbot.runBot();
         });
         this.setShowBotStopMessage(false);

@@ -1,3 +1,5 @@
+// MAZIWA-EXEC (temporary diagnostic)
+import { EXEC_STAGE, execTrace, execTraceFail } from '@/utils/exec-trace';
 import { localize } from '@deriv-com/translations';
 import { config } from '../../../constants/config';
 import { LogTypes, MessageTypes } from '../../../constants/messages';
@@ -39,6 +41,14 @@ export default Engine =>
                 // Don't unnecessarily send a forget request for a purchased contract.
                 const { buy } = response;
 
+                // MAZIWA-EXEC (temporary diagnostic)
+                execTrace(EXEC_STAGE.BUY_SUCCESS, {
+                    contract_id: buy?.contract_id,
+                    transaction_id: buy?.transaction_id,
+                    buy_price: buy?.buy_price,
+                    payout: buy?.payout,
+                });
+
                 contractStatus({
                     id: 'contract.purchase_received',
                     data: buy.transaction_id,
@@ -68,6 +78,13 @@ export default Engine =>
 
                 const action = () => {
                     markTiming('buy_sent');
+                    // MAZIWA-EXEC (temporary diagnostic)
+                    execTrace(EXEC_STAGE.BUY_REQUEST, {
+                        via: 'proposal_id',
+                        proposal_id: id,
+                        price: askPrice,
+                        contract_type,
+                    });
                     return api_base.api.send({ buy: id, price: askPrice });
                 };
 
@@ -79,12 +96,30 @@ export default Engine =>
                 });
 
                 if (!this.options.timeMachineEnabled) {
-                    return doUntilDone(action).then(onSuccess);
+                    // MAZIWA-EXEC (temporary diagnostic) - rethrows, so the
+                    // existing error handling downstream is unchanged.
+                    return doUntilDone(action)
+                        .then(onSuccess)
+                        .catch(error => {
+                            execTraceFail(EXEC_STAGE.BUY_FAILURE, {
+                                via: 'proposal_id',
+                                proposal_id: id,
+                                code: error?.error?.code ?? error?.code,
+                                message: error?.error?.message ?? error?.message,
+                            });
+                            throw error;
+                        });
                 }
 
                 return recoverFromError(
                     action,
                     (errorCode, makeDelay) => {
+                        // MAZIWA-EXEC (temporary diagnostic)
+                        execTraceFail(EXEC_STAGE.BUY_FAILURE, {
+                            via: 'proposal_id',
+                            code: errorCode,
+                            recovering: true,
+                        });
                         // if disconnected no need to resubscription (handled by live-api)
                         if (errorCode !== 'DisconnectError') {
                             this.renewProposalsOnPurchase();
@@ -105,7 +140,16 @@ export default Engine =>
                 ).then(onSuccess);
             }
             const trade_option = tradeOptionToBuy(contract_type, this.tradeOptions, api_base.is_otp_transport);
-            const action = () => api_base.api.send(trade_option);
+            const action = () => {
+                // MAZIWA-EXEC (temporary diagnostic)
+                execTrace(EXEC_STAGE.BUY_REQUEST, {
+                    via: 'parameters',
+                    contract_type,
+                    amount: this.tradeOptions?.amount,
+                    currency: this.tradeOptions?.currency,
+                });
+                return api_base.api.send(trade_option);
+            };
 
             this.isSold = false;
 
@@ -115,12 +159,24 @@ export default Engine =>
             });
 
             if (!this.options.timeMachineEnabled) {
-                return doUntilDone(action).then(onSuccess);
+                // MAZIWA-EXEC (temporary diagnostic) - rethrows, unchanged flow.
+                return doUntilDone(action)
+                    .then(onSuccess)
+                    .catch(error => {
+                        execTraceFail(EXEC_STAGE.BUY_FAILURE, {
+                            via: 'parameters',
+                            code: error?.error?.code ?? error?.code,
+                            message: error?.error?.message ?? error?.message,
+                        });
+                        throw error;
+                    });
             }
 
             return recoverFromError(
                 action,
                 (errorCode, makeDelay) => {
+                    // MAZIWA-EXEC (temporary diagnostic)
+                    execTraceFail(EXEC_STAGE.BUY_FAILURE, { via: 'parameters', code: errorCode, recovering: true });
                     if (errorCode === 'DisconnectError') {
                         this.clearProposals();
                     }

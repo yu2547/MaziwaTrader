@@ -6,6 +6,8 @@ import { TPortfolioPosition, TStores } from '@deriv/stores/types';
 import { TContractInfo } from '../components/summary/summary-card.types';
 import { transaction_elements } from '../constants/transactions';
 import { getActiveAccountId } from '../utils/active-account-id';
+// MAZIWA-EXEC (temporary diagnostic)
+import { EXEC_STAGE, execTrace } from '../utils/exec-trace';
 import { getStoredItemsByKey, getStoredItemsByUser, setStoredItemsByKey } from '../utils/session-storage';
 import RootStore from './root-store';
 
@@ -174,6 +176,32 @@ export default class TransactionsStore {
         }
 
         this.elements = { ...this.elements }; // force update
+
+        // MAZIWA-EXEC (temporary diagnostic). `readable` is the load-bearing
+        // field: the writer will happily create an elements[''] bucket that
+        // the getter then refuses to read, so a push can succeed and still be
+        // invisible. readable=false with rows>0 means the store has the trade
+        // and the UI can never see it - a different fault from not receiving
+        // it at all.
+        const stats = this.statistics;
+        execTrace(EXEC_STAGE.TRANSACTION_PUSHED, {
+            account_key: current_account || '(empty)',
+            readable: !!current_account,
+            rows: this.elements[current_account]?.length ?? 0,
+            contract_id: data.contract_id,
+            completed: is_completed,
+            entry: contract.entry_tick,
+            exit: contract.exit_tick,
+            profit: contract.profit,
+        });
+        execTrace(EXEC_STAGE.STATISTICS, {
+            runs: stats.number_of_runs,
+            won: stats.won_contracts,
+            lost: stats.lost_contracts,
+            stake: stats.total_stake,
+            payout: stats.total_payout,
+            pl: stats.total_profit,
+        });
     }
 
     clear() {

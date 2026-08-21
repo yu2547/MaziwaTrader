@@ -1,4 +1,6 @@
 import { getRoundedNumber } from '@/components/shared';
+// MAZIWA-EXEC (temporary diagnostic)
+import { EXEC_STAGE, execTrace } from '@/utils/exec-trace';
 import { localize } from '@deriv-com/translations';
 import { config } from '../../../constants/config';
 import { MessageTypes } from '../../../constants/messages';
@@ -18,7 +20,22 @@ export default Engine =>
 
                     // The only emitter of 'bot.contract' - Transactions,
                     // Summary and the Journal are all fed from here.
-                    if (!contract || !this.expectedContractId(contract?.contract_id)) {
+
+                    // MAZIWA-EXEC (temporary diagnostic) - logged before the
+                    // guard on purpose. An update arriving for a contract this
+                    // engine is not expecting looks identical to no update at
+                    // all from downstream, and they are different faults.
+                    const is_expected = !!contract && this.expectedContractId(contract?.contract_id);
+                    execTrace(EXEC_STAGE.CONTRACT_UPDATE, {
+                        contract_id: contract?.contract_id,
+                        expected: is_expected,
+                        awaiting: this.contractId || 'none',
+                        status: contract?.status,
+                        is_sold: contract?.is_sold,
+                        profit: contract?.profit,
+                    });
+
+                    if (!is_expected) {
                         return;
                     }
 
