@@ -16,8 +16,14 @@ type TSegmentedControlProps = {
 };
 
 /**
- * A compact text toggle, not an instrument - two labels and a thin indicator
- * line that slides to whichever is active. No background, no elevation.
+ * A compact currency switcher: one joined pill track with the active option
+ * sitting on a filled segment that slides between them (shared via framer's
+ * layoutId, so it animates across rather than reappearing).
+ *
+ * It reads as a single control on purpose. Two bare labels with a hairline
+ * under the active one was the previous shape, and on the light theme the
+ * active label was near-white on near-white - one label visible, one not,
+ * which made the pair look like two unrelated words instead of a switch.
  */
 const SegmentedControl = ({ id, options, value, onChange, ariaLabel }: TSegmentedControlProps) => {
     const button_refs = useRef<Array<HTMLButtonElement | null>>([]);
