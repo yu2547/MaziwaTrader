@@ -59,8 +59,26 @@ export default class TransactionsStore {
     is_transaction_details_modal_open = false;
 
     get transactions(): TTransaction[] {
+        // `elements` is read before the account id, and unconditionally, on
+        // purpose: this getter is a MobX computed, and a computed tracks only
+        // what it actually reads.
+        //
+        // The account id comes from the OTP handshake, which has not finished
+        // when this is first evaluated on an OAuth session - so it was empty,
+        // the ternary returned [] without ever touching `elements`, and the
+        // cached [] was left with a dependency set of just client.loginid.
+        // That never changes on OAuth, `elements` was not in the set so
+        // pushTransaction could not invalidate it, and api_base is a plain
+        // object so the arriving account id could not either. The cache stayed
+        // poisoned for the whole session: Transactions and every statistic
+        // read [] while the store filled up behind them.
+        //
+        // Touching `elements` first puts it in the dependency set on every
+        // path, so any push invalidates this and the account id is re-read -
+        // by which time the OTP account is populated.
+        const elements = this.elements;
         const account_id = getActiveAccountId(this.core?.client);
-        return account_id ? (this.elements[account_id] ?? []) : [];
+        return account_id ? (elements[account_id] ?? []) : [];
     }
 
     get statistics() {
