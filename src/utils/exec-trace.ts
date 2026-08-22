@@ -25,6 +25,10 @@ const PREFIX = '[MAZIWA-EXEC]';
 
 /** Stages in the order the chain should produce them. */
 export const EXEC_STAGE = {
+    /** The click itself, before any of the handler's early returns. */
+    RUN_CLICKED: 'RUN_CLICKED',
+    /** Run was clicked but the handler returned before starting the engine. */
+    RUN_ABORTED: 'RUN_ABORTED',
     BOT_STARTED: 'BOT_STARTED',
     PROPOSAL_REQUEST: 'PROPOSAL_REQUEST',
     PROPOSAL_SUCCESS: 'PROPOSAL_SUCCESS',
@@ -56,7 +60,9 @@ const render = (detail: TDetail) =>
         .join(' ');
 
 export const execTrace = (stage: string, detail: TDetail = {}) => {
-    if (stage === EXEC_STAGE.BOT_STARTED) {
+    // The click starts the clock, not BOT_STARTED - a run that aborts before
+    // the engine starts still needs its stages timed and numbered.
+    if (stage === EXEC_STAGE.RUN_CLICKED) {
         sequence = 0;
         run_started_at = Date.now();
         first_failure = null;
