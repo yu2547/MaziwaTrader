@@ -238,9 +238,6 @@ const Dcircles = observer(() => {
                 >
                     i
                 </button>
-                <button type='button' className='mw-dcircles__config' onClick={openTradingConfiguration}>
-                    {localize('Trading Configuration')}
-                </button>
             </div>
 
             {is_info_open && (
@@ -318,6 +315,13 @@ const Dcircles = observer(() => {
                 <span>{localize('current digit / most')}</span>
                 <span>{localize('least frequency')}</span>
             </div>
+
+            {/* Directly under the digit circles: this is where someone decides
+                a distribution is worth trading, so the way into the trade
+                settings belongs at that point rather than up in the header. */}
+            <button type='button' className='mw-dcircles__config' onClick={openTradingConfiguration}>
+                {localize('Trading Configuration')}
+            </button>
 
             <h3 className='mw-dcircles__heading'>{localize('Even/Odd')}</h3>
             <div className='mw-dcircles__panels mw-dcircles__panels--two'>

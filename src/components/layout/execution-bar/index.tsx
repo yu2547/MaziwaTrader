@@ -1,8 +1,6 @@
-import React, { startTransition, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { useNavigate } from 'react-router-dom';
 import TradeAnimation from '@/components/trade-animation';
-import { DBOT_TABS } from '@/constants/bot-contents';
 import { useStore } from '@/hooks/useStore';
 import { StandaloneChevronUpBoldIcon } from '@deriv/quill-icons/Standalone';
 import { localize } from '@deriv-com/translations';
@@ -59,8 +57,7 @@ const clampToViewport = ({ x, y }: TPoint): TPoint => ({
 });
 
 const ExecutionBar = observer(() => {
-    const { run_panel, dashboard, quick_strategy } = useStore() ?? {};
-    const navigate = useNavigate();
+    const { run_panel } = useStore() ?? {};
     const [is_ai_open, setIsAiOpen] = useState(false);
     const [is_fast, setIsFast] = useState(() => sessionStorage.getItem(SPEED_KEY) !== 'slow');
     // Where the user last put the orb. Null means "wherever the stylesheet
@@ -162,16 +159,10 @@ const ExecutionBar = observer(() => {
         });
     };
 
-    // Reuses the app's own trading configuration - Quick Strategy - rather
-    // than introducing a second one. It only renders inside the Bot Builder
-    // tab, so this goes there and opens it.
-    const openTradingConfiguration = () => {
-        startTransition(() => {
-            navigate('/');
-            dashboard?.setActiveTab(DBOT_TABS.BOT_BUILDER);
-            quick_strategy?.setFormVisibility(true);
-        });
-    };
+    // The Trading Configuration button used to live here as well. It now sits
+    // directly under the digit circles on the Analysis page, which is where a
+    // distribution is actually read and acted on - and having it in one place
+    // means there is one way in rather than two that can drift apart.
 
     return (
         <>
@@ -209,13 +200,6 @@ const ExecutionBar = observer(() => {
                         <StandaloneChevronUpBoldIcon iconSize='xs' />
                     </button>
                 </div>
-
-                {/* Two labels rather than a truncated one: at phone widths the
-                    full wording is what pushed this row past the viewport. */}
-                <button type='button' className='mw-exec-bar__config' onClick={openTradingConfiguration}>
-                    <span className='mw-exec-bar__config-long'>{localize('Trading Configuration')}</span>
-                    <span className='mw-exec-bar__config-short'>{localize('Config')}</span>
-                </button>
             </div>
 
             {/* Draggable: press and move to reposition, press and release to

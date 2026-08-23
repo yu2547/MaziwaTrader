@@ -154,6 +154,10 @@ $mw-grey: #7d8fa3;
     }
 
     &__config {
+        // It sits under the circles now, directly in the column, and the
+        // column stretches its children. Left alone the button would span the
+        // full width; centring keeps the compact pill it has always been.
+        align-self: center;
         padding: 0.9rem 1.6rem;
         border: none;
         border-radius: 6px;
