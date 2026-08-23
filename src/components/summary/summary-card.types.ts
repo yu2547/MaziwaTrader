@@ -14,6 +14,13 @@ export type TContractInfo = Omit<
     entry_tick_time?: TDateType;
     exit_tick?: TDateType;
     exit_tick_time?: TDateType;
+    /**
+     * Sent by the Options API, which omits exit_tick_display_value entirely.
+     * Absent from ProposalOpenContract in the api-types version in use, so it
+     * is declared here rather than assumed. entry_spot needs no declaration -
+     * that one the shipped types already carry.
+     */
+    exit_spot?: number | null;
 };
 
 export interface TSummaryCardProps {

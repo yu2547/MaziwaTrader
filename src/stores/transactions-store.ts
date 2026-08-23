@@ -154,9 +154,23 @@ export default class TransactionsStore {
             is_completed,
             run_id,
             date_start: formatDate(data.date_start, 'YYYY-M-D HH:mm:ss [GMT]'),
-            entry_tick: data.entry_tick_display_value,
+            // The Options API sends the spots as entry_spot / exit_spot and
+            // omits the *_tick_display_value fields these used to read, so both
+            // cells rendered their loading skeleton forever - the row's
+            // `?? <TransactionFieldLoader />` cannot tell "absent" from
+            // "pending". Confirmed from a live settlement payload, which
+            // carried entry_spot and exit_spot and neither display value.
+            //
+            // display_value is kept as the first choice where it exists: it is
+            // pre-formatted to the symbol's pip size, whereas the raw spot is a
+            // plain number. Classic sessions therefore render exactly as before
+            // and only fall through to the spot when the field is missing.
+            // The trailing `?? undefined` maps a null spot onto undefined: the
+            // spots are nullable while these fields are not, and the row treats
+            // undefined as "no value" already.
+            entry_tick: data.entry_tick_display_value ?? data.entry_spot ?? undefined,
             entry_tick_time: data.entry_tick_time && formatDate(data.entry_tick_time, 'YYYY-M-D HH:mm:ss [GMT]'),
-            exit_tick: data.exit_tick_display_value,
+            exit_tick: data.exit_tick_display_value ?? data.exit_spot ?? undefined,
             exit_tick_time: data.exit_tick_time && formatDate(data.exit_tick_time, 'YYYY-M-D HH:mm:ss [GMT]'),
             profit: is_completed ? data.profit : 0,
         };
