@@ -89,16 +89,36 @@ export default class TransactionsStore {
         );
         const statistics = trxs.reduce(
             (stats, { data }) => {
-                const { profit = 0, is_completed = false, buy_price = 0, payout, bid_price } = data as TContractInfo;
+                const { profit, is_completed = false, buy_price, payout, bid_price } = data as TContractInfo;
                 if (is_completed) {
-                    if (profit > 0) {
+                    // The Options API returns these as strings ("10.00"), so
+                    // `+=` concatenated instead of adding: total_stake went
+                    // 0 -> "010.00" -> "010.0010.00", which <Money> then
+                    // rendered as 0.00.
+                    //
+                    // It hid well because every other reader coerces silently.
+                    // `profit > 0` compares fine on a string, so won/lost and
+                    // the run count stayed correct, and the rows print correctly
+                    // through Math.abs() and <Money>. Only the running totals -
+                    // the one place using `+=` on a field value - were wrong.
+                    //
+                    // Normalise once, here, and aggregate only numbers. `|| 0`
+                    // covers undefined/null/NaN, so a field the API omits
+                    // contributes nothing rather than poisoning the total.
+                    const stake_value = Number(buy_price) || 0;
+                    const profit_value = Number(profit) || 0;
+                    // payout is absent on a loss; bid_price is the existing
+                    // fallback and is kept exactly as it was.
+                    const payout_value = Number(payout ?? bid_price) || 0;
+
+                    if (profit_value > 0) {
                         stats.won_contracts += 1;
-                        stats.total_payout += payout ?? bid_price ?? 0;
+                        stats.total_payout += payout_value;
                     } else {
                         stats.lost_contracts += 1;
                     }
-                    stats.total_profit += profit;
-                    stats.total_stake += buy_price;
+                    stats.total_profit += profit_value;
+                    stats.total_stake += stake_value;
                     total_runs += 1;
                 }
                 return stats;
@@ -140,6 +160,40 @@ export default class TransactionsStore {
             exit_tick_time: data.exit_tick_time && formatDate(data.exit_tick_time, 'YYYY-M-D HH:mm:ss [GMT]'),
             profit: is_completed ? data.profit : 0,
         };
+
+        // MAZIWA-EXEC (temporary diagnostic). Reports the RUNTIME TYPE of each
+        // money field alongside its value, plus every plausible spelling of the
+        // exit spot, because the Options API has already been found returning
+        // fields under different names and shapes than the documented schema.
+        //
+        // `add_check` is the load-bearing one: it evaluates 0 + buy_price + 1
+        // exactly as the statistics reducer's `+=` does. A number gives 11; a
+        // string gives "010.001". That single value decides whether the
+        // aggregates are being concatenated rather than summed - which would
+        // explain why the counters (+= 1) are right while every sum is zero.
+        if (is_completed) {
+            const raw = data as unknown as Record<string, unknown>;
+            execTrace(EXEC_STAGE.SETTLEMENT_FIELDS, {
+                contract_id: data.contract_id,
+                buy_price: `${typeof raw.buy_price}:${String(raw.buy_price)}`,
+                profit: `${typeof raw.profit}:${String(raw.profit)}`,
+                payout: `${typeof raw.payout}:${String(raw.payout)}`,
+                bid_price: `${typeof raw.bid_price}:${String(raw.bid_price)}`,
+                add_check: String(0 + (raw.buy_price as number) + 1),
+                status: String(raw.status),
+                is_sold: String(raw.is_sold),
+                // Every key the payload actually carries whose name mentions a
+                // tick or a spot, with its value. Listing candidate spellings
+                // would only prove the ones guessed at were absent; this shows
+                // what is really there, so the exit spot cannot hide under a
+                // name nobody thought to check.
+                spot_keys:
+                    Object.keys(raw)
+                        .filter(key => /tick|spot/i.test(key))
+                        .map(key => `${key}=${String(raw[key])}`)
+                        .join(' ') || '(none)',
+            });
+        }
 
         // Worth knowing: the getter above refuses to read a falsy key, while
         // this writer will happily create an elements[''] bucket. Anything
@@ -212,13 +266,16 @@ export default class TransactionsStore {
             exit: contract.exit_tick,
             profit: contract.profit,
         });
+        // The three sums carry their runtime type. If they come back as
+        // `string`, the reducer concatenated instead of adding - which is what
+        // correct counters beside zeroed totals would mean.
         execTrace(EXEC_STAGE.STATISTICS, {
             runs: stats.number_of_runs,
             won: stats.won_contracts,
             lost: stats.lost_contracts,
-            stake: stats.total_stake,
-            payout: stats.total_payout,
-            pl: stats.total_profit,
+            stake: `${typeof stats.total_stake}:${String(stats.total_stake)}`,
+            payout: `${typeof stats.total_payout}:${String(stats.total_payout)}`,
+            pl: `${typeof stats.total_profit}:${String(stats.total_profit)}`,
         });
     }
 
