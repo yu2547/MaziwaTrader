@@ -123,28 +123,6 @@
             grid-template: 64px 64px / 1fr 1fr 1fr;
         }
 
-        // Full width under the grid rather than a seventh tile, which would
-        // have started a ragged third row. Separated by a rule because it is
-        // not another session total - it is the account's real balance.
-        &--balance {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-            padding: 0.8rem 1.6rem 1rem;
-            border-top: 1px solid var(--general-section-1);
-        }
-
-        &--balance-label {
-            @include typeface(--small-left-bold-black, none);
-        }
-
-        &--balance-value {
-            @include typeface(--small-right-bold-black, none);
-
-            color: var(--text-general);
-        }
-
         &-amount {
             @include typeface(--small-center-normal-black, none);
 
