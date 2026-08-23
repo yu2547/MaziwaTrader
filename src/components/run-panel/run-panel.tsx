@@ -25,6 +25,14 @@ type TStatisticsTile = {
 };
 
 type TStatisticsSummary = {
+    /**
+     * The account's live balance, straight off oauth_session.balance - the
+     * same value the header shows. Null until the socket has reported one;
+     * nothing here derives or adjusts it, and it is deliberately kept apart
+     * from the totals below, which are sums over transactions and are a
+     * different quantity entirely.
+     */
+    balance: number | null;
     currency: string;
     is_mobile: boolean;
     lost_contracts: number;
@@ -68,6 +76,7 @@ const StatisticsTile = ({ content, contentClassName, title }: TStatisticsTile) =
 );
 
 export const StatisticsSummary = ({
+    balance,
     currency,
     is_mobile,
     lost_contracts,
@@ -112,6 +121,25 @@ export const StatisticsSummary = ({
                 })}
             />
         </div>
+        {/* A row of its own rather than a seventh tile: the grid above is two
+            rows of three, and a seventh would start a ragged third row. It is
+            also a different kind of number - the account's actual balance,
+            not a sum over this session's transactions - so keeping it visually
+            apart is the honest presentation.
+
+            Rendered only once a balance has actually arrived. Showing 0.00
+            while the socket is still connecting would read as an empty
+            account. */}
+        {balance !== null && (
+            <div className='run-panel__stat--balance'>
+                <span className='run-panel__stat--balance-label'>
+                    <Localize i18n_default_text='Account balance' />
+                </span>
+                <span className='run-panel__stat--balance-value'>
+                    <Money amount={balance} currency={currency} show_currency />
+                </span>
+            </div>
+        )}
     </div>
 );
 
@@ -229,10 +257,13 @@ const StatisticsInfoModal = ({
 };
 
 const RunPanelContent = observer(() => {
-    const { run_panel, dashboard, transactions } = useStore();
+    const { run_panel, dashboard, transactions, oauth_session } = useStore();
     const { client } = useStore();
     const { isDesktop } = useDevice();
     const currency = getActiveCurrency(client);
+    // The same computed the header reads. Not recalculated here, and not
+    // derived from the transaction totals - those are a different quantity.
+    const balance = oauth_session?.balance ?? null;
     const {
         active_index,
         is_drawer_open,
@@ -265,6 +296,7 @@ const RunPanelContent = observer(() => {
     const content = (
         <DrawerContent
             active_index={active_index}
+            balance={balance}
             currency={currency}
             is_drawer_open={is_drawer_open}
             is_mobile={!isDesktop}
