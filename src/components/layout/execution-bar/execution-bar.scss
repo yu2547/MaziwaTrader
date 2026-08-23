@@ -97,16 +97,32 @@ $exec-bar-gap: 1.2rem;
     }
 
     &__run {
-        flex: none;
+        // Takes the free space so the stage text and its progress bar have
+        // somewhere to sit; min-width: 0 lets it shrink below its content
+        // rather than pushing the speed switch off the bar.
+        flex: 1 1 auto;
+        min-width: 0;
         display: flex;
         align-items: center;
 
-        // TradeAnimation prints the contract stage next to its button. The run
-        // panel immediately below already reports it, so on this card it was
-        // the same sentence twice, a few pixels apart. Hidden here rather than
-        // removed from the component, which other callers still rely on.
+        // The contract stage reads here the way the reference shows it -
+        // button, then state, then progress.
+        // This was previously hidden as a duplicate of the run panel's own
+        // stage text. That was wrong: the panel is collapsible and frequently
+        // closed, and with it shut the bar reported no state whatsoever, so
+        // a running bot and an idle one looked identical.
         .animation__text {
-            display: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        // Under this width the button, the stage text and the speed switch
+        // cannot all fit, and the button is the one that has to survive.
+        @media (width <= 480px) {
+            .animation__text {
+                display: none;
+            }
         }
     }
 
@@ -119,7 +135,12 @@ $exec-bar-gap: 1.2rem;
         align-items: flex-start;
         gap: 0.2rem;
         min-width: 0;
-        flex: 1;
+
+        // Sized to its own content rather than growing. At `flex: 1` it split
+        // the bar evenly with the run area, which left the stage text and its
+        // progress bar squeezed into the remaining half - the speed switch is
+        // the secondary control here and should not claim equal room.
+        flex: 0 0 auto;
         position: relative;
         padding: 0.6rem 5rem 0.6rem 1.4rem;
         border: none;
