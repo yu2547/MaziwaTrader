@@ -80,7 +80,16 @@
         @include flex-center(flex-start, flex-end);
 
         flex-direction: column;
-        width: 35rem;
+
+        // Fluid up to the design width rather than pinned at it. This was a
+        // flat `width: 35rem`, and run-panel__content clips with
+        // `overflow: hidden !important`, so any drawer narrower than 350px cut
+        // the panel off mid-content - "10.00 USD" rendered as "10.00 US" - and
+        // squeezed the 3-column tile grid, which is what pushed the second row
+        // of statistics out of view. Desktop is unchanged: the drawer is wider
+        // than 35rem there, so max-width still governs.
+        width: 100%;
+        max-width: 35rem;
         background-color: var(--general-section-2);
 
         @include mobile-or-tablet-screen {
