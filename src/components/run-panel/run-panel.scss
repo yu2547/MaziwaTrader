@@ -94,7 +94,20 @@
 
         @include mobile-or-tablet-screen {
             margin: 0;
-            position: fixed;
+
+            // Deliberately NOT `position: fixed` any more. Together with
+            // `bottom: 0` on --mobile below, that pinned this block to the
+            // bottom of the viewport - which is exactly where the execution
+            // bar is fixed. The bar is about 64px tall and the tile grid is
+            // two 64px rows, so the bar covered the lower row precisely:
+            // contracts lost, contracts won and total profit/loss vanished
+            // while the top row stayed put. Reset was never affected because
+            // it lives inside the sheet rather than at the viewport edge,
+            // which is what made this look like clipping rather than
+            // something being covered.
+            // It made sense when the run panel was a full-screen takeover.
+            // The panel is a bottom sheet anchored above the execution bar
+            // now, so this block belongs in that sheet's normal flow.
 
             /* Fix for iOS devices to prevent stats panel overlap */
             @supports (-webkit-touch-callout: none) {
@@ -139,7 +152,10 @@
 
         &--mobile {
             width: 100%;
-            bottom: 0;
+
+            // `bottom: 0` removed with the `position: fixed` above - it only
+            // had meaning while this was pinned to the viewport, and together
+            // they parked the tile grid underneath the execution bar.
         }
     }
 

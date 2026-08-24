@@ -97,6 +97,11 @@
         $header-grid-items: (string.unquote('type'), string.unquote('spot'), string.unquote('profit'));
 
         &-column {
+            // Same reason as __cell below: without this the header labels
+            // widen their columns and the header drifts out of alignment with
+            // the rows underneath it.
+            min-width: 0;
+
             @include mobile-or-tablet-screen {
                 padding: 0.5rem;
                 display: flex;
@@ -240,6 +245,14 @@
         display: flex;
         align-items: center;
         color: var(--text-general);
+
+        // Grid items default to `min-width: auto`, which refuses to shrink
+        // below their own content. That quietly defeats the 0.8fr 1fr 1.1fr
+        // columns: a value like "10.00 USD" widened its column past its share,
+        // the row grew wider than the panel, and the panel clips - so amounts
+        // rendered cut off as "10.00 US". The columns can only honour their
+        // fractions once the items are allowed to shrink.
+        min-width: 0;
     }
 
     &__profit {
