@@ -1,5 +1,4 @@
 import { useRef } from 'react';
-import { motion } from 'framer-motion';
 import './segmented-control.scss';
 
 export type TSegmentOption = {
@@ -66,7 +65,7 @@ const SegmentedControl = ({ id, options, value, onChange, ariaLabel }: TSegmente
     };
 
     return (
-        <div className='mw-dial' role='tablist' aria-label={ariaLabel}>
+        <div className='mw-dial' id={id} role='tablist' aria-label={ariaLabel}>
             {options.map((option, index) => {
                 const is_active = option.value === value;
                 return (
@@ -83,14 +82,10 @@ const SegmentedControl = ({ id, options, value, onChange, ariaLabel }: TSegmente
                         onClick={() => selectOption(option)}
                         onKeyDown={event => handleKeyDown(event, index)}
                     >
+                        {/* The active face is the dark one; there is no sliding
+                            indicator to animate, so the previous framer-motion
+                            underline is gone. */}
                         <span className='mw-dial__label'>{option.label}</span>
-                        {is_active && (
-                            <motion.span
-                                layoutId={`mw-dial-underline-${id}`}
-                                className='mw-dial__underline'
-                                transition={{ type: 'spring', stiffness: 500, damping: 40 }}
-                            />
-                        )}
                     </button>
                 );
             })}

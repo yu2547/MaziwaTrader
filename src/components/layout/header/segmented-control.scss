@@ -1,71 +1,138 @@
-// One joined control rather than two loose labels: a pill track with the
-// active currency sitting on a filled segment inside it.
-// It was previously two bare labels separated by a gap, with an underline
-// under the active one - and the colours were literal darks (#565c6e
-// inactive, #eef3fb active) chosen against a dark bar. The header is painted
-// from theme tokens and follows the light/dark switch, so on the light theme
-// the active label was near-white on near-white: one label visible, one not,
-// which is what made the pair read as two unrelated blocks rather than a
-// switch. Everything here is a token now, so it is legible in both themes.
-.mw-dial {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 0;
-    padding: 0.2rem;
-    border-radius: 999px;
-    background: var(--general-section-1);
+// A small physical-looking currency block rather than two text labels.
+// The character of it is the fold: the left face is rotated a few degrees on
+// its right edge, so the pair reads as one object hinged in the middle rather
+// than two flat buttons side by side. Everything else - the bevel, the seam,
+// the ground shadow - is there to support that read, and is kept shallow so it
+// stays legible at header size.
+// Colours are deliberately literal rather than themed. This control is a
+// black/grey object by design and must look identical in light and dark; the
+// brand teal and the old red/blue are explicitly not used here.
+$mw-dial-dark: #17181a;
+$mw-dial-dark-edge: #000;
+$mw-dial-grey: #d3d4d6;
+$mw-dial-grey-edge: #a9abae;
+$mw-dial-ink: #16171a;
 
-    // The track is the boundary of the control, so nothing inside may paint
-    // outside it - including the sliding indicator.
-    overflow: hidden;
+.mw-dial {
+    display: inline-flex;
+    align-items: stretch;
+    height: 2.4rem;
+
+    // The block sits on the header rather than floating above it, so the
+    // shadow is tight. drop-shadow rather than box-shadow because the faces
+    // are rotated - box-shadow would draw the pre-transform rectangle.
+    filter: drop-shadow(0 1px 1px rgb(0 0 0 / 30%)) drop-shadow(0 2px 3px rgb(0 0 0 / 14%));
+
+    // Rotated faces would otherwise be resampled softly at small sizes.
+    backface-visibility: hidden;
 
     &__option {
         position: relative;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 0.4rem 1rem;
+        min-width: 3.4rem;
+        padding: 0 0.7rem;
         border: none;
-        border-radius: 999px;
-        background: transparent;
         cursor: pointer;
-    }
+        background: $mw-dial-grey;
+        color: $mw-dial-ink;
 
-    &__option:focus-visible {
-        outline: 2px solid #4fd8ff;
-        outline-offset: 2px;
-    }
+        // A subtle top bevel and a darker bottom edge give the face its
+        // thickness. Both are inset so they follow the rotated geometry.
+        box-shadow:
+            inset 0 1px 0 rgb(255 255 255 / 45%),
+            inset 0 -1px 0 rgb(0 0 0 / 22%);
+        transition:
+            background 140ms ease,
+            color 140ms ease;
 
-    &__label {
-        // Above the indicator, which is painted behind it.
-        position: relative;
-        z-index: 1;
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: var(--text-less-prominent);
-        white-space: nowrap;
-        transition: color 150ms ease;
+        &:focus-visible {
+            outline: 2px solid #4fd8ff;
+            outline-offset: 2px;
+        }
 
-        .mw-dial__option--active & {
+        // The fold. Hinged on the right edge so the two faces stay joined at
+        // the seam and only the outer edge lifts away from the header.
+        &:first-child {
+            transform: perspective(90px) rotateY(9deg);
+            transform-origin: right center;
+            border-start-start-radius: 3px;
+            border-end-start-radius: 3px;
+
+            // The seam - the visible division between the two sections.
+            border-inline-end: 1px solid rgb(0 0 0 / 38%);
+        }
+
+        &:last-child {
+            border-start-end-radius: 3px;
+            border-end-end-radius: 3px;
+        }
+
+        // Whichever currency is selected becomes the dark face. Both faces
+        // carry the same rules, so the dark side moves with the selection
+        // instead of being pinned to one side.
+        &--active {
+            background: $mw-dial-dark;
             color: #fff;
+            box-shadow:
+                inset 0 1px 0 rgb(255 255 255 / 16%),
+                inset 0 -1px 0 rgb(0 0 0 / 55%);
+        }
+
+        &--active:first-child {
+            border-inline-end-color: $mw-dial-dark-edge;
+        }
+
+        &:not(.mw-dial__option--active):first-child {
+            border-inline-end-color: $mw-dial-grey-edge;
         }
     }
 
-    // Still one element shared between both options via layoutId, so it
-    // slides across rather than reappearing - it is just a filled segment
-    // now instead of a hairline under the text.
-    &__underline {
-        position: absolute;
-        inset: 0;
-        z-index: 0;
-        border-radius: 999px;
-        background: #1a5cff;
+    &__label {
+        font-size: 1.05rem;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+
+        // Keeps the lettering crisp on the rotated face.
+        transform: translateZ(0);
+    }
+
+    // Slightly larger where there is room. Same component, same proportions -
+    // only the scale changes.
+    @media (width >= 1024px) {
+        height: 2.8rem;
+
+        .mw-dial__option {
+            min-width: 4rem;
+            padding: 0 0.9rem;
+        }
+
+        .mw-dial__label {
+            font-size: 1.2rem;
+        }
+    }
+
+    // Narrow phones: tighten before the text does, so the balance keeps its
+    // room and the labels stay readable.
+    @media (width <= 400px) {
+        height: 2.2rem;
+
+        .mw-dial__option {
+            min-width: 3rem;
+            padding: 0 0.5rem;
+        }
+
+        .mw-dial__label {
+            font-size: 1rem;
+        }
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .mw-dial__underline {
+    .mw-dial__option {
         transition: none;
     }
 }
