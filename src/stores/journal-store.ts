@@ -106,7 +106,22 @@ export default class JournalStore {
 
     restoreStoredJournals() {
         const client = this.core.client as RootStore['client'];
-        this.journal_filters = getSetting('journal_filter') ?? this.filters.map(filter => filter.id);
+
+        // An empty stored filter set is treated as "no preference", not as
+        // "hide everything".
+        //
+        // This was `getSetting(...) ?? all`, and ?? only falls back on
+        // null/undefined - an empty array is neither. Unchecking all three
+        // boxes persists [], which then survived every reload, and
+        // filtered_messages starts with `this.journal_filters.length &&`, so
+        // zero filters silently discarded every message. The panel showed its
+        // header and nothing else, for good, with no way to tell that a saved
+        // setting was the cause rather than a broken feed.
+        const stored_filters = getSetting('journal_filter');
+        const all_filters = this.filters.map(filter => filter.id);
+        this.journal_filters =
+            Array.isArray(stored_filters) && stored_filters.length > 0 ? stored_filters : all_filters;
+
         this.unfiltered_messages = getStoredItemsByUser(this.JOURNAL_CACHE, getActiveAccountId(client), []);
     }
 
