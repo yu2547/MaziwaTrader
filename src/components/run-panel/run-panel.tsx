@@ -149,7 +149,12 @@ const DrawerContent = ({ active_index, is_drawer_open, active_tour, setActiveTab
                     <Journal />
                 </div>
             </Tabs>
-            {((is_drawer_open && active_index !== 2) || active_tour) && <StatisticsSummary {...props} />}
+            {/* The statistics belong to the run, not to a tab, so they are no
+                longer withheld on the Journal. This used to read
+                `active_index !== 2`, which blanked the whole block whenever
+                Journal was selected - the totals for a run in progress simply
+                vanished depending on where the user happened to be looking. */}
+            {(is_drawer_open || active_tour) && <StatisticsSummary {...props} />}
         </>
     );
 };

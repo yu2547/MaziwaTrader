@@ -90,6 +90,16 @@
         // than 35rem there, so max-width still governs.
         width: 100%;
         max-width: 35rem;
+
+        // Never surrender height. This is a flex item of run-panel__content,
+        // a column that clips with `overflow: hidden !important`, so any
+        // shrinking here is not recoverable - the part that gives way is
+        // simply gone, and the part that gives way is the bottom, which is the
+        // second row of statistics.
+        // The scrollable transaction list above is the element that can afford
+        // to lose height, and it does: it carries flex: auto and min-height: 0
+        // precisely so it can absorb this.
+        flex-shrink: 0;
         background-color: var(--general-section-2);
 
         @include mobile-or-tablet-screen {
@@ -133,7 +143,24 @@
         &--tiles {
             width: 100%;
             display: grid;
-            grid-template: 64px 64px / 1fr 1fr 1fr;
+
+            // Rows that can grow, columns that can shrink.
+            // This was `grid-template: 64px 64px / 1fr 1fr 1fr`, and both
+            // halves of that caused a visible fault.
+            // The rows were a hard 64px each, so the grid had one fixed size
+            // and no way to absorb pressure: anything squeezing this block
+            // vertically pushed the lower row out of view rather than
+            // compressing it, which is how contracts lost / won / profit-loss
+            // came to be missing while the top row stayed.
+            // `1fr` does not stop a column growing past its share either -
+            // grid items default to min-width: auto and refuse to shrink below
+            // their content, which is what widened the amount column and cut
+            // "10.00 USD" down to "10.00 US".
+            // minmax(0, 1fr) lets the columns honour their fractions;
+            // minmax(6.4rem, auto) keeps each row at its designed height as a
+            // floor while allowing it to grow instead of disappear.
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-rows: repeat(2, minmax(6.4rem, auto));
         }
 
         &-amount {
