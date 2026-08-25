@@ -1,5 +1,3 @@
-// MAZIWA-EXEC (temporary diagnostic)
-import { EXEC_STAGE, execTrace, execTraceFail } from '@/utils/exec-trace';
 import { localize } from '@deriv-com/translations';
 import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
@@ -90,16 +88,6 @@ export default Engine =>
                 const expected = this.proposal_templates?.length ?? 0;
                 const received = this.data.proposals.length;
 
-                // MAZIWA-EXEC (temporary diagnostic) - the handshake stalled.
-                // This is the answer to "why was BUY never sent" whenever
-                // PROPOSAL_REQUEST appears with no PROPOSAL_SUCCESS after it.
-                execTraceFail(EXEC_STAGE.PROPOSAL_FAILURE, {
-                    stalled: true,
-                    expected,
-                    received,
-                    matched: this.proposals_matched,
-                });
-
                 if (this.proposals_matched) {
                     // Matched, but proposalsReady() is dispatched behind
                     // startPromise - which only resolves once some message has
@@ -145,14 +133,6 @@ export default Engine =>
 
         requestProposals() {
             markTiming('proposals_requested');
-            // MAZIWA-EXEC (temporary diagnostic)
-            execTrace(EXEC_STAGE.PROPOSAL_REQUEST, {
-                count: this.proposal_templates?.length,
-                symbol: this.proposal_templates?.[0]?.underlying_symbol ?? this.proposal_templates?.[0]?.symbol,
-                types: this.proposal_templates?.map(t => t.contract_type).join('/'),
-                amount: this.proposal_templates?.[0]?.amount,
-                currency: this.proposal_templates?.[0]?.currency,
-            });
             this.startProposalWatchdog();
             // Since there are two proposals (in most cases), an error may be logged twice, to avoid this
             // flip this boolean on error.
@@ -166,14 +146,6 @@ export default Engine =>
                         // the other is valid. We will error on Purchase rather than here.
 
                         if (error?.error?.code === 'ContractBuyValidationError') {
-                            // MAZIWA-EXEC (temporary diagnostic) - not fatal on
-                            // its own: one of a pair can be invalid (e.g.
-                            // DIGITOVER 9) while the other is fine.
-                            execTrace(EXEC_STAGE.PROPOSAL_FAILURE, {
-                                fatal: false,
-                                code: error?.error?.code,
-                                message: error?.error?.message,
-                            });
                             this.data.proposals.push({
                                 ...error.error.echo_req,
                                 ...error.echo_req.passthrough,
@@ -182,11 +154,6 @@ export default Engine =>
 
                             return null;
                         }
-                        // MAZIWA-EXEC (temporary diagnostic)
-                        execTraceFail(EXEC_STAGE.PROPOSAL_FAILURE, {
-                            code: error?.error?.code,
-                            message: error?.error?.message,
-                        });
                         if (!has_informed_error) {
                             has_informed_error = true;
                             this.$scope.observer.emit('Error', error.error);
@@ -231,18 +198,6 @@ export default Engine =>
 
                 if (has_equal_proposals) {
                     markTiming('proposals_ready');
-                    // MAZIWA-EXEC (temporary diagnostic)
-                    execTrace(EXEC_STAGE.PROPOSAL_SUCCESS, {
-                        matched: proposals.length,
-                        proposal_ids: proposals
-                            .map(p => p.id)
-                            .filter(Boolean)
-                            .join(','),
-                        ask_prices: proposals
-                            .map(p => p.ask_price)
-                            .filter(v => v !== undefined)
-                            .join('/'),
-                    });
                     this.proposals_matched = true;
                     // Everything past this point waits on startPromise, which
                     // only settles once a message has arrived on the socket

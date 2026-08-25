@@ -17,8 +17,6 @@ import {
 import { getSelectedTradeType } from '@/external/bot-skeleton/scratch/utils';
 import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
 // import { journalError, switch_account_notification } from '@/utils/bot-notifications';
-// MAZIWA-EXEC (temporary diagnostic)
-import { EXEC_STAGE, execTrace, execTraceFail } from '@/utils/exec-trace';
 import GTM from '@/utils/gtm';
 import { helpers } from '@/utils/store-helpers';
 import { Buy, ProposalOpenContract } from '@deriv/api-types';
@@ -181,16 +179,6 @@ export default class RunPanelStore {
     };
 
     onRunButtonClick = async () => {
-        // MAZIWA-EXEC (temporary diagnostic). First line of the handler on
-        // purpose: BOT_STARTED sits after five separate early returns, so a
-        // click that bails at any of them produced no output at all - which
-        // looked exactly like never having clicked. Every bail-out below now
-        // says so before returning.
-        execTrace(EXEC_STAGE.RUN_CLICKED, {
-            is_logged_in: this.core.client?.is_logged_in,
-            otp_transport: api_base.is_otp_transport,
-            has_token: !!getStoredAccessToken(),
-        });
         let timer_counter = 1;
         if (window.sendRequestsStatistic) {
             performance.clearMeasures();
@@ -228,11 +216,6 @@ export default class RunPanelStore {
             if (getStoredAccessToken()) {
                 const connected = await api_base.initOtpConnection();
                 if (!connected) {
-                    // MAZIWA-EXEC (temporary diagnostic)
-                    execTraceFail(EXEC_STAGE.RUN_ABORTED, {
-                        why: 'otp_connection_failed',
-                        reason: api_base.otp_error ?? 'unknown',
-                    });
                     observer.emit(
                         'ui.log.error',
                         localize('Could not open a trading connection for your account. {{reason}}', {
@@ -242,8 +225,6 @@ export default class RunPanelStore {
                     return;
                 }
             } else {
-                // MAZIWA-EXEC (temporary diagnostic)
-                execTraceFail(EXEC_STAGE.RUN_ABORTED, { why: 'no_access_token_login_dialog_shown' });
                 this.showLoginDialog();
                 return;
             }
@@ -271,16 +252,6 @@ export default class RunPanelStore {
         const selected_account_id = oauth_session?.selected_account_id;
         if (api_base.is_otp_transport && selected_account_id && api_base.account_id !== selected_account_id) {
             const switched = await api_base.switchOtpAccount(selected_account_id);
-            // MAZIWA-EXEC (temporary diagnostic) - this path always returns
-            // without trading; the run needs a second click on a settled
-            // socket. Worth naming, because from the UI it looks like Run did
-            // nothing at all.
-            execTraceFail(EXEC_STAGE.RUN_ABORTED, {
-                why: 'account_repointed',
-                switched,
-                socket_account: api_base.account_id,
-                header_account: selected_account_id,
-            });
             if (switched) {
                 ApiHelpers?.instance?.contracts_for?.disposeCache();
                 observer.emit('ui.log.notify', {
@@ -323,8 +294,6 @@ export default class RunPanelStore {
         if (is_ios || isSafari()) this.preloadAudio();
 
         if (!self_exclusion.should_bot_run) {
-            // MAZIWA-EXEC (temporary diagnostic)
-            execTraceFail(EXEC_STAGE.RUN_ABORTED, { why: 'self_exclusion_restricted' });
             self_exclusion.setIsRestricted(true);
             return;
         }
@@ -333,10 +302,6 @@ export default class RunPanelStore {
         this.registerBotListeners();
 
         if (!this.dbot.shouldRunBot()) {
-            // MAZIWA-EXEC (temporary diagnostic) - the workspace refused to
-            // produce a runnable strategy. Blockly reports why separately;
-            // this records that the run stopped here rather than in the engine.
-            execTraceFail(EXEC_STAGE.RUN_ABORTED, { why: 'shouldRunBot_false' });
             this.unregisterBotListeners();
             return;
         }
@@ -354,14 +319,6 @@ export default class RunPanelStore {
 
             summary_card.clear();
             this.setContractStage(contract_stages.STARTING);
-            // MAZIWA-EXEC (temporary diagnostic)
-            execTrace(EXEC_STAGE.BOT_STARTED, {
-                run_id: this.run_id,
-                transport: api_base.is_otp_transport ? 'otp' : 'classic',
-                account_id: api_base.otp_account?.account_id,
-                account_type: api_base.otp_account?.account_type,
-                currency: api_base.account_info?.currency,
-            });
             this.dbot.runBot();
         });
         this.setShowBotStopMessage(false);

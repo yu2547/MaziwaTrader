@@ -6,8 +6,6 @@ import { TPortfolioPosition, TStores } from '@deriv/stores/types';
 import { TContractInfo } from '../components/summary/summary-card.types';
 import { transaction_elements } from '../constants/transactions';
 import { getActiveAccountId } from '../utils/active-account-id';
-// MAZIWA-EXEC (temporary diagnostic)
-import { EXEC_STAGE, execTrace } from '../utils/exec-trace';
 import { getStoredItemsByKey, getStoredItemsByUser, setStoredItemsByKey } from '../utils/session-storage';
 import RootStore from './root-store';
 
@@ -175,40 +173,6 @@ export default class TransactionsStore {
             profit: is_completed ? data.profit : 0,
         };
 
-        // MAZIWA-EXEC (temporary diagnostic). Reports the RUNTIME TYPE of each
-        // money field alongside its value, plus every plausible spelling of the
-        // exit spot, because the Options API has already been found returning
-        // fields under different names and shapes than the documented schema.
-        //
-        // `add_check` is the load-bearing one: it evaluates 0 + buy_price + 1
-        // exactly as the statistics reducer's `+=` does. A number gives 11; a
-        // string gives "010.001". That single value decides whether the
-        // aggregates are being concatenated rather than summed - which would
-        // explain why the counters (+= 1) are right while every sum is zero.
-        if (is_completed) {
-            const raw = data as unknown as Record<string, unknown>;
-            execTrace(EXEC_STAGE.SETTLEMENT_FIELDS, {
-                contract_id: data.contract_id,
-                buy_price: `${typeof raw.buy_price}:${String(raw.buy_price)}`,
-                profit: `${typeof raw.profit}:${String(raw.profit)}`,
-                payout: `${typeof raw.payout}:${String(raw.payout)}`,
-                bid_price: `${typeof raw.bid_price}:${String(raw.bid_price)}`,
-                add_check: String(0 + (raw.buy_price as number) + 1),
-                status: String(raw.status),
-                is_sold: String(raw.is_sold),
-                // Every key the payload actually carries whose name mentions a
-                // tick or a spot, with its value. Listing candidate spellings
-                // would only prove the ones guessed at were absent; this shows
-                // what is really there, so the exit spot cannot hide under a
-                // name nobody thought to check.
-                spot_keys:
-                    Object.keys(raw)
-                        .filter(key => /tick|spot/i.test(key))
-                        .map(key => `${key}=${String(raw[key])}`)
-                        .join(' ') || '(none)',
-            });
-        }
-
         // Worth knowing: the getter above refuses to read a falsy key, while
         // this writer will happily create an elements[''] bucket. Anything
         // filed under '' is therefore written and can never be read back. It
@@ -262,35 +226,6 @@ export default class TransactionsStore {
         }
 
         this.elements = { ...this.elements }; // force update
-
-        // MAZIWA-EXEC (temporary diagnostic). `readable` is the load-bearing
-        // field: the writer will happily create an elements[''] bucket that
-        // the getter then refuses to read, so a push can succeed and still be
-        // invisible. readable=false with rows>0 means the store has the trade
-        // and the UI can never see it - a different fault from not receiving
-        // it at all.
-        const stats = this.statistics;
-        execTrace(EXEC_STAGE.TRANSACTION_PUSHED, {
-            account_key: current_account || '(empty)',
-            readable: !!current_account,
-            rows: this.elements[current_account]?.length ?? 0,
-            contract_id: data.contract_id,
-            completed: is_completed,
-            entry: contract.entry_tick,
-            exit: contract.exit_tick,
-            profit: contract.profit,
-        });
-        // The three sums carry their runtime type. If they come back as
-        // `string`, the reducer concatenated instead of adding - which is what
-        // correct counters beside zeroed totals would mean.
-        execTrace(EXEC_STAGE.STATISTICS, {
-            runs: stats.number_of_runs,
-            won: stats.won_contracts,
-            lost: stats.lost_contracts,
-            stake: `${typeof stats.total_stake}:${String(stats.total_stake)}`,
-            payout: `${typeof stats.total_payout}:${String(stats.total_payout)}`,
-            pl: `${typeof stats.total_profit}:${String(stats.total_profit)}`,
-        });
     }
 
     clear() {
