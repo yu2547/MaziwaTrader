@@ -161,6 +161,15 @@
             // floor while allowing it to grow instead of disappear.
             grid-template-columns: repeat(3, minmax(0, 1fr));
             grid-template-rows: repeat(2, minmax(6.4rem, auto));
+
+            // Two rows of 6.4rem is what this grid is; it may never be less.
+            // flex-shrink: 0 on the parent asks the flex algorithm nicely, but
+            // this does not depend on the flex context agreeing - the
+            // transactions list is a sibling at flex: 1 1 auto and competes for
+            // the same space, and losing that contest is what took the second
+            // row (contracts lost, contracts won, total profit/loss) off the
+            // screen while the first row stayed.
+            min-height: 12.8rem;
         }
 
         &-amount {
