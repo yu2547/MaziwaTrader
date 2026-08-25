@@ -207,16 +207,28 @@
 
             &--mobile {
                 display: flex;
-                height: var(--drawer-content-height-mobile);
-                position: fixed;
-                bottom: 15.7rem;
-                width: 100vw;
-                padding: 0.4rem 0;
 
-                /* Fix for iOS devices to prevent tab content overlap with bottom controls */
-                @supports (-webkit-touch-callout: none) {
-                    bottom: calc(15.7rem + env(safe-area-inset-bottom, 0));
-                }
+                // In the sheet's flow, not pinned to the viewport.
+                // This was `position: fixed; bottom: 15.7rem; width: 100vw`,
+                // left over from when the run panel was a full-screen
+                // takeover. Once the statistics block stopped being fixed
+                // itself, it became static - and a static element paints
+                // beneath every positioned one, so this fixed list rendered
+                // straight over the tiles. Measured against the shipped
+                // stylesheet at 390x760: the list occupied y=68..603 while the
+                // tiles sat at y=136..264, and elementFromPoint returned the
+                // list for all six of them.
+                // Reset was never affected because the footer sits below the
+                // list's lower edge, which is what made this look like the
+                // second row being clipped rather than covered.
+                // flex: 1 with min-height: 0 lets the list take the space that
+                // is left and give way when there is not enough, instead of
+                // the statistics - which cannot shrink anyway, being two
+                // explicit 64px rows.
+                flex: 1 1 auto;
+                min-height: 0;
+                width: 100%;
+                padding: 0.4rem 0;
             }
 
             &--summary-tab {
