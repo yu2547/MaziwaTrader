@@ -75,6 +75,17 @@ const BOTS: Bot[] = [
         rating: 5,
     },
     {
+        id: 'supatrader',
+        name: 'Supatrader',
+        description:
+            'Supatrader - Premium Over & Under Bot. Advanced automated Over/Under trading bot for Volatility 100 & 75.',
+        fileName: 'Supatrader.xml',
+        category: 'Over/Under',
+        icon: '🤖',
+        is_premium: true,
+        rating: 5,
+    },
+    {
         id: '7',
         name: 'Auto C4 Volt Premium',
         description: 'Premium automated trading bot with advanced market analysis features.',

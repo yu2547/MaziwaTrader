@@ -1,0 +1,317 @@
+<xml xmlns="http://www.w3.org/1999/xhtml" is_dbot="true" collection="false">
+  <variables>
+    <variable type="" id="v_base_stake" islocal="false" iscloud="false">Base Stake</variable>
+    <variable type="" id="v_current_stake" islocal="false" iscloud="false">Current Stake</variable>
+    <variable type="" id="v_mg_enabled" islocal="false" iscloud="false">Martingale ON 1 OFF 0</variable>
+    <variable type="" id="v_mg_multiplier" islocal="false" iscloud="false">Martingale Multiplier</variable>
+    <variable type="" id="v_stop_loss" islocal="false" iscloud="false">Stop Loss</variable>
+    <variable type="" id="v_stop_limit" islocal="false" iscloud="false">Stop Loss Limit</variable>
+    <variable type="" id="v_take_profit" islocal="false" iscloud="false">Take Profit</variable>
+    <variable type="" id="v_min_digit" islocal="false" iscloud="false">Min Prediction Digit</variable>
+    <variable type="" id="v_max_digit" islocal="false" iscloud="false">Max Prediction Digit</variable>
+    <variable type="" id="v_prediction" islocal="false" iscloud="false">Prediction</variable>
+    <variable type="" id="v_start_side" islocal="false" iscloud="false">Starting Side 0 OVER 1 UNDER</variable>
+    <variable type="" id="v_side" islocal="false" iscloud="false">Trade Side</variable>
+  </variables>
+
+  <block type="trade_definition" id="trade_root" x="40" y="40">
+    <statement name="TRADE_OPTIONS">
+      <block type="trade_definition_market" id="market" deletable="false" movable="false">
+        <field name="MARKET_LIST">synthetic_index</field>
+        <field name="SUBMARKET_LIST">random_index</field>
+        <field name="SYMBOL_LIST">R_100</field>
+        <next>
+          <block type="trade_definition_tradetype" id="tradetype" deletable="false" movable="false">
+            <field name="TRADETYPECAT_LIST">digits</field>
+            <field name="TRADETYPE_LIST">overunder</field>
+            <next>
+              <block type="trade_definition_contracttype" id="contracttype" deletable="false" movable="false">
+                <field name="TYPE_LIST">both</field>
+                <next>
+                  <block type="trade_definition_candleinterval" id="candle" deletable="false" movable="false">
+                    <field name="CANDLEINTERVAL_LIST">60</field>
+                    <next>
+                      <block type="trade_definition_restartbuysell" id="restart_buy_sell" deletable="false" movable="false">
+                        <field name="TIME_MACHINE_ENABLED">FALSE</field>
+                        <next>
+                          <block type="trade_definition_restartonerror" id="restart_error" deletable="false" movable="false">
+                            <field name="RESTARTONERROR">TRUE</field>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+
+    <!-- USER SETTINGS: edit the blue number blocks below directly in Deriv Bot. No popups. -->
+    <statement name="INITIALIZATION">
+      <block type="variables_set" id="set_base">
+        <field name="VAR" id="v_base_stake" variabletype="">Base Stake</field>
+        <comment pinned="false" h="55" w="260">SETTING: starting stake amount.</comment>
+        <value name="VALUE">
+          <block type="math_number" id="num_base"><field name="NUM">0.35</field></block>
+        </value>
+        <next>
+          <block type="variables_set" id="set_mg_enabled">
+            <field name="VAR" id="v_mg_enabled" variabletype="">Martingale ON 1 OFF 0</field>
+            <comment pinned="false" h="55" w="300">SETTING: 1 = martingale ON, 0 = martingale OFF.</comment>
+            <value name="VALUE">
+              <block type="math_number" id="num_mg_enabled"><field name="NUM">1</field></block>
+            </value>
+            <next>
+              <block type="variables_set" id="set_mg">
+                <field name="VAR" id="v_mg_multiplier" variabletype="">Martingale Multiplier</field>
+                <comment pinned="false" h="55" w="300">SETTING: loss multiplier. Example 2 doubles the next stake.</comment>
+                <value name="VALUE">
+                  <block type="math_number" id="num_mg"><field name="NUM">2</field></block>
+                </value>
+                <next>
+                  <block type="variables_set" id="set_sl">
+                    <field name="VAR" id="v_stop_loss" variabletype="">Stop Loss</field>
+                    <comment pinned="false" h="55" w="300">SETTING: positive session loss amount. Example 10 stops at -10 total profit.</comment>
+                    <value name="VALUE">
+                      <block type="math_number" id="num_sl"><field name="NUM">10</field></block>
+                    </value>
+                    <next>
+                      <block type="variables_set" id="set_tp">
+                        <field name="VAR" id="v_take_profit" variabletype="">Take Profit</field>
+                        <comment pinned="false" h="55" w="300">SETTING: positive session profit target.</comment>
+                        <value name="VALUE">
+                          <block type="math_number" id="num_tp"><field name="NUM">10</field></block>
+                        </value>
+                        <next>
+                          <block type="variables_set" id="set_min_digit">
+                            <field name="VAR" id="v_min_digit" variabletype="">Min Prediction Digit</field>
+                            <comment pinned="false" h="70" w="320">SETTING: lowest random prediction. Use 4 here and 5 below to randomly trade 4 or 5. For auto Over/Under switching, keep the range inside 1-8.</comment>
+                            <value name="VALUE">
+                              <block type="math_number" id="num_min_digit"><field name="NUM">4</field></block>
+                            </value>
+                            <next>
+                              <block type="variables_set" id="set_max_digit">
+                                <field name="VAR" id="v_max_digit" variabletype="">Max Prediction Digit</field>
+                                <comment pinned="false" h="70" w="320">SETTING: highest random prediction. Example Min 4 + Max 5 = prediction changes between 4 and 5.</comment>
+                                <value name="VALUE">
+                                  <block type="math_number" id="num_max_digit"><field name="NUM">5</field></block>
+                                </value>
+                                <next>
+                                  <block type="variables_set" id="set_start_side">
+                                    <field name="VAR" id="v_start_side" variabletype="">Starting Side 0 OVER 1 UNDER</field>
+                                    <comment pinned="false" h="55" w="300">SETTING: 0 starts with DIGIT OVER. 1 starts with DIGIT UNDER.</comment>
+                                    <value name="VALUE">
+                                      <block type="math_number" id="num_start_side"><field name="NUM">0</field></block>
+                                    </value>
+                                    <next>
+                                      <block type="variables_set" id="set_current">
+                                        <field name="VAR" id="v_current_stake" variabletype="">Current Stake</field>
+                                        <value name="VALUE">
+                                          <block type="variables_get" id="get_base_init"><field name="VAR" id="v_base_stake" variabletype="">Base Stake</field></block>
+                                        </value>
+                                        <next>
+                                          <block type="variables_set" id="set_sl_limit">
+                                            <field name="VAR" id="v_stop_limit" variabletype="">Stop Loss Limit</field>
+                                            <value name="VALUE">
+                                              <block type="math_arithmetic" id="calc_sl_limit">
+                                                <field name="OP">MINUS</field>
+                                                <value name="A"><block type="math_number" id="zero_sl"><field name="NUM">0</field></block></value>
+                                                <value name="B"><block type="variables_get" id="get_sl_init"><field name="VAR" id="v_stop_loss" variabletype="">Stop Loss</field></block></value>
+                                              </block>
+                                            </value>
+                                            <next>
+                                              <block type="variables_set" id="set_side_init">
+                                                <field name="VAR" id="v_side" variabletype="">Trade Side</field>
+                                                <value name="VALUE">
+                                                  <block type="variables_get" id="get_start_side"><field name="VAR" id="v_start_side" variabletype="">Starting Side 0 OVER 1 UNDER</field></block>
+                                                </value>
+                                                <next>
+                                                  <!-- IMPORTANT: prediction is initialized BEFORE DBot builds the first contract proposal. -->
+                                                  <block type="variables_set" id="set_prediction_initial">
+                                                    <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
+                                                    <value name="VALUE">
+                                                      <block type="math_random_int" id="random_digit_initial">
+                                                        <value name="FROM">
+                                                          <block type="variables_get" id="get_min_initial"><field name="VAR" id="v_min_digit" variabletype="">Min Prediction Digit</field></block>
+                                                        </value>
+                                                        <value name="TO">
+                                                          <block type="variables_get" id="get_max_initial"><field name="VAR" id="v_max_digit" variabletype="">Max Prediction Digit</field></block>
+                                                        </value>
+                                                      </block>
+                                                    </value>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+
+    <statement name="SUBMARKET">
+      <block type="trade_definition_tradeoptions" id="trade_options">
+        <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
+        <field name="DURATIONTYPE_LIST">t</field>
+        <value name="DURATION">
+          <shadow type="math_number" id="duration_shadow"><field name="NUM">1</field></shadow>
+          <block type="math_number" id="duration"><field name="NUM">1</field></block>
+        </value>
+        <value name="AMOUNT">
+          <shadow type="math_number" id="amount_shadow"><field name="NUM">0.35</field></shadow>
+          <block type="variables_get" id="get_current_stake"><field name="VAR" id="v_current_stake" variabletype="">Current Stake</field></block>
+        </value>
+        <value name="PREDICTION">
+          <shadow type="math_number_positive" id="prediction_shadow"><field name="NUM">4</field></shadow>
+          <block type="variables_get" id="get_prediction"><field name="VAR" id="v_prediction" variabletype="">Prediction</field></block>
+        </value>
+      </block>
+    </statement>
+  </block>
+
+  <block type="before_purchase" id="before" x="40" y="1100">
+    <statement name="BEFOREPURCHASE_STACK">
+      <!-- Prediction is already prepared before proposal generation. Only choose contract side here. -->
+      <block type="controls_if" id="choose_side">
+        <mutation else="1"></mutation>
+        <value name="IF0">
+          <block type="logic_compare" id="side_is_over">
+            <field name="OP">EQ</field>
+            <value name="A"><block type="variables_get" id="get_side_before"><field name="VAR" id="v_side" variabletype="">Trade Side</field></block></value>
+            <value name="B"><block type="math_number" id="side_zero"><field name="NUM">0</field></block></value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="purchase" id="buy_over"><field name="PURCHASE_LIST">DIGITOVER</field></block>
+        </statement>
+        <statement name="ELSE">
+          <block type="purchase" id="buy_under"><field name="PURCHASE_LIST">DIGITUNDER</field></block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+
+  <block type="after_purchase" id="after" x="720" y="1100">
+    <statement name="AFTERPURCHASE_STACK">
+      <block type="controls_if" id="risk_stop_check">
+        <mutation else="1"></mutation>
+        <value name="IF0">
+          <block type="logic_operation" id="hit_any_limit">
+            <field name="OP">OR</field>
+            <value name="A">
+              <block type="logic_compare" id="hit_tp">
+                <field name="OP">GTE</field>
+                <value name="A"><block type="total_profit" id="total_profit_tp"></block></value>
+                <value name="B"><block type="variables_get" id="get_tp"><field name="VAR" id="v_take_profit" variabletype="">Take Profit</field></block></value>
+              </block>
+            </value>
+            <value name="B">
+              <block type="logic_compare" id="hit_sl">
+                <field name="OP">LTE</field>
+                <value name="A"><block type="total_profit" id="total_profit_sl"></block></value>
+                <value name="B"><block type="variables_get" id="get_sl_limit"><field name="VAR" id="v_stop_limit" variabletype="">Stop Loss Limit</field></block></value>
+              </block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="text_print" id="stop_message">
+            <value name="TEXT">
+              <shadow type="text" id="stop_text"><field name="TEXT">BOT STOPPED: Take Profit or Stop Loss reached.</field></shadow>
+            </value>
+          </block>
+        </statement>
+        <statement name="ELSE">
+          <block type="controls_if" id="result_martingale">
+            <mutation else="1"></mutation>
+            <value name="IF0">
+              <block type="contract_check_result" id="was_win"><field name="CHECK_RESULT">win</field></block>
+            </value>
+            <statement name="DO0">
+              <block type="variables_set" id="reset_stake">
+                <field name="VAR" id="v_current_stake" variabletype="">Current Stake</field>
+                <value name="VALUE"><block type="variables_get" id="get_base_reset"><field name="VAR" id="v_base_stake" variabletype="">Base Stake</field></block></value>
+              </block>
+            </statement>
+            <statement name="ELSE">
+              <block type="controls_if" id="mg_enabled_check">
+                <mutation else="1"></mutation>
+                <value name="IF0">
+                  <block type="logic_compare" id="mg_enabled_equals_one">
+                    <field name="OP">EQ</field>
+                    <value name="A"><block type="variables_get" id="get_mg_enabled"><field name="VAR" id="v_mg_enabled" variabletype="">Martingale ON 1 OFF 0</field></block></value>
+                    <value name="B"><block type="math_number" id="mg_one"><field name="NUM">1</field></block></value>
+                  </block>
+                </value>
+                <statement name="DO0">
+                  <block type="variables_set" id="martingale_stake">
+                    <field name="VAR" id="v_current_stake" variabletype="">Current Stake</field>
+                    <value name="VALUE">
+                      <block type="math_arithmetic" id="multiply_stake">
+                        <field name="OP">MULTIPLY</field>
+                        <value name="A"><block type="variables_get" id="get_current_for_mg"><field name="VAR" id="v_current_stake" variabletype="">Current Stake</field></block></value>
+                        <value name="B"><block type="variables_get" id="get_mg"><field name="VAR" id="v_mg_multiplier" variabletype="">Martingale Multiplier</field></block></value>
+                      </block>
+                    </value>
+                  </block>
+                </statement>
+                <statement name="ELSE">
+                  <block type="variables_set" id="no_mg_reset">
+                    <field name="VAR" id="v_current_stake" variabletype="">Current Stake</field>
+                    <value name="VALUE"><block type="variables_get" id="get_base_no_mg"><field name="VAR" id="v_base_stake" variabletype="">Base Stake</field></block></value>
+                  </block>
+                </statement>
+              </block>
+            </statement>
+            <next>
+              <!-- Auto-switch side after every completed contract. -->
+              <block type="variables_set" id="toggle_side">
+                <field name="VAR" id="v_side" variabletype="">Trade Side</field>
+                <value name="VALUE">
+                  <block type="math_arithmetic" id="one_minus_side">
+                    <field name="OP">MINUS</field>
+                    <value name="A"><block type="math_number" id="one_side"><field name="NUM">1</field></block></value>
+                    <value name="B"><block type="variables_get" id="get_side_toggle"><field name="VAR" id="v_side" variabletype="">Trade Side</field></block></value>
+                  </block>
+                </value>
+                <next>
+                  <!-- Prepare the NEXT prediction before trade_again asks DBot for the next proposal. -->
+                  <block type="variables_set" id="randomize_prediction_next">
+                    <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
+                    <value name="VALUE">
+                      <block type="math_random_int" id="random_digit_next">
+                        <value name="FROM"><block type="variables_get" id="get_min_next"><field name="VAR" id="v_min_digit" variabletype="">Min Prediction Digit</field></block></value>
+                        <value name="TO"><block type="variables_get" id="get_max_next"><field name="VAR" id="v_max_digit" variabletype="">Max Prediction Digit</field></block></value>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="trade_again" id="again"></block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+</xml>
