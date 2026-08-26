@@ -162,16 +162,21 @@
     // an AutoSizer, and AutoSizer renders NOTHING when it measures zero height -
     // so a collapsed box shows an empty panel rather than a short one. That is
     // what emptied the transaction rows while the statistics below stayed correct.
-    &__content {
+    // Both classes carry the full rule set because they are alternatives, not
+    // a base plus a modifier: transactions.tsx applies `transactions__content`
+    // when isDesktop and `transactions__content--mobile` when not, never both.
+    // That is what kept this broken. `display: flex` sat only on the base
+    // class, so on mobile the container was a plain block, transactions__scrollbar
+    // sized to its content instead of to the box, .data-list's height: 100%
+    // resolved against auto, and AutoSizer measured zero - which renders no
+    // rows at all. Desktop had the rule and worked, which is precisely why it
+    // looked fixed from that side.
+    &__content,
+    &__content--mobile {
         display: flex;
         flex-direction: column;
         flex: 1 1 auto;
         min-height: 0;
-
-        &--mobile {
-            flex: 1 1 auto;
-            min-height: 0;
-        }
     }
 
     // Same reasoning one level down: AutoSizer measures this, so it needs a real
