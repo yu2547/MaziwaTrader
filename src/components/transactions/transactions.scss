@@ -5,7 +5,23 @@
     $transaction: &;
     $grid-template-columns: 0.8fr 1fr 1.1fr;
 
+    // `flex-direction: column` was declared here without `display: flex`, so
+    // it did nothing at all. That left this a block inside
+    // run-panel-tab__content--mobile, which IS a flex row - and a row flex
+    // item defaults to min-width: auto, refusing to shrink below its content.
+    // Both faults on the Transactions tab came from that. Horizontally the
+    // rows pushed wider than the panel and the amounts were cut mid-word
+    // ("10.00 USD" as "10.00 US"); vertically nothing capped this, so the
+    // list's full content height shoved the statistics block past the
+    // bottom of run-panel__content, which clips - taking the second row with
+    // it. The Journal tab was unaffected only because it has far less to
+    // render.
+    display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
 
     .ReactVirtualized__Grid__innerScrollContainer {
         & > :first-child,
@@ -17,6 +33,10 @@
     }
 
     .download__container {
+        // Same reason as the column header: a fixed row of buttons that must
+        // keep its height now that .transactions is a real flex column.
+        flex: none;
+
         &__view-detail-button {
             margin-inline-start: 12px;
         }
@@ -86,6 +106,11 @@
         width: 100%;
         display: grid;
 
+        // Fixed 6.4rem, and now a flex item of .transactions - so say it does
+        // not shrink. The list below is the only part that should give up
+        // height, and it can, because it scrolls.
+        flex: none;
+
         @include typeface(--small-left-bold-black, none);
 
         grid-template-columns: $grid-template-columns;
@@ -131,8 +156,16 @@
     &__content {
         height: calc(100% - 11rem);
 
+        // Take what is left after the buttons and the column header, and
+        // scroll inside it. The percentage height this replaced resolved
+        // against a parent that had no height of its own, so it never capped
+        // anything - the list simply grew with its rows and pushed the
+        // statistics out of the panel. min-height: 0 is what actually lets a
+        // flex item shrink below its content so the scrollbar engages.
         &--mobile {
-            height: calc(100% - 4.2rem);
+            flex: 1 1 auto;
+            min-height: 0;
+            height: auto;
         }
     }
 
@@ -245,6 +278,12 @@
         display: flex;
         align-items: center;
         color: var(--text-general);
+
+        // Grid items default to min-width: auto and will not shrink below
+        // their own content, which defeats the 0.8fr 1fr 1.1fr columns: the
+        // amount column widened past its share and the row overflowed the
+        // panel, so "10.00 USD" rendered as "10.00 US".
+        min-width: 0;
 
         // Grid items default to `min-width: auto`, which refuses to shrink
         // below their own content. That quietly defeats the 0.8fr 1fr 1.1fr
