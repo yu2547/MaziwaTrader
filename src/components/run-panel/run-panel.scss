@@ -41,6 +41,57 @@
             // which now would freeze a workspace the user can see.
             overscroll-behavior: contain;
 
+            // The Drawer inside this sheet has to be bound to it. On mobile the
+            // sheet geometry lands on this wrapper while the Drawer itself only
+            // receives the `run-panel` class - `run-panel__container` is applied
+            // on desktop only (run-panel.tsx). dc-drawer is position: fixed by
+            // default, so it was not merely unstyled here, it was out of this
+            // wrapper's flow altogether and sized itself against the viewport:
+            // 726px of drawer inside a 455px sheet, overflowing by 271px.
+            // That is why nothing downstream could be made to behave. With no
+            // bounded height on run-panel__content there was no height pressure
+            // for flex to distribute, so flex-shrink: 0 on the statistics had
+            // nothing to push against and the block simply sat below the
+            // sheet's lower edge, where run-panel__content clips.
+            // Anchoring the drawer to the sheet gives the column a real height,
+            // and the existing rules then do what they were written to do: the
+            // transaction list absorbs the pressure and the statistics keep
+            // their two rows.
+            .dc-drawer {
+                position: relative;
+                inset: auto;
+                width: 100%;
+                height: 100%;
+                max-height: 100%;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .dc-drawer__container {
+                flex: 1 1 auto;
+                min-height: 0;
+                height: auto;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .run-panel__content {
+                flex: 1 1 auto;
+                min-height: 0;
+            }
+
+            // The tab area is the flexible region; it must be able to shrink
+            // below its content so the list scrolls rather than the panel
+            // growing. The base rule carries height: calc(100vh - 42rem),
+            // which is a guess at the viewport that has nothing to do with
+            // this sheet's height.
+            .run-panel-tab__content {
+                flex: 1 1 auto;
+                min-height: 0;
+                height: auto;
+            }
+
             &-closed {
                 position: unset;
             }
