@@ -76,21 +76,10 @@
                 flex-direction: column;
             }
 
-            .run-panel__content {
-                flex: 1 1 auto;
-                min-height: 0;
-            }
-
-            // The tab area is the flexible region; it must be able to shrink
-            // below its content so the list scrolls rather than the panel
-            // growing. The base rule carries height: calc(100vh - 42rem),
-            // which is a guess at the viewport that has nothing to do with
-            // this sheet's height.
-            .run-panel-tab__content {
-                flex: 1 1 auto;
-                min-height: 0;
-                height: auto;
-            }
+            // run-panel__content and run-panel-tab__content are sized in their
+            // own blocks below rather than here. Scoping them to this wrapper
+            // was the bug: the class is applied only when !isDesktop, so the
+            // desktop path never received them.
 
             &-closed {
                 position: unset;
@@ -266,6 +255,13 @@
         flex-direction: column;
         overflow: hidden !important;
 
+        // Fill the drawer and allow the column to shrink, on every width. Same
+        // reason as run-panel-tab__content below: these were scoped to the
+        // mobile wrapper, so the desktop path had no bounded height to
+        // distribute and the statistics were pushed past the clip.
+        flex: 1 1 auto;
+        min-height: 0;
+
         .dc-tabs {
             &__item {
                 overflow: hidden;
@@ -285,8 +281,29 @@
 
     &-tab {
         &__content {
-            height: calc(100vh - 42rem);
+            // The flexible region, on every width.
+            // This was `height: calc(100vh - 42rem)` - a guess at the viewport
+            // that has nothing to do with the panel it sits in. It never
+            // yielded, so run-panel__content had nothing to distribute and the
+            // statistics block was pushed against the clipping edge, losing its
+            // second row.
+            // The equivalent rules were added under
+            // run-panel__container--mobile in eab9a1bc, and React only applies
+            // that class when !isDesktop. That is exactly why docking DevTools
+            // fixed it: the narrower viewport took the mobile path and picked
+            // the rules up, while the normal desktop view never did. The
+            // sizing belongs here, where both paths see it.
+            flex: 1 1 auto;
+            min-height: 0;
             overflow: hidden;
+
+            // A flex container here too, not only in the --mobile variant.
+            // Without it the tab's child is a plain block that sizes to its
+            // own content: the transaction list measured 443px inside a 258px
+            // tab area and was simply clipped by the overflow above, so the
+            // rows were cut off instead of scrolling.
+            display: flex;
+            flex-direction: column;
 
             &--no-stat {
                 height: var(--drawer-content-height-no-stat);
