@@ -9,6 +9,16 @@
     background: linear-gradient(180deg, var(--general-section-2) 0%, rgb(242 243 244 / 0%) 80%);
     width: 100%;
 
+    // Preventive, not a fix for anything observed here. This is a child of
+    // run-panel-tab__content--mobile, the same flex row that .transactions
+    // sits in, and a flex item defaults to min-height: auto - it will not
+    // shrink below its content. That is exactly how the transactions list
+    // came to push the statistics block out of the panel. The summary card is
+    // small enough that it has never done so, but the relationship is
+    // identical and there is no reason to leave it able to.
+    min-width: 0;
+    min-height: 0;
+
     @include desktop-screen {
         height: inherit;
     }
