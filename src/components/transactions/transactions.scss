@@ -182,9 +182,24 @@
         display: flex;
         flex-direction: column;
 
-        & .dc-themed-scrollbars {
+        // DataList sits in here and carries its own percentage chain -
+        // `.data-list` and `.data-list__body-wrapper` are both height: 100%,
+        // and `.data-list__body` is flex: 1 with the default min-height: auto.
+        // Percentages resolve against a definite height, which a
+        // flex-determined box does not reliably provide, so the chain kept
+        // collapsing before it reached AutoSizer - and AutoSizer renders
+        // nothing at zero height, which is why the rows were blank while the
+        // store held them.
+        // Scoped here rather than in data-list.scss: DataList is shared, and
+        // the run panel is the only place putting it inside a flex column.
+        .data-list,
+        .data-list__body-wrapper,
+        .data-list__body {
             flex: 1 1 auto;
             min-height: 0;
+        }
+
+        & .dc-themed-scrollbars {
             width: 100%;
         }
     }
