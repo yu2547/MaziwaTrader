@@ -64,10 +64,23 @@ export default class GoogleDriveStore {
         this.setKey();
         this.client = null;
         this.access_token = localStorage.getItem('google_access_token') ?? '';
-        setTimeout(() => {
-            importExternal('https://accounts.google.com/gsi/client').then(() => this.initialiseClient());
-            importExternal('https://apis.google.com/js/api.js').then(() => this.initialise());
-        }, 3000);
+
+        // Only reach for Google's SDK when this deployment actually has Drive
+        // credentials. GD_CLIENT_ID is injected at build time from the build
+        // environment (rsbuild.config.ts); where it is not set it arrives as
+        // undefined, and initTokenClient({ client_id: undefined }) is what
+        // throws "Missing required parameter client_id" on every page load.
+        //
+        // The integration cannot work without the credential either way, so
+        // the choice is an unavoidable console error or not loading it. There
+        // is no behaviour to lose: is_authorised already gates the UI, and it
+        // is false when no token was ever obtained.
+        if (this.client_id) {
+            setTimeout(() => {
+                importExternal('https://accounts.google.com/gsi/client').then(() => this.initialiseClient());
+                importExternal('https://apis.google.com/js/api.js').then(() => this.initialise());
+            }, 3000);
+        }
     }
 
     is_google_drive_token_valid = true;
