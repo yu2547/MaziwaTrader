@@ -153,27 +153,38 @@
         }
     }
 
+    // Takes what is left after the buttons and the column header, and scrolls
+    // inside it. Sized by flex rather than by percentage on purpose: .transactions
+    // is now a flex column whose own height is flex-determined, and a percentage
+    // cannot resolve against that - `height: calc(100% - 11rem)` computed to auto,
+    // which collapsed this box.
+    // That matters more here than it looks. The list is react-virtualized behind
+    // an AutoSizer, and AutoSizer renders NOTHING when it measures zero height -
+    // so a collapsed box shows an empty panel rather than a short one. That is
+    // what emptied the transaction rows while the statistics below stayed correct.
     &__content {
-        height: calc(100% - 11rem);
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
 
-        // Take what is left after the buttons and the column header, and
-        // scroll inside it. The percentage height this replaced resolved
-        // against a parent that had no height of its own, so it never capped
-        // anything - the list simply grew with its rows and pushed the
-        // statistics out of the panel. min-height: 0 is what actually lets a
-        // flex item shrink below its content so the scrollbar engages.
         &--mobile {
             flex: 1 1 auto;
             min-height: 0;
-            height: auto;
         }
     }
 
+    // Same reasoning one level down: AutoSizer measures this, so it needs a real
+    // height from flex, not a percentage of an auto-height parent.
     &__scrollbar {
-        height: 100%;
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
 
         & .dc-themed-scrollbars {
-            height: 100%;
+            flex: 1 1 auto;
+            min-height: 0;
             width: 100%;
         }
     }
