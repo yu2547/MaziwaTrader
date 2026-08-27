@@ -1,0 +1,324 @@
+<xml xmlns="http://www.w3.org/1999/xhtml" is_dbot="true" collection="false">
+  <variables>
+    <variable id="dp_loss">Loss</variable>
+    <variable id="dp_stake">Stake</variable>
+    <variable id="dp_stake2">stake 2</variable>
+    <variable id="dp_target">Target Profit</variable>
+    <variable id="dp_text">text</variable>
+    <variable id="dp_text1">text1</variable>
+    <variable id="dp_text2">text2</variable>
+    <variable id="dp_text3">text3</variable>
+  </variables>
+
+  <block type="trade_definition" id="dp_root" x="40" y="40">
+    <statement name="TRADE_OPTIONS">
+      <block type="trade_definition_market" id="dp_market" deletable="false" movable="false">
+        <field name="MARKET_LIST">synthetic_index</field>
+        <field name="SUBMARKET_LIST">random_index</field>
+        <field name="SYMBOL_LIST">1HZ100V</field>
+        <next>
+          <block type="trade_definition_tradetype" id="dp_tradetype" deletable="false" movable="false">
+            <field name="TRADETYPECAT_LIST">digits</field>
+            <field name="TRADETYPE_LIST">overunder</field>
+            <next>
+              <block type="trade_definition_contracttype" id="dp_contracttype" deletable="false" movable="false">
+                <field name="TYPE_LIST">both</field>
+                <next>
+                  <block type="trade_definition_candleinterval" id="dp_candle" deletable="false" movable="false">
+                    <field name="CANDLEINTERVAL_LIST">60</field>
+                    <next>
+                      <block type="trade_definition_restartbuysell" id="dp_restartbuysell" deletable="false" movable="false">
+                        <field name="TIME_MACHINE_ENABLED">FALSE</field>
+                        <next>
+                          <block type="trade_definition_restartonerror" id="dp_restarterror" deletable="false" movable="false">
+                            <field name="RESTARTONERROR">TRUE</field>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+
+    <statement name="INITIALIZATION">
+      <block type="text_print" id="dp_hello">
+        <value name="TEXT">
+          <shadow type="text" id="dp_hello_txt"><field name="TEXT">About To Print Dollars</field></shadow>
+        </value>
+        <next>
+          <block type="variables_set" id="dp_set_loss">
+            <field name="VAR" id="dp_loss">Loss</field>
+            <value name="VALUE">
+              <block type="math_number" id="dp_n_loss"><field name="NUM">1000</field></block>
+            </value>
+            <next>
+              <block type="variables_set" id="dp_set_target">
+                <field name="VAR" id="dp_target">Target Profit</field>
+                <value name="VALUE">
+                  <block type="math_number" id="dp_n_target"><field name="NUM">607</field></block>
+                </value>
+                <next>
+                  <block type="variables_set" id="dp_set_stake">
+                    <field name="VAR" id="dp_stake">Stake</field>
+                    <value name="VALUE">
+                      <block type="math_number" id="dp_n_stake"><field name="NUM">2</field></block>
+                    </value>
+                    <next>
+                      <block type="variables_set" id="dp_set_stake2">
+                        <field name="VAR" id="dp_stake2">stake 2</field>
+                        <value name="VALUE">
+                          <block type="math_number" id="dp_n_stake2"><field name="NUM">2</field></block>
+                        </value>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+
+    <statement name="SUBMARKET">
+      <block type="trade_definition_tradeoptions" id="dp_tradeoptions">
+        <mutation xmlns="http://www.w3.org/1999/xhtml" has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
+        <field name="DURATIONTYPE_LIST">t</field>
+        <value name="DURATION">
+          <shadow type="math_number" id="dp_dur_shadow"><field name="NUM">1</field></shadow>
+          <block type="math_number" id="dp_dur"><field name="NUM">1</field></block>
+        </value>
+        <value name="AMOUNT">
+          <shadow type="math_number" id="dp_amt_shadow"><field name="NUM">2</field></shadow>
+          <block type="variables_get" id="dp_get_stake"><field name="VAR" id="dp_stake">Stake</field></block>
+        </value>
+        <value name="PREDICTION">
+          <shadow type="math_number_positive" id="dp_pred_shadow"><field name="NUM">5</field></shadow>
+          <block type="math_number" id="dp_pred"><field name="NUM">5</field></block>
+        </value>
+      </block>
+    </statement>
+  </block>
+
+  <block type="before_purchase" id="dp_before" x="40" y="900">
+    <statement name="BEFOREPURCHASE_STACK">
+      <block type="purchase" id="dp_buy"><field name="PURCHASE_LIST">DIGITOVER</field></block>
+    </statement>
+  </block>
+
+  <block type="after_purchase" id="dp_after" x="700" y="900">
+    <statement name="AFTERPURCHASE_STACK">
+      <block type="controls_if" id="dp_result_if">
+        <mutation else="1"></mutation>
+        <value name="IF0">
+          <block type="contract_check_result" id="dp_is_win"><field name="CHECK_RESULT">win</field></block>
+        </value>
+
+        <statement name="DO0">
+          <block type="text_join" id="dp_join_win">
+            <field name="VARIABLE" id="dp_text">text</field>
+            <statement name="STACK">
+              <block type="text_statement" id="dp_win_label">
+                <value name="TEXT">
+                  <shadow type="text" id="dp_win_label_txt"><field name="TEXT">Ganhou: </field></shadow>
+                </value>
+                <next>
+                  <block type="text_statement" id="dp_win_profit">
+                    <value name="TEXT">
+                      <block type="read_details" id="dp_win_detail"><field name="DETAIL_INDEX">4</field></block>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="notify" id="dp_notify_win">
+                <field name="NOTIFICATION_TYPE">success</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <block type="variables_get" id="dp_get_text"><field name="VAR" id="dp_text">text</field></block>
+                </value>
+                <next>
+                  <block type="variables_set" id="dp_reset_after_win">
+                    <field name="VAR" id="dp_stake">Stake</field>
+                    <value name="VALUE">
+                      <block type="variables_get" id="dp_get_stake2_win"><field name="VAR" id="dp_stake2">stake 2</field></block>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+
+        <statement name="ELSE">
+          <block type="text_join" id="dp_join_loss">
+            <field name="VARIABLE" id="dp_text1">text1</field>
+            <statement name="STACK">
+              <block type="text_statement" id="dp_loss_label">
+                <value name="TEXT">
+                  <shadow type="text" id="dp_loss_label_txt"><field name="TEXT">Perdeu: </field></shadow>
+                </value>
+                <next>
+                  <block type="text_statement" id="dp_loss_profit">
+                    <value name="TEXT">
+                      <block type="math_single" id="dp_abs_loss">
+                        <field name="OP">ABS</field>
+                        <value name="NUM">
+                          <shadow type="math_number" id="dp_abs_loss_shadow"><field name="NUM">0</field></shadow>
+                          <block type="read_details" id="dp_loss_detail"><field name="DETAIL_INDEX">4</field></block>
+                        </value>
+                      </block>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="notify" id="dp_notify_loss">
+                <field name="NOTIFICATION_TYPE">warn</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <block type="variables_get" id="dp_get_text1"><field name="VAR" id="dp_text1">text1</field></block>
+                </value>
+                <next>
+                  <block type="math_change" id="dp_grow_stake">
+                    <field name="VAR" id="dp_stake">Stake</field>
+                    <value name="DELTA">
+                      <shadow type="math_number" id="dp_delta_shadow"><field name="NUM">1</field></shadow>
+                      <block type="math_arithmetic" id="dp_delta_calc">
+                        <field name="OP">MULTIPLY</field>
+                        <value name="A">
+                          <shadow type="math_number" id="dp_delta_a_shadow"><field name="NUM">1</field></shadow>
+                          <block type="math_single" id="dp_abs_delta">
+                            <field name="OP">ABS</field>
+                            <value name="NUM">
+                              <shadow type="math_number" id="dp_abs_delta_shadow"><field name="NUM">0</field></shadow>
+                              <block type="read_details" id="dp_delta_detail"><field name="DETAIL_INDEX">4</field></block>
+                            </value>
+                          </block>
+                        </value>
+                        <value name="B">
+                          <shadow type="math_number" id="dp_delta_b_shadow"><field name="NUM">1</field></shadow>
+                          <block type="math_number" id="dp_delta_b"><field name="NUM">1</field></block>
+                        </value>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="controls_if" id="dp_cap_if">
+                        <value name="IF0">
+                          <block type="logic_compare" id="dp_cap_cmp">
+                            <field name="OP">GTE</field>
+                            <value name="A">
+                              <block type="math_single" id="dp_abs_cap">
+                                <field name="OP">ABS</field>
+                                <value name="NUM">
+                                  <shadow type="math_number" id="dp_abs_cap_shadow"><field name="NUM">0</field></shadow>
+                                  <block type="read_details" id="dp_cap_detail"><field name="DETAIL_INDEX">4</field></block>
+                                </value>
+                              </block>
+                            </value>
+                            <value name="B">
+                              <block type="variables_get" id="dp_get_loss"><field name="VAR" id="dp_loss">Loss</field></block>
+                            </value>
+                          </block>
+                        </value>
+                        <statement name="DO0">
+                          <block type="variables_set" id="dp_reset_after_cap">
+                            <field name="VAR" id="dp_stake">Stake</field>
+                            <value name="VALUE">
+                              <block type="variables_get" id="dp_get_stake2_cap"><field name="VAR" id="dp_stake2">stake 2</field></block>
+                            </value>
+                          </block>
+                        </statement>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+
+        <next>
+          <block type="text_join" id="dp_join_total">
+            <field name="VARIABLE" id="dp_text2">text2</field>
+            <statement name="STACK">
+              <block type="text_statement" id="dp_total_label">
+                <value name="TEXT">
+                  <shadow type="text" id="dp_total_label_txt"><field name="TEXT">Total Profit: </field></shadow>
+                </value>
+                <next>
+                  <block type="text_statement" id="dp_total_value">
+                    <value name="TEXT">
+                      <block type="total_profit" id="dp_total_profit"></block>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="notify" id="dp_notify_total">
+                <field name="NOTIFICATION_TYPE">info</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <block type="variables_get" id="dp_get_text2"><field name="VAR" id="dp_text2">text2</field></block>
+                </value>
+                <next>
+                  <block type="controls_if" id="dp_target_if">
+                    <mutation else="1"></mutation>
+                    <value name="IF0">
+                      <block type="logic_compare" id="dp_target_cmp">
+                        <field name="OP">LT</field>
+                        <value name="A">
+                          <block type="total_profit" id="dp_total_for_check"></block>
+                        </value>
+                        <value name="B">
+                          <block type="variables_get" id="dp_get_target"><field name="VAR" id="dp_target">Target Profit</field></block>
+                        </value>
+                      </block>
+                    </value>
+                    <statement name="DO0">
+                      <block type="trade_again" id="dp_again"></block>
+                    </statement>
+                    <statement name="ELSE">
+                      <block type="text_join" id="dp_join_done">
+                        <field name="VARIABLE" id="dp_text3">text3</field>
+                        <statement name="STACK">
+                          <block type="text_statement" id="dp_done_label">
+                            <value name="TEXT">
+                              <shadow type="text" id="dp_done_label_txt"><field name="TEXT">Dollars Printed Successfully : </field></shadow>
+                            </value>
+                            <next>
+                              <block type="text_statement" id="dp_done_value">
+                                <value name="TEXT">
+                                  <block type="total_profit" id="dp_total_done"></block>
+                                </value>
+                              </block>
+                            </next>
+                          </block>
+                        </statement>
+                        <next>
+                          <block type="text_print" id="dp_print_done">
+                            <value name="TEXT">
+                              <block type="variables_get" id="dp_get_text3"><field name="VAR" id="dp_text3">text3</field></block>
+                            </value>
+                          </block>
+                        </next>
+                      </block>
+                    </statement>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

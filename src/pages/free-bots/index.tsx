@@ -68,6 +68,17 @@ const BOTS: Bot[] = [
         rating: 5,
     },
     {
+        id: 'dollar-printer-11',
+        name: 'DOLLAR PRINTER BOT11',
+        description:
+            'Professional Dollar Printer bot version 11. Advanced automated trading system designed for consistent profits with intelligent risk management on Volatility 100 (1s).',
+        fileName: 'Dollar_Printer_Bot11.xml',
+        category: 'Over/Under',
+        icon: '🤖',
+        is_premium: true,
+        rating: 5,
+    },
+    {
         id: '7',
         name: 'Auto C4 Volt Premium',
         description: 'Premium automated trading bot with advanced market analysis features.',
