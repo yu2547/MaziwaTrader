@@ -43,14 +43,6 @@ const BOTS: Bot[] = [
         icon: '🕯️',
     },
     {
-        id: '3',
-        name: 'Accumulators Pro Bot',
-        description: 'Professional accumulator strategy bot for consistent growth trading.',
-        fileName: 'Accumulators_Pro_Bot_1765711647657.xml',
-        category: 'Accumulators',
-        icon: '📈',
-    },
-    {
         id: '4',
         name: 'AI Entry Point Bot',
         description: 'AI-powered bot that identifies optimal entry points for maximum profit.',
