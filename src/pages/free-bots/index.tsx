@@ -80,11 +80,14 @@ const BOTS: Bot[] = [
     },
     {
         id: '7',
-        name: 'Auto C4 Volt Premium',
-        description: 'Premium automated trading bot with advanced market analysis features.',
+        name: 'Maziwa Auto Premium',
+        description:
+            'Maziwa Auto Premium - Automated trading bot with advanced market analysis, running on Volatility 10 (1s) for rapid execution.',
         fileName: 'AUTO_C4_VOLT_🇬🇧_2_🇬🇧_AI_PREMIUM_ROBOT_(2)_(1)_1765711647660.xml',
         category: 'Premium',
         icon: '⚡',
+        is_premium: true,
+        rating: 5,
     },
     {
         id: '11',
