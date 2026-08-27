@@ -128,14 +128,6 @@ const BOTS: Bot[] = [
         category: 'Even/Odd',
         icon: '⚡',
     },
-    {
-        id: '12',
-        name: 'Even & Odd AI Bot',
-        description: 'Smart AI bot specialized in even and odd digit predictions.',
-        fileName: 'BINARYTOOL@EVEN&ODD_AI_BOT_(2)_1765711647663.xml',
-        category: 'Even/Odd',
-        icon: '🎲',
-    },
 ];
 
 export type TFreeBotsProps = {
