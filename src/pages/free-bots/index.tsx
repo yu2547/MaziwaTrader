@@ -97,30 +97,6 @@ const BOTS: Bot[] = [
         icon: '⚡',
     },
     {
-        id: '8',
-        name: 'Binary Flipper AI Plus',
-        description: 'AI-enhanced binary options trading bot with flip strategy optimization.',
-        fileName: 'BINARY_FLIPPER_AI_ROBOT_PLUS_+_1765711647660.xml',
-        category: 'AI Trading',
-        icon: '🔄',
-    },
-    {
-        id: '9',
-        name: 'Binarytool Wizard AI',
-        description: 'Intelligent trading wizard with multiple strategy implementations.',
-        fileName: 'BINARYTOOL_WIZARD_AI_BOT_1765711647661.xml',
-        category: 'AI Trading',
-        icon: '🧙',
-    },
-    {
-        id: '10',
-        name: 'Binarytool Differ V2.0',
-        description: 'Version 2.0 differ bot with improved accuracy and performance.',
-        fileName: 'BINARYTOOL@_DIFFER_V2.0_(1)_(1)_1765711647662.xml',
-        category: 'Differ',
-        icon: '📊',
-    },
-    {
         id: '11',
         name: 'Even Odd Thunder AI Pro',
         description:
