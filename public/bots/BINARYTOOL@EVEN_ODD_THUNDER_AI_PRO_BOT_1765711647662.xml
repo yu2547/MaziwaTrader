@@ -17,7 +17,7 @@
       <block type="trade_definition_market" id="W1QDpysz)|HA?v8!^FtU" deletable="false" movable="false">
         <field name="MARKET_LIST">synthetic_index</field>
         <field name="SUBMARKET_LIST">random_index</field>
-        <field name="SYMBOL_LIST">R_100</field>
+        <field name="SYMBOL_LIST">1HZ100V</field>
         <next>
           <block type="trade_definition_tradetype" id="biR]#vY0simU/=/ihfop" deletable="false" movable="false">
             <field name="TRADETYPECAT_LIST">digits</field>
@@ -30,7 +30,7 @@
                     <field name="CANDLEINTERVAL_LIST">60</field>
                     <next>
                       <block type="trade_definition_restartbuysell" id="L|Ujo`Itmpb%HV@iz^:{" deletable="false" movable="false">
-                        <field name="TIME_MACHINE_ENABLED">TRUE</field>
+                        <field name="TIME_MACHINE_ENABLED">FALSE</field>
                         <next>
                           <block type="trade_definition_restartonerror" id="^YG1oR[iRR_zWp}Yxt//" deletable="false" movable="false">
                             <field name="RESTARTONERROR">TRUE</field>

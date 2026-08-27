@@ -123,10 +123,13 @@ const BOTS: Bot[] = [
     {
         id: '11',
         name: 'Even Odd Thunder AI Pro',
-        description: 'Professional even/odd prediction bot with thunder-fast execution.',
+        description:
+            'Even Odd Thunder AI Pro - Premium even/odd prediction bot with thunder-fast execution on Volatility 100 (1s).',
         fileName: 'BINARYTOOL@EVEN_ODD_THUNDER_AI_PRO_BOT_1765711647662.xml',
         category: 'Even/Odd',
         icon: '⚡',
+        is_premium: true,
+        rating: 5,
     },
 ];
 
