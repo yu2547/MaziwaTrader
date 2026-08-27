@@ -14,7 +14,7 @@
       <block type="trade_definition_market" id="PpTYCikO-Vl3xW7EvY;9" deletable="false" movable="false">
         <field name="MARKET_LIST">synthetic_index</field>
         <field name="SUBMARKET_LIST">random_index</field>
-        <field name="SYMBOL_LIST">R_100</field>
+        <field name="SYMBOL_LIST">1HZ100V</field>
         <next>
           <block type="trade_definition_tradetype" id="_]^,~{o$]3uX4sZ2OB!7" deletable="false" movable="false">
             <field name="TRADETYPECAT_LIST">digits</field>
@@ -114,7 +114,7 @@
       </block>
     </statement>
   </block>
-  <block type="during_purchase" id="WK;)4B%_3F6e;^`*1U/U" collapsed="true" x="820" y="60"></block>
+  <block type="during_purchase" id="WK;)4B%_3F6e;^`*1U/U" collapsed="true" x="820" y="60"/>
   <block type="after_purchase" id=";N+NF2Y^)C.@z-}-]O]U" x="820" y="156">
     <statement name="AFTERPURCHASE_STACK">
       <block type="controls_if" id="QX}izG@:OQMRc%H9J)|,">
@@ -131,7 +131,7 @@
               <block type="text_statement" id="WDJxL+;fE2o[$x_=uHAE">
                 <value name="TEXT">
                   <shadow type="text" id="B2l.r889*+o^nDz,GB3O">
-                    <field name="TEXT"></field>
+                    <field name="TEXT"/>
                   </shadow>
                   <block type="text" id=":eOVX;TQ^qkW6Bt2}35N">
                     <field name="TEXT">Good Job🤑 Won it💥🥳💥🎉✔️</field>
@@ -141,7 +141,7 @@
                   <block type="text_statement" id="aGZ5s+OVU5Ag(K%H{@c|">
                     <value name="TEXT">
                       <shadow type="text" id="@:jEjHr}|NQugAHW%*de">
-                        <field name="TEXT"></field>
+                        <field name="TEXT"/>
                       </shadow>
                       <block type="read_details" id="02s-yT%-?rQ2mBpNUYoS">
                         <field name="DETAIL_INDEX">4</field>
@@ -181,7 +181,7 @@
               <block type="text_statement" id="O|:m|2pOokz/Zo{DFvaC">
                 <value name="TEXT">
                   <shadow type="text" id="]yExvue[r}N|e+!F7sXN">
-                    <field name="TEXT"></field>
+                    <field name="TEXT"/>
                   </shadow>
                   <block type="text" id="{7!*zMmQB3xow[eg`1;E">
                     <field name="TEXT">sorry we lost but we will win🙏</field>
@@ -191,7 +191,7 @@
                   <block type="text_statement" id="VdemyKnjcku?6g2q)o;0">
                     <value name="TEXT">
                       <shadow type="text" id="mAlm31JJ`.4Rg.]`[;hD">
-                        <field name="TEXT"></field>
+                        <field name="TEXT"/>
                       </shadow>
                       <block type="math_single" id="[%Rp4+?.(YT),,o(rCVm">
                         <field name="OP">ABS</field>
@@ -303,7 +303,7 @@
               <block type="text_statement" id="NXZSZ~NJir^r|k?Lz2s5">
                 <value name="TEXT">
                   <shadow type="text" id="g8;~:CD6akaMg$^bkep4">
-                    <field name="TEXT"></field>
+                    <field name="TEXT"/>
                   </shadow>
                   <block type="text" id="9/O.T92/ES(uDTn^1kz$">
                     <field name="TEXT">Total Profit: </field>
@@ -313,9 +313,9 @@
                   <block type="text_statement" id="G[uC#-GbY-,aiTZ(#t-p">
                     <value name="TEXT">
                       <shadow type="text" id="}hs:WU@.$Crhj%4`^wC]">
-                        <field name="TEXT"></field>
+                        <field name="TEXT"/>
                       </shadow>
-                      <block type="total_profit" id="A*4_}Zz=K?VbeQnl#%Kf"></block>
+                      <block type="total_profit" id="A*4_}Zz=K?VbeQnl#%Kf"/>
                     </value>
                   </block>
                 </next>
@@ -337,7 +337,7 @@
                       <block type="logic_compare" id="4jp7,@;t-VaiB*A{O(9q">
                         <field name="OP">LT</field>
                         <value name="A">
-                          <block type="total_profit" id="r%cgq[P,hb6N5v|!=G[8"></block>
+                          <block type="total_profit" id="r%cgq[P,hb6N5v|!=G[8"/>
                         </value>
                         <value name="B">
                           <block type="variables_get" id="ac^:@t9)Y=jl[3*-kNn1">
@@ -347,7 +347,7 @@
                       </block>
                     </value>
                     <statement name="DO0">
-                      <block type="trade_again" id="oMzV#w4Ry*oj!34)iD]."></block>
+                      <block type="trade_again" id="oMzV#w4Ry*oj!34)iD]."/>
                     </statement>
                     <statement name="ELSE">
                       <block type="text_join" id="~o{YMg~H?$M}!W[vI%y}">
@@ -356,7 +356,7 @@
                           <block type="text_statement" id="YPV,lNcN%Vap|rZ)@/N2">
                             <value name="TEXT">
                               <shadow type="text" id="A0}a/?5#c,_C*;n^.vBh">
-                                <field name="TEXT"></field>
+                                <field name="TEXT"/>
                               </shadow>
                               <block type="text" id="2/zpBXMK9%3EU%zRS;De">
                                 <field name="TEXT">Dollar Printer strategy worked ! 🎉🎉💥Congratulations 🥳</field>
@@ -366,9 +366,9 @@
                               <block type="text_statement" id="^SsViN3H:V01#3mtJ4uk">
                                 <value name="TEXT">
                                   <shadow type="text" id="=jqugB8Z#s8/lcxTlnfW">
-                                    <field name="TEXT"></field>
+                                    <field name="TEXT"/>
                                   </shadow>
-                                  <block type="total_profit" id="+uL(kE?0jtR;RQ;c4{cf"></block>
+                                  <block type="total_profit" id="+uL(kE?0jtR;RQ;c4{cf"/>
                                 </value>
                               </block>
                             </next>

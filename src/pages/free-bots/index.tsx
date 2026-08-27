@@ -49,7 +49,7 @@ const BOTS: Bot[] = [
         id: '6',
         name: 'Alpha Version 2026 Edition',
         description:
-            'Alpha Version 2026 Edition - Premium trading bot with cutting-edge 2026 algorithms. Features advanced market analysis and automated execution on Volatility 100.',
+            'Alpha Version 2026 Edition - Premium trading bot with cutting-edge 2026 algorithms. Features advanced market analysis and automated execution on Volatility 100 (1s).',
         fileName: 'Alpha_Bot_Version_2026.xml',
         category: 'AI Trading',
         icon: '🤖',
@@ -60,7 +60,7 @@ const BOTS: Bot[] = [
         id: 'supatrader',
         name: 'Supatrader',
         description:
-            'Supatrader - Premium Over & Under Bot. Advanced automated Over/Under trading bot for Volatility 100 & 75.',
+            'Supatrader - Premium Over & Under Bot. Advanced automated Over/Under trading bot running on Volatility 100 (1s).',
         fileName: 'Supatrader.xml',
         category: 'Over/Under',
         icon: '🤖',
