@@ -72,12 +72,42 @@
             .dc-drawer {
                 position: relative;
                 inset: auto;
-                width: 100%;
-                height: 100%;
                 max-height: 100%;
                 min-height: 0;
                 display: flex;
                 flex-direction: column;
+
+                // The shared components stylesheet ships
+                //   @media (max-width: 1279px) { .dc-drawer {
+                //       width: 100vw !important;
+                //       height: calc(100% - 10.1rem) !important;
+                //       top: calc(100% - 9.8rem) !important; } }
+                // !important beats any selector weight, so the plain `inset`
+                // and `height` above lost silently at every phone and tablet
+                // width. `position` is not in that block, so `relative` above
+                // did apply - which turned the imposed `top` into a 485px
+                // relative shift instead of a no-op. Measured at 375x812: the
+                // drawer rendered 482px tall inside a 583px sheet and slid
+                // down far enough that the transaction rows (490-543) landed
+                // on top of the statistics grid (441-569).
+                // Matching !important is the only thing that outranks it.
+                inset-block-start: auto !important;
+                width: 100% !important;
+                height: 100% !important;
+
+                // Same media block also carries the drawer's slide-in:
+                //   .dc-drawer--open { transform: translateY(calc(3.6rem - 100%)) }
+                // That pairs with the fixed `top` above - the drawer parks
+                // below the fold and slides up into view. Once the sheet owns
+                // the geometry the animation has nothing left to correct for,
+                // so it just lifts the panel out of the sheet: measured
+                // translateY(-547px) at 375x812, putting Reset at y=96 and the
+                // transaction rows off the top of the screen.
+                // drawer.tsx:49 applies dc-drawer--open from `is_open` alone,
+                // with no device branch, and the .bot-dashboard rule that
+                // resets the transform is scoped to desktop-screen - so on
+                // every viewport up to 1279px this was landing unopposed.
+                transform: none !important;
             }
 
             .dc-drawer__container {
