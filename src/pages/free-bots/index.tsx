@@ -35,28 +35,12 @@ const BOTS: Bot[] = [
         rating: 5,
     },
     {
-        id: '2',
-        name: 'Candle Mine Bot',
-        description: 'Analyzes candlestick patterns to identify profitable trading opportunities.',
-        fileName: '3_2025_Updated_Version_Of_Candle_Mine🇬🇧_1765711647657.xml',
-        category: 'Pattern Analysis',
-        icon: '🕯️',
-    },
-    {
         id: '4',
         name: 'AI Entry Point Bot',
         description: 'AI-powered bot that identifies optimal entry points for maximum profit.',
         fileName: 'AI_with_Entry_Point_1765711647658.xml',
         category: 'AI Trading',
         icon: '🤖',
-    },
-    {
-        id: '5',
-        name: 'Alex Speed Bot EXPRO2',
-        description: 'Enhanced speed trading bot with advanced algorithms for rapid execution.',
-        fileName: 'ALEXSPEEDBOT__EXPRO2_(2)_(1)_1765711647659.xml',
-        category: 'Speed Trading',
-        icon: '🚀',
     },
     {
         id: '6',
