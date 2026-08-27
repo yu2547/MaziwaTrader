@@ -1,11 +1,20 @@
 @use 'components/shared/styles/themes' as *;
-// IBM Plex Sans is loaded via a <link> tag in index.html instead of an @import
+
+// Interface fonts are loaded by <link> tags in index.html rather than @import
 // here - an @import inside this always-loaded global stylesheet meant the
 // browser couldn't discover/fetch the font until after downloading and
 // parsing this whole CSS file, instead of in parallel with it from the start.
 
 body {
-    font-family: 'IBM Plex Sans', sans-serif;
+    // One interface typeface for the whole app, declared once here. This is
+    // the only place it needs to be: the typeface() mixin every component uses
+    // sets size, alignment, weight and colour but never font-family, so
+    // everything inherits from this rule - including content rendered at
+    // runtime, such as transaction rows, which no stylesheet of ours can reach
+    // individually.
+    // Inter is loaded by a <link> in index.html. Roboto covers Android before
+    // Inter arrives, then Arial, then the device's own sans.
+    font-family: 'Inter', 'Roboto', 'Arial', sans-serif;
     background: var(--general-main-1);
 }
 
