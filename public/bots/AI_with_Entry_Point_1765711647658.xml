@@ -96,21 +96,7 @@
         
         <value name="VALUE">
           
-          <block type="text_prompt_ext" id="b+H..IR*c8$h81Vst5Z1">
-            
-            <field name="TYPE">NUMBER</field>
-            
-            <value name="TEXT">
-              
-              <shadow type="text" id=";04*~;)5D!J05$8!Ex;Q">
-                
-                <field name="TEXT">Enter Your Stake</field>
-              
-              </shadow>
-            
-            </value>
-          
-          </block>
+          <block type="math_number" id="mw_aiep_1"><field name="NUM">0.35</field></block>
         
         </value>
         
@@ -138,21 +124,7 @@
                 
                 <value name="VALUE">
                   
-                  <block type="text_prompt_ext" id="{n10zG1h?gpci3XK~Ir9">
-                    
-                    <field name="TYPE">NUMBER</field>
-                    
-                    <value name="TEXT">
-                      
-                      <shadow type="text" id="R0jp5+@^34O_ICgXq3|Q">
-                        
-                        <field name="TEXT">Enter your Entry</field>
-                      
-                      </shadow>
-                    
-                    </value>
-                  
-                  </block>
+                  <block type="math_number" id="mw_aiep_2"><field name="NUM">0</field></block>
                 
                 </value>
                 
@@ -164,27 +136,7 @@
                     
                     <value name="VALUE">
                       
-                      <block type="text_prompt_ext" id="jE@Q,,~oK;%yWP`;PyGl">
-                        
-                        <field name="TYPE">NUMBER</field>
-                        
-                        <value name="TEXT">
-                          
-                          <shadow type="text" id=":,I?L(=fMPwTFe(O|4gL">
-                            
-                            <field name="TEXT">Enter Your Stake</field>
-                          
-                          </shadow>
-                          
-                          <block type="text" id="mFupYz,92C)/j;f(F^=5">
-                            
-                            <field name="TEXT">enter your Martingale</field>
-                          
-                          </block>
-                        
-                        </value>
-                      
-                      </block>
+                      <block type="math_number" id="mw_aiep_3"><field name="NUM">2</field></block>
                     
                     </value>
                     
@@ -478,7 +430,7 @@
         
         <value name="IF0">
           
-          <block type="check_sell" id="6pn;63iD!hgqq{z4(gJ+"></block>
+          <block type="check_sell" id="6pn;63iD!hgqq{z4(gJ+"/>
         
         </value>
       
@@ -600,7 +552,7 @@
         
         <next>
           
-          <block type="trade_again" id="I7F;6mpS}m0A$#=5:PSv"></block>
+          <block type="trade_again" id="I7F;6mpS}m0A$#=5:PSv"/>
         
         </next>
       
@@ -626,7 +578,7 @@
             
             <value name="A">
               
-              <block type="last_digit" id="4_yW@#]|Qr(XS=[0AjcG"></block>
+              <block type="last_digit" id="4_yW@#]|Qr(XS=[0AjcG"/>
             
             </value>
             
@@ -672,11 +624,11 @@
                       
                       <shadow type="text" id="uSe;9P!M+B4j,Gc7rb=c">
                         
-                        <field name="TEXT"></field>
+                        <field name="TEXT"/>
                       
                       </shadow>
                       
-                      <block type="last_digit" id="7FUA59?Y;9e?@)U!bpr]"></block>
+                      <block type="last_digit" id="7FUA59?Y;9e?@)U!bpr]"/>
                     
                     </value>
                   
@@ -808,11 +760,11 @@
                       
                       <shadow type="text" id="uSe;9P!M+B4j,Gc7rb=c">
                         
-                        <field name="TEXT"></field>
+                        <field name="TEXT"/>
                       
                       </shadow>
                       
-                      <block type="last_digit" id="T{9uxVm}}?S],6gguHFE"></block>
+                      <block type="last_digit" id="T{9uxVm}}?S],6gguHFE"/>
                     
                     </value>
                   

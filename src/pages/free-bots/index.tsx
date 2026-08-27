@@ -37,10 +37,13 @@ const BOTS: Bot[] = [
     {
         id: '4',
         name: 'AI Entry Point Bot',
-        description: 'AI-powered bot that identifies optimal entry points for maximum profit.',
+        description:
+            'AI Entry Point Bot - Premium entry-timing bot that waits for its target digit before committing, then trades instantly on Volatility 10 (1s).',
         fileName: 'AI_with_Entry_Point_1765711647658.xml',
         category: 'AI Trading',
         icon: '🤖',
+        is_premium: true,
+        rating: 5,
     },
     {
         id: '6',
