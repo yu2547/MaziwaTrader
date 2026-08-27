@@ -25,11 +25,14 @@ interface Bot {
 const BOTS: Bot[] = [
     {
         id: '1',
-        name: 'Expert Speed Bot',
-        description: 'Advanced speed trading bot with optimized entry and exit points for quick trades.',
+        name: 'Expert Speed Bot V1 2026',
+        description:
+            'Expert Speed Bot V1 2026 - Next-generation high-speed execution bot. Optimized for rapid trades with 2026 advanced profit strategies and smart risk management on Volatility 75 (1s).',
         fileName: '2_2025_Updated_Expert_Speed_Bot_Version_📉📉📉📈📈📈_1_1_1765711647656.xml',
         category: 'Speed Trading',
-        icon: '⚡',
+        icon: '🤖',
+        is_premium: true,
+        rating: 5,
     },
     {
         id: '2',

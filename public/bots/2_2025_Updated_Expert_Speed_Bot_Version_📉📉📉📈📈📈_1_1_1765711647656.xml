@@ -62,21 +62,21 @@
         
         <field name="SUBMARKET_LIST">random_index</field>
         
-        <field name="SYMBOL_LIST">R_100</field>
+        <field name="SYMBOL_LIST">1HZ75V</field>
         
         <next>
           
           <block type="trade_definition_tradetype" id="d}hrB!ZF!]yev+5!Ib2G" deletable="false" movable="false">
             
-            <field name="TRADETYPECAT_LIST">callput</field>
+            <field name="TRADETYPECAT_LIST">digits</field>
             
-            <field name="TRADETYPE_LIST">callput</field>
+            <field name="TRADETYPE_LIST">overunder</field>
             
             <next>
               
               <block type="trade_definition_contracttype" id="R|7eJ^85+SiP`z1[Z)^O" deletable="false" movable="false">
                 
-                <field name="TYPE_LIST">PUT</field>
+                <field name="TYPE_LIST">DIGITOVER</field>
                 
                 <next>
                   
@@ -144,7 +144,7 @@
           
           <block type="math_number" id="yvjGDiLTH9{oE}E[Ugcr">
             
-            <field name="NUM">300</field>
+            <field name="NUM">10</field>
           
           </block>
         
@@ -154,7 +154,7 @@
           
           <block type="math_number" id="wf/G-u}1:C]]HmvYUAU7">
             
-            <field name="NUM">150</field>
+            <field name="NUM">100</field>
           
           </block>
         
@@ -164,7 +164,7 @@
           
           <block type="math_number" id="nyccI$!UUt/Fhbdj{GG;">
             
-            <field name="NUM">100</field>
+            <field name="NUM">1</field>
           
           </block>
         
@@ -174,7 +174,7 @@
           
           <block type="math_number" id="EA{iVZBt2Y}Bv8vQO[)O">
             
-            <field name="NUM">2</field>
+            <field name="NUM">1</field>
           
           </block>
         
@@ -184,7 +184,7 @@
           
           <block type="math_number" id="k?60Te%+I(Bv-z`S4B*/">
             
-            <field name="NUM">1</field>
+            <field name="NUM">8</field>
           
           </block>
         
@@ -208,7 +208,7 @@
       
       <block type="trade_definition_tradeoptions" id=";[Ns/i15.H[/Q/[h*?%^">
         
-        <mutation xmlns="http://www.w3.org/1999/xhtml" has_first_barrier="false" has_second_barrier="false" has_prediction="false"></mutation>
+        <mutation xmlns="http://www.w3.org/1999/xhtml" has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
         
         <field name="DURATIONTYPE_LIST">t</field>
         
@@ -236,6 +236,9 @@
           
           </block>
         
+        </value>
+        <value name="PREDICTION">
+          <shadow type="math_number_positive" id="mw_pred_shadow"><field name="NUM">2</field></shadow>
         </value>
       
       </block>
@@ -304,7 +307,7 @@
       
       <block type="purchase" id=",{0hGLktcVm;D_NDd`$U">
         
-        <field name="PURCHASE_LIST">PUT</field>
+        <field name="PURCHASE_LIST">DIGITOVER</field>
       
       </block>
     
