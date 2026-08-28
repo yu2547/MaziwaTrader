@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useState } from 'react';
+import { startTransition, useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
 import { DBOT_TABS } from '@/constants/bot-contents';
@@ -190,6 +190,28 @@ const EntryScanner = observer(
         }, [is_scanning, onScanningChange]);
 
         useEffect(() => () => onScanningChange?.(false), [onScanningChange]);
+
+        // The panel already declares role="dialog" aria-modal="true", which
+        // promises modal behaviour it did not implement: Escape did nothing,
+        // and focus stayed behind on the orb, so a keyboard or screen-reader
+        // user landed in a dialog they could neither reach nor dismiss.
+        useEffect(() => {
+            const onKeyDown = (event: KeyboardEvent) => {
+                if (event.key === 'Escape') onClose();
+            };
+            document.addEventListener('keydown', onKeyDown);
+            return () => document.removeEventListener('keydown', onKeyDown);
+        }, [onClose]);
+
+        // Move focus in on open and put it back where it was on close, so
+        // dismissing the scanner returns the caret to the orb that opened it
+        // rather than to the top of the document.
+        const sheet_ref = useRef<HTMLDivElement>(null);
+        useEffect(() => {
+            const previously_focused = document.activeElement as HTMLElement | null;
+            sheet_ref.current?.focus();
+            return () => previously_focused?.focus?.();
+        }, []);
         const [progress, setProgress] = useState({ done: 0, total: 0, market: '' });
         const [best, setBest] = useState<TResult | null>(null);
         const [status, setStatus] = useState('');
@@ -329,7 +351,7 @@ const EntryScanner = observer(
         return (
             <div className='mw-scanner' role='dialog' aria-modal='true' aria-label={localize('Entry Scanner')}>
                 <div className='mw-scanner__backdrop' onClick={onClose} />
-                <div className='mw-scanner__sheet'>
+                <div className='mw-scanner__sheet' ref={sheet_ref} tabIndex={-1}>
                     <div className='mw-scanner__head'>
                         <h2>{localize('Entry Scanner')}</h2>
                         <button type='button' onClick={onClose} aria-label={localize('Close')}>

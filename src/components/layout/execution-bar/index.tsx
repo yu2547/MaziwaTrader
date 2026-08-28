@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import TradeAnimation from '@/components/trade-animation';
 import { useStore } from '@/hooks/useStore';
@@ -117,6 +117,27 @@ const ExecutionBar = observer(() => {
         return () => window.removeEventListener('resize', onResize);
     }, [orb_position]);
 
+    // Stable identity: the scanner subscribes a keydown listener to this, and
+    // an inline arrow would tear that listener down and re-add it on every
+    // render - which, during a scan, is once per market.
+    const closeAi = useCallback(() => setIsAiOpen(false), []);
+
+    // The orb opens from pointerup, so that a press which moved counts as a
+    // drag rather than a click. Keyboard activation fires no pointer events at
+    // all - Enter and Space on a <button> raise only `click` - so that path
+    // left the orb focusable, labelled, and completely inert: tab to it, press
+    // Enter, nothing happens.
+    //
+    // Handled here rather than by adding onClick, because a click also arrives
+    // at the end of a real drag, and opening the scanner every time the user
+    // finished repositioning the orb is the bug the pointerup logic exists to
+    // avoid. preventDefault stops the browser's synthetic click on top of this.
+    const onOrbKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        setIsAiOpen(true);
+    };
+
     const onOrbPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
         const box = event.currentTarget.getBoundingClientRect();
         drag.current = { active: true, moved: false, dx: event.clientX - box.left, dy: event.clientY - box.top };
@@ -234,6 +255,8 @@ const ExecutionBar = observer(() => {
                 onPointerMove={onOrbPointerMove}
                 onPointerUp={onOrbPointerUp}
                 onPointerCancel={onOrbPointerUp}
+                onKeyDown={onOrbKeyDown}
+                aria-expanded={is_ai_open}
                 aria-haspopup='dialog'
                 aria-label={localize('Entry Scanner')}
             >
@@ -244,7 +267,7 @@ const ExecutionBar = observer(() => {
                 <span className='mw-exec-bar__ai-dot' aria-hidden='true' />
             </button>
 
-            {is_ai_open && <EntryScanner onClose={() => setIsAiOpen(false)} onScanningChange={setIsScanning} />}
+            {is_ai_open && <EntryScanner onClose={closeAi} onScanningChange={setIsScanning} />}
         </>
     );
 });
