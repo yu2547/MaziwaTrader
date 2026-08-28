@@ -12,6 +12,40 @@ $mw-tab-active: #1a3d7c;
 .run-panel {
     height: 0;
 
+    // A closed panel on a phone must render nothing.
+    // ---
+    // run-panel.tsx:308 picks the wrapper class from the open state:
+    // `run-panel__container--mobile` when open, plain `run-panel` when shut. So
+    // every bottom-sheet rule below - including the ones that neutralise the
+    // shared drawer geometry - is scoped to a class that only exists while the
+    // panel is open. With it shut, the shared stylesheet's
+    //   @media (max-width: 1279px) { .dc-drawer {
+    //       top: calc(100% - 9.8rem) !important;
+    //       height: calc(100% - 10.1rem) !important; } }
+    // applies unopposed to a position: fixed drawer, which parks a 98px strip
+    // of it against the bottom of the viewport - the Summary/Transactions/
+    // Journal tabs. The wrapper's `height: 0` above does not contain it,
+    // because a fixed child is out of that flow entirely.
+    // ---
+    // That strip carries the Drawer's own zIndex prop, popover_zindex
+    // .RUN_PANEL = 6, and the execution bar is z-index 3. So the bar was not
+    // merely hidden behind it, it was unreachable: measured at 393x873 with the
+    // panel shut, the drawer ran 775 -> 1548 over a bar at 813 -> 873, and
+    // elementFromPoint at the Run control returned dc-tabs__item. Tapping Run
+    // hit the tab strip.
+    // ---
+    // Hiding it is the whole fix. The execution bar already owns the affordance
+    // that opens the panel (mw-exec-bar__handle -> toggleDrawer), so a shut
+    // panel has nothing to show, and the bar underneath becomes visible and
+    // clickable again. Desktop is untouched: it keeps this same wrapper class
+    // but is outside the query, and the open state is unaffected because the
+    // wrapper is then --mobile and no longer matches.
+    @media (width <= 768px) {
+        > .dc-drawer {
+            display: none;
+        }
+    }
+
     &__container {
         height: var(--bot-content-height) !important;
         top: 10.4rem !important;
