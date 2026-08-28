@@ -187,6 +187,17 @@ $mw-tab-active: #1a3d7c;
         width: 100%;
         max-width: 35rem;
 
+        // ...but on the phone sheet the panel IS the viewport, and the cap
+        // strands the statistics at 350px inside it: 43px of dead space at
+        // 393, 80px at 430, with the block left-aligned so its three columns
+        // stop lining up with the Type / Entry-Exit / Buy price header above
+        // them. The cap exists for the desktop drawer (36.6rem), which is
+        // untouched here - the sheet is never narrower than 375px, which is
+        // already wider than the 35rem the cap was protecting.
+        @media (width <= 768px) {
+            max-width: none;
+        }
+
         // Never surrender height. This is a flex item of run-panel__content,
         // a column that clips with `overflow: hidden !important`, so any
         // shrinking here is not recoverable - the part that gives way is
