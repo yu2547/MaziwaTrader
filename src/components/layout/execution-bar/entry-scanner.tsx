@@ -191,6 +191,22 @@ const EntryScanner = observer(
 
         useEffect(() => () => onScanningChange?.(false), [onScanningChange]);
 
+        // A scan is a sequential await-loop over every market, so closing the
+        // scanner part-way through left it running to completion against a
+        // component that no longer exists: it kept requesting tick history for
+        // the remaining markets, and kept calling setProgress/setStatus/setBest
+        // on the way. usePublicMarketFeed releases its handle on unmount too,
+        // so those requests were being made against a feed this panel had
+        // already let go of.
+        // The loop checks this between markets and stops at the next boundary.
+        const is_live = useRef(true);
+        useEffect(() => {
+            is_live.current = true;
+            return () => {
+                is_live.current = false;
+            };
+        }, []);
+
         // The panel already declares role="dialog" aria-modal="true", which
         // promises modal behaviour it did not implement: Escape did nothing,
         // and focus stayed behind on the orb, so a keyboard or screen-reader
@@ -241,10 +257,14 @@ const EntryScanner = observer(
                         (item): item is TActiveSymbol => !!item
                     );
                     const synthetics = list.filter(item => item.market === 'synthetic_index');
+                    // Same reason as the scan loop: this request outlives a
+                    // scanner closed before the market list came back.
+                    if (!is_live.current) return;
                     setSymbols(wanted.length ? wanted : synthetics);
                     setIsError(false);
                 })
                 .catch(() => {
+                    if (!is_live.current) return;
                     setIsError(true);
                     setStatus(localize('Could not load the market list. Check your connection and try again.'));
                 });
@@ -273,6 +293,8 @@ const EntryScanner = observer(
 
             const results: TResult[] = [];
             for (let i = 0; i < symbols.length; i += 1) {
+                // Abandoned scanner: stop requesting, stop reporting.
+                if (!is_live.current) return;
                 const item = symbols[i];
                 setProgress({ done: i + 1, total: symbols.length, market: item.underlying_symbol_name });
                 setStatus(
@@ -298,6 +320,9 @@ const EntryScanner = observer(
                 }
             }
 
+            // The last market's request can still land after the panel closes.
+            if (!is_live.current) return;
+
             results.sort((a, b) => b.score - a.score);
             const winner = results[0] ?? null;
             setBest(winner);
@@ -317,9 +342,23 @@ const EntryScanner = observer(
 
         /**
          * Hands the scan result to Quick Strategy - the app's own strategy
-         * builder. It loads the bundled Martingale XML, injects these values and
-         * presses Run, so the bot that trades is the one this app already ships
-         * and tests, not a strategy written here from a screenshot.
+         * builder. It loads the bundled Martingale XML and injects these
+         * values, so the bot that trades is the one this app already ships and
+         * tests, not a strategy written here from a screenshot.
+         *
+         * `action: 'EDIT'` rather than 'RUN' is the whole point: quick-strategy
+         * -store.ts:201 treats 'RUN' as "load the strategy AND press Run",
+         * calling run_panel.onRunButtonClick() as soon as the trade_definition
+         * block appears. Loading a scanner result therefore started trading
+         * real money on its own, with no further confirmation - a scan result
+         * is a suggestion, and committing funds has to stay a separate,
+         * deliberate act by the user.
+         *
+         * 'EDIT' is the app's own existing value for "load it into the
+         * workspace and stop there" (useQsSubmitHandler.tsx:36), so this
+         * reuses the established path rather than inventing a mode. The bot
+         * still loads, still lands in the Bot Builder, and the existing Run
+         * control is what starts it.
          */
         const launchBot = () => {
             if (!best || !quick_strategy) return;
@@ -340,7 +379,7 @@ const EntryScanner = observer(
                 profit: 0,
                 duration: 1,
                 unit: 't',
-                action: 'RUN',
+                action: 'EDIT',
             });
             setShowParams(false);
             onClose();
@@ -600,7 +639,7 @@ const EntryScanner = observer(
 
                             <p className='mw-scanner__note'>
                                 {localize(
-                                    'Launch loads the bundled Martingale strategy with these values and starts it - the same builder the Bot Builder uses. Number of wins and digits to check have no field in that strategy, so they are not applied; send me the scanner bot XML and I will wire them.'
+                                    'Launch loads the bundled Martingale strategy with these values into the Bot Builder - the same builder the Bot Builder uses. It does not start trading: press Run when you are ready. Number of wins and digits to check have no field in that strategy, so they are not applied; send me the scanner bot XML and I will wire them.'
                                 )}
                             </p>
 
