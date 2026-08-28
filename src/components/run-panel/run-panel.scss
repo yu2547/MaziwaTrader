@@ -41,11 +41,19 @@ $mw-tab-active: #1a3d7c;
             // single transaction row, leaving about 9px - so the list collapsed
             // to zero and AutoSizer, which renders nothing at zero height,
             // showed an empty panel.
-            // 70vh gives the list roughly 120px, which is two rows and a
-            // scrollbar. The max-height keeps it inside the space above the
-            // execution bar on short viewports, so it can never grow into the
-            // bar the way the old fixed sheet could.
-            height: 70vh;
+            // 70vh cleared that, but it is short of the reference. Measured off
+            // the reference phone screenshot at 2.2x: the panel runs from ~140
+            // to ~1415 of a 1536px-tall image, so ~580 CSS px inside a ~698px
+            // viewport - 83% of it, against the 489px 70vh was giving.
+            // The max-height below already computed 578px there, i.e. it was
+            // right all along and only ever a ceiling `height` never reached.
+            // So the sheet now takes that same expression as its height and
+            // fills the space it was already allowed.
+            // Deliberately not 100vh: 4rem of that reserve is the mobile header
+            // (layout.scss), and the rest is breathing room above it, so the
+            // header and the execution bar both stay reachable - the sheet
+            // spans exactly the gap between them.
+            height: calc(100vh - var(--mw-exec-bar-height, 6rem) - 6rem);
             max-height: calc(100vh - var(--mw-exec-bar-height, 6rem) - 6rem);
             z-index: var(--zindex-drawer);
             padding-bottom: 0;

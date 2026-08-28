@@ -77,43 +77,73 @@ export const StatisticsSummary = ({
     toggleStatisticsInfoModal,
     total_profit,
     won_contracts,
-}: TStatisticsSummary) => (
-    <div
-        className={classNames('run-panel__stat', {
-            'run-panel__stat--mobile': is_mobile,
-        })}
-    >
-        <div className='run-panel__stat--info' onClick={toggleStatisticsInfoModal}>
-            <div className='run-panel__stat--info-item'>
-                <Localize i18n_default_text="What's this?" />
+}: TStatisticsSummary) => {
+    // Publishes this block's height so the floating AI orb can park above it
+    // rather than on top of the totals. Same approach the execution bar takes
+    // for --mw-exec-bar-height, and for the same reason: the block is not a
+    // fixed size - the tiles grow when a figure wraps, and "Total profit/loss"
+    // wraps first on a narrow phone - so a hardcoded offset is a gap at one
+    // width and a covered total at another.
+    // A callback ref rather than useRef: this block is unmounted whenever the
+    // drawer closes, so an effect keyed on [] would measure a node that is not
+    // there yet and never run again once it appears.
+    const [stat_element, setStatElement] = React.useState<HTMLDivElement | null>(null);
+
+    React.useEffect(() => {
+        if (!stat_element) return undefined;
+
+        const publish = () => {
+            document.documentElement.style.setProperty('--mw-run-stats-height', `${stat_element.offsetHeight}px`);
+        };
+        publish();
+
+        const resize_observer = new ResizeObserver(publish);
+        resize_observer.observe(stat_element);
+        return () => {
+            resize_observer.disconnect();
+            document.documentElement.style.removeProperty('--mw-run-stats-height');
+        };
+    }, [stat_element]);
+
+    return (
+        <div
+            ref={setStatElement}
+            className={classNames('run-panel__stat', {
+                'run-panel__stat--mobile': is_mobile,
+            })}
+        >
+            <div className='run-panel__stat--info' onClick={toggleStatisticsInfoModal}>
+                <div className='run-panel__stat--info-item'>
+                    <Localize i18n_default_text="What's this?" />
+                </div>
+            </div>
+            <div className='run-panel__stat--tiles'>
+                <StatisticsTile
+                    title={localize('Total stake')}
+                    alignment='top'
+                    content={<Money amount={total_stake} currency={currency} show_currency />}
+                />
+                <StatisticsTile
+                    title={localize('Total payout')}
+                    alignment='top'
+                    content={<Money amount={total_payout} currency={currency} show_currency />}
+                />
+                <StatisticsTile title={localize('No. of runs')} alignment='top' content={number_of_runs} />
+                <StatisticsTile title={localize('Contracts lost')} alignment='bottom' content={lost_contracts} />
+                <StatisticsTile title={localize('Contracts won')} alignment='bottom' content={won_contracts} />
+                <StatisticsTile
+                    title={localize('Total profit/loss')}
+                    content={<Money amount={total_profit} currency={currency} has_sign show_currency />}
+                    alignment='bottom'
+                    contentClassName={classNames('run-panel__stat-amount', {
+                        'run-panel__stat-amount--positive': total_profit > 0,
+                        'run-panel__stat-amount--negative': total_profit < 0,
+                    })}
+                />
             </div>
         </div>
-        <div className='run-panel__stat--tiles'>
-            <StatisticsTile
-                title={localize('Total stake')}
-                alignment='top'
-                content={<Money amount={total_stake} currency={currency} show_currency />}
-            />
-            <StatisticsTile
-                title={localize('Total payout')}
-                alignment='top'
-                content={<Money amount={total_payout} currency={currency} show_currency />}
-            />
-            <StatisticsTile title={localize('No. of runs')} alignment='top' content={number_of_runs} />
-            <StatisticsTile title={localize('Contracts lost')} alignment='bottom' content={lost_contracts} />
-            <StatisticsTile title={localize('Contracts won')} alignment='bottom' content={won_contracts} />
-            <StatisticsTile
-                title={localize('Total profit/loss')}
-                content={<Money amount={total_profit} currency={currency} has_sign show_currency />}
-                alignment='bottom'
-                contentClassName={classNames('run-panel__stat-amount', {
-                    'run-panel__stat-amount--positive': total_profit > 0,
-                    'run-panel__stat-amount--negative': total_profit < 0,
-                })}
-            />
-        </div>
-    </div>
-);
+    );
+};
 
 const DrawerHeader = ({ is_clear_stat_disabled, is_mobile, is_drawer_open, onClearStatClick }: TDrawerHeader) =>
     is_mobile &&

@@ -292,19 +292,26 @@ $exec-bar-gap: 1.2rem;
         // orb 656-740 against a statistics block of 593-752, covering the
         // Total profit/loss tile outright.
         // The block spans the sheet, so no sideways nudge separates them - the
-        // orb has to clear the sheet. Its bottom edge is pinned to the same
-        // expression the sheet's own height is built from (run-panel.scss), so
-        // the two cannot drift apart: min() matters because max-height wins
-        // over 70vh on a short viewport, which a landscape phone actually
-        // reaches, and assuming 70vh there would push the orb off the top.
+        // orb has to move above it.
+        // It used to clear the whole sheet, which worked while that sheet was
+        // 70vh. Now that it spans the gap between the header and the execution
+        // bar (run-panel.scss), only ~6rem is left above it and the orb is
+        // 8.4rem, so clearing the sheet would put it through the header. It
+        // parks just above the statistics block instead - inside the panel,
+        // over the transaction list, which scrolls, so anything it covers there
+        // can be scrolled back into view. The totals cannot.
+        // The offset comes from --mw-run-stats-height, measured and published
+        // by StatisticsSummary, because the block is not a fixed size: the
+        // tiles grow when a figure wraps, and Total profit/loss wraps first on
+        // a narrow phone. The fallback matches its unwrapped height.
         // Scoped with :has because run-panel__container--mobile is only in the
         // DOM while the sheet is open (run-panel.tsx:308) - with it closed the
         // orb keeps its normal corner above the bar.
         @media (width <= 768px) {
             body:has(.run-panel__container--mobile) & {
                 $bar: var(--mw-exec-bar-height, #{$exec-bar-height});
-                $sheet-height: min(70vh, 100vh - #{$bar} - 6rem);
-                $clearance: calc(#{$bar} + env(safe-area-inset-bottom, 0px) + #{$sheet-height} + 1.2rem);
+                $stats: var(--mw-run-stats-height, 16rem);
+                $clearance: calc(#{$bar} + env(safe-area-inset-bottom, 0px) + #{$stats} + 1.2rem);
 
                 bottom: $clearance;
             }
