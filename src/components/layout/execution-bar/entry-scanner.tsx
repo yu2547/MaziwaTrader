@@ -169,396 +169,438 @@ const analyse = (digits: number[], over: number, under: number) => {
     };
 };
 
-const EntryScanner = observer(({ onClose }: { onClose: () => void }) => {
-    const { feed, isConnected } = usePublicMarketFeed();
-    const { dashboard, quick_strategy, run_panel } = useStore() ?? {};
-    const { localize } = useTranslations();
-    const navigate = useNavigate();
+const EntryScanner = observer(
+    ({ onClose, onScanningChange }: { onClose: () => void; onScanningChange?: (scanning: boolean) => void }) => {
+        const { feed, isConnected } = usePublicMarketFeed();
+        const { dashboard, quick_strategy, run_panel } = useStore() ?? {};
+        const { localize } = useTranslations();
+        const navigate = useNavigate();
 
-    const [mode, setMode] = useState<TMode>('O1/U8');
-    const [scan_depth, setScanDepth] = useState(1000);
-    const [symbols, setSymbols] = useState<TActiveSymbol[]>([]);
-    const [is_scanning, setIsScanning] = useState(false);
-    const [progress, setProgress] = useState({ done: 0, total: 0, market: '' });
-    const [best, setBest] = useState<TResult | null>(null);
-    const [status, setStatus] = useState('');
-    const [show_params, setShowParams] = useState(false);
-    const [params, setParams] = useState({
-        stake: 0.5,
-        martingale: 2,
-        wins: 5,
-        digits_to_check: 1,
-        stop_loss: 50,
-        use_martingale: true,
-    });
+        const [mode, setMode] = useState<TMode>('O1/U8');
+        const [scan_depth, setScanDepth] = useState(1000);
+        const [symbols, setSymbols] = useState<TActiveSymbol[]>([]);
+        const [is_scanning, setIsScanning] = useState(false);
 
-    const active_mode = MODES.find(item => item.id === mode) ?? MODES[0];
+        // Mirrors the scan state out to the floating button so it can show it is
+        // working. Reported rather than duplicated - this stays the only place the
+        // flag is set, so the two cannot disagree. The cleanup clears it, otherwise
+        // closing the scanner mid-scan would leave the orb spinning for good.
+        useEffect(() => {
+            onScanningChange?.(is_scanning);
+        }, [is_scanning, onScanningChange]);
 
-    useEffect(() => {
-        if (!isConnected) return;
-        feed.getActiveSymbols()
-            .then(list => {
-                const by_name = new Map(list.map(item => [item.underlying_symbol_name, item]));
-                const wanted = SCAN_MARKETS.map(name => by_name.get(name)).filter(
-                    (item): item is TActiveSymbol => !!item
-                );
-                const synthetics = list.filter(item => item.market === 'synthetic_index');
-                setSymbols(wanted.length ? wanted : synthetics);
-            })
-            .catch(() => setStatus(localize('Could not load the market list.')));
-    }, [isConnected, feed, localize]);
+        useEffect(() => () => onScanningChange?.(false), [onScanningChange]);
+        const [progress, setProgress] = useState({ done: 0, total: 0, market: '' });
+        const [best, setBest] = useState<TResult | null>(null);
+        const [status, setStatus] = useState('');
+        // Kept apart from `status` so a failure reads as one. Every message used to
+        // land in the same neutral line, so "Could not load the market list" looked
+        // exactly like "Ready to scan" and a scanner that could not run at all was
+        // indistinguishable from one waiting to be told to.
+        const [is_error, setIsError] = useState(false);
+        const [show_params, setShowParams] = useState(false);
+        const [params, setParams] = useState({
+            stake: 0.5,
+            martingale: 2,
+            wins: 5,
+            digits_to_check: 1,
+            stop_loss: 50,
+            use_martingale: true,
+        });
 
-    const selectMode = (next: TMode) => {
-        setMode(next);
-        setBest(null);
-        const picked = MODES.find(item => item.id === next);
-        setStatus(localize('Ready to scan {{label}}.', { label: picked?.label ?? next }));
-    };
+        const active_mode = MODES.find(item => item.id === mode) ?? MODES[0];
 
-    const scanMarkets = async () => {
-        if (is_scanning || symbols.length === 0) return;
-        setIsScanning(true);
-        setBest(null);
-
-        const results: TResult[] = [];
-        for (let i = 0; i < symbols.length; i += 1) {
-            const item = symbols[i];
-            setProgress({ done: i + 1, total: symbols.length, market: item.underlying_symbol_name });
-            setStatus(
-                localize('Scanning {{market}} ({{done}}/{{total}})…', {
-                    market: item.underlying_symbol_name,
-                    done: i + 1,
-                    total: symbols.length,
+        useEffect(() => {
+            if (!isConnected) return;
+            feed.getActiveSymbols()
+                .then(list => {
+                    const by_name = new Map(list.map(item => [item.underlying_symbol_name, item]));
+                    const wanted = SCAN_MARKETS.map(name => by_name.get(name)).filter(
+                        (item): item is TActiveSymbol => !!item
+                    );
+                    const synthetics = list.filter(item => item.market === 'synthetic_index');
+                    setSymbols(wanted.length ? wanted : synthetics);
+                    setIsError(false);
                 })
-            );
-            try {
-                // eslint-disable-next-line no-await-in-loop
-                const { prices, pip_size } = await feed.getTickHistory(item.underlying_symbol, scan_depth);
-                if (!prices.length) continue;
-                const places = toDecimalPlaces(pip_size) ?? 2;
-                const digits = prices.map(price => getLastDigit(price, places)).reverse();
-                results.push({
-                    symbol: item.underlying_symbol,
-                    name: item.underlying_symbol_name,
-                    ...analyse(digits, active_mode.over, active_mode.under),
+                .catch(() => {
+                    setIsError(true);
+                    setStatus(localize('Could not load the market list. Check your connection and try again.'));
                 });
-            } catch {
-                // A market that will not return history is skipped, not faked.
+        }, [isConnected, feed, localize]);
+
+        const selectMode = (next: TMode) => {
+            setMode(next);
+            setBest(null);
+            const picked = MODES.find(item => item.id === next);
+            setStatus(localize('Ready to scan {{label}}.', { label: picked?.label ?? next }));
+        };
+
+        const scanMarkets = async () => {
+            if (is_scanning) return;
+            // Pressing Scan with no market list used to return silently, which is
+            // the one case where the button genuinely cannot work and so the one
+            // case that most needs to say so.
+            if (symbols.length === 0) {
+                setIsError(true);
+                setStatus(localize('No markets available to scan yet. Reopen the scanner once connected.'));
+                return;
             }
-        }
+            setIsScanning(true);
+            setIsError(false);
+            setBest(null);
 
-        results.sort((a, b) => b.score - a.score);
-        const winner = results[0] ?? null;
-        setBest(winner);
-        setIsScanning(false);
-        setStatus(
-            winner
-                ? localize('Scanned {{count}} markets over {{depth}} ticks each.', {
-                      count: results.length,
-                      depth: scan_depth,
-                  })
-                : localize('No market returned enough history to rank.')
-        );
-    };
+            const results: TResult[] = [];
+            for (let i = 0; i < symbols.length; i += 1) {
+                const item = symbols[i];
+                setProgress({ done: i + 1, total: symbols.length, market: item.underlying_symbol_name });
+                setStatus(
+                    localize('Scanning {{market}} ({{done}}/{{total}})…', {
+                        market: item.underlying_symbol_name,
+                        done: i + 1,
+                        total: symbols.length,
+                    })
+                );
+                try {
+                    // eslint-disable-next-line no-await-in-loop
+                    const { prices, pip_size } = await feed.getTickHistory(item.underlying_symbol, scan_depth);
+                    if (!prices.length) continue;
+                    const places = toDecimalPlaces(pip_size) ?? 2;
+                    const digits = prices.map(price => getLastDigit(price, places)).reverse();
+                    results.push({
+                        symbol: item.underlying_symbol,
+                        name: item.underlying_symbol_name,
+                        ...analyse(digits, active_mode.over, active_mode.under),
+                    });
+                } catch {
+                    // A market that will not return history is skipped, not faked.
+                }
+            }
 
-    /**
-     * Hands the scan result to Quick Strategy - the app's own strategy
-     * builder. It loads the bundled Martingale XML, injects these values and
-     * presses Run, so the bot that trades is the one this app already ships
-     * and tests, not a strategy written here from a screenshot.
-     */
-    const launchBot = () => {
-        if (!best || !quick_strategy) return;
-        startTransition(() => {
-            navigate('/');
-            dashboard?.setActiveTab(DBOT_TABS.BOT_BUILDER);
-        });
-        quick_strategy.setSelectedStrategy('MARTINGALE');
-        quick_strategy.onSubmit({
-            symbol: best.symbol,
-            tradetype: 'overunder',
-            type: 'DIGITOVER',
-            prediction: active_mode.over,
-            stake: params.stake,
-            // Martingale off means every stake is the first stake.
-            size: params.use_martingale ? params.martingale : 1,
-            loss: params.stop_loss,
-            profit: 0,
-            duration: 1,
-            unit: 't',
-            action: 'RUN',
-        });
-        setShowParams(false);
-        onClose();
-    };
+            results.sort((a, b) => b.score - a.score);
+            const winner = results[0] ?? null;
+            setBest(winner);
+            setIsScanning(false);
+            // Nothing ranked means every market refused history - a failed scan,
+            // not a scan with a quiet result.
+            setIsError(!winner);
+            setStatus(
+                winner
+                    ? localize('Scanned {{count}} markets over {{depth}} ticks each.', {
+                          count: results.length,
+                          depth: scan_depth,
+                      })
+                    : localize('No market returned enough history to rank. Try again in a moment.')
+            );
+        };
 
-    const percent = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+        /**
+         * Hands the scan result to Quick Strategy - the app's own strategy
+         * builder. It loads the bundled Martingale XML, injects these values and
+         * presses Run, so the bot that trades is the one this app already ships
+         * and tests, not a strategy written here from a screenshot.
+         */
+        const launchBot = () => {
+            if (!best || !quick_strategy) return;
+            startTransition(() => {
+                navigate('/');
+                dashboard?.setActiveTab(DBOT_TABS.BOT_BUILDER);
+            });
+            quick_strategy.setSelectedStrategy('MARTINGALE');
+            quick_strategy.onSubmit({
+                symbol: best.symbol,
+                tradetype: 'overunder',
+                type: 'DIGITOVER',
+                prediction: active_mode.over,
+                stake: params.stake,
+                // Martingale off means every stake is the first stake.
+                size: params.use_martingale ? params.martingale : 1,
+                loss: params.stop_loss,
+                profit: 0,
+                duration: 1,
+                unit: 't',
+                action: 'RUN',
+            });
+            setShowParams(false);
+            onClose();
+        };
 
-    return (
-        <div className='mw-scanner' role='dialog' aria-modal='true' aria-label={localize('Entry Scanner')}>
-            <div className='mw-scanner__backdrop' onClick={onClose} />
-            <div className='mw-scanner__sheet'>
-                <div className='mw-scanner__head'>
-                    <h2>{localize('Entry Scanner')}</h2>
-                    <button type='button' onClick={onClose} aria-label={localize('Close')}>
-                        ✕
-                    </button>
-                </div>
+        const percent = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
 
-                <div className='mw-scanner__body'>
-                    <div className='mw-scanner__hero'>
-                        <span className='mw-scanner__hero-pill'>✦ {localize(active_mode.badge)}</span>
-                        <h3>{localize(active_mode.title)}</h3>
-                        <p>{localize(active_mode.blurb)}</p>
-                        <span className={`mw-scanner__radar ${is_scanning ? 'mw-scanner__radar--on' : ''}`}>
-                            <span className='mw-scanner__radar-ring' />
-                            <span className='mw-scanner__radar-ring mw-scanner__radar-ring--mid' />
-                            <span className='mw-scanner__radar-core'>AI</span>
-                            <span className='mw-scanner__radar-blip' />
-                            <span className='mw-scanner__radar-blip mw-scanner__radar-blip--two' />
-                        </span>
+        return (
+            <div className='mw-scanner' role='dialog' aria-modal='true' aria-label={localize('Entry Scanner')}>
+                <div className='mw-scanner__backdrop' onClick={onClose} />
+                <div className='mw-scanner__sheet'>
+                    <div className='mw-scanner__head'>
+                        <h2>{localize('Entry Scanner')}</h2>
+                        <button type='button' onClick={onClose} aria-label={localize('Close')}>
+                            ✕
+                        </button>
                     </div>
 
-                    <div className='mw-scanner__modes'>
-                        {MODES.map(item => (
-                            <button
-                                key={item.id}
-                                type='button'
-                                className={`mw-scanner__mode ${mode === item.id ? 'mw-scanner__mode--active' : ''}`}
-                                onClick={() => selectMode(item.id)}
-                                disabled={is_scanning}
-                            >
-                                {item.label}
-                            </button>
-                        ))}
-                    </div>
+                    <div className='mw-scanner__body'>
+                        <div className='mw-scanner__hero'>
+                            <span className='mw-scanner__hero-pill'>✦ {localize(active_mode.badge)}</span>
+                            <h3>{localize(active_mode.title)}</h3>
+                            <p>{localize(active_mode.blurb)}</p>
+                            <span className={`mw-scanner__radar ${is_scanning ? 'mw-scanner__radar--on' : ''}`}>
+                                <span className='mw-scanner__radar-ring' />
+                                <span className='mw-scanner__radar-ring mw-scanner__radar-ring--mid' />
+                                <span className='mw-scanner__radar-core'>AI</span>
+                                <span className='mw-scanner__radar-blip' />
+                                <span className='mw-scanner__radar-blip mw-scanner__radar-blip--two' />
+                            </span>
+                        </div>
 
-                    <div className='mw-scanner__fields'>
-                        <label className='mw-scanner__field'>
-                            <span>{localize('SCAN DEPTH')}</span>
-                            <input
-                                type='number'
-                                value={scan_depth}
-                                min={MIN_DEPTH}
-                                max={MAX_DEPTH}
-                                step={100}
-                                disabled={is_scanning}
-                                onChange={event =>
-                                    setScanDepth(
-                                        Math.min(MAX_DEPTH, Math.max(MIN_DEPTH, Number(event.target.value) || 0))
-                                    )
-                                }
-                            />
-                        </label>
-                        <div className='mw-scanner__field mw-scanner__field--static'>
-                            <span>{localize('MODE')}</span>
-                            <strong>{active_mode.id}</strong>
+                        <div className='mw-scanner__modes'>
+                            {MODES.map(item => (
+                                <button
+                                    key={item.id}
+                                    type='button'
+                                    className={`mw-scanner__mode ${mode === item.id ? 'mw-scanner__mode--active' : ''}`}
+                                    onClick={() => selectMode(item.id)}
+                                    disabled={is_scanning}
+                                >
+                                    {item.label}
+                                </button>
+                            ))}
                         </div>
-                        <div className='mw-scanner__field mw-scanner__field--static'>
-                            <span>{localize('TICKS')}</span>
-                            <strong>{scan_depth}</strong>
-                        </div>
-                    </div>
 
-                    <div className='mw-scanner__fields mw-scanner__fields--two'>
-                        <div className='mw-scanner__field mw-scanner__field--static'>
-                            <span>{localize('SELECTED MARKET')}</span>
-                            <strong>
-                                {best ? `${best.name} (${best.symbol})` : localize('Scan to find the best market')}
-                            </strong>
-                        </div>
-                        <div className='mw-scanner__field mw-scanner__field--static'>
-                            <span>{localize('TRADE TYPE')}</span>
-                            <strong>
-                                {best
-                                    ? localize('Over {{over}} / Under {{under}}', {
-                                          over: active_mode.over,
-                                          under: active_mode.under,
-                                      })
-                                    : localize('Waiting for scan')}
-                            </strong>
-                        </div>
-                    </div>
-
-                    {best && (
-                        <>
-                            <div className='mw-scanner__metrics'>
-                                <div>
-                                    <span>{localize('AI SCORE')}</span>
-                                    <strong>{best.score.toFixed(2)}%</strong>
-                                </div>
-                                <div>
-                                    <span>{localize('WIN RATE')}</span>
-                                    <strong>{best.win_rate.toFixed(1)}%</strong>
-                                </div>
-                                <div>
-                                    <span>{localize('RECENT')}</span>
-                                    <strong>{best.recent_rate.toFixed(1)}%</strong>
-                                </div>
-                                <div>
-                                    <span>{localize('SAMPLES')}</span>
-                                    <strong>{best.samples}</strong>
-                                </div>
-                            </div>
-                            <div className='mw-scanner__heat'>
-                                {localize(
-                                    'Heatmap: hottest digit {{hot}} | coldest digit {{cold}} | missing {{missing}} | low streak {{low}} | high streak {{high}}',
-                                    {
-                                        hot: best.hottest,
-                                        cold: best.coldest,
-                                        missing: best.missing.length ? best.missing.join(', ') : localize('none'),
-                                        low: best.low_streak,
-                                        high: best.high_streak,
+                        <div className='mw-scanner__fields'>
+                            <label className='mw-scanner__field'>
+                                <span>{localize('SCAN DEPTH')}</span>
+                                <input
+                                    type='number'
+                                    value={scan_depth}
+                                    min={MIN_DEPTH}
+                                    max={MAX_DEPTH}
+                                    step={100}
+                                    disabled={is_scanning}
+                                    onChange={event =>
+                                        setScanDepth(
+                                            Math.min(MAX_DEPTH, Math.max(MIN_DEPTH, Number(event.target.value) || 0))
+                                        )
                                     }
-                                )}
+                                />
+                            </label>
+                            <div className='mw-scanner__field mw-scanner__field--static'>
+                                <span>{localize('MODE')}</span>
+                                <strong>{active_mode.id}</strong>
                             </div>
-                            <div className='mw-scanner__best'>
-                                {localize('Best market: {{name}} | {{character}} | AI {{score}}%', {
-                                    name: best.name,
-                                    character: best.character,
-                                    score: best.score.toFixed(2),
-                                })}
-                            </div>
-                        </>
-                    )}
-
-                    {is_scanning && (
-                        <div className='mw-scanner__progress'>
-                            <div className='mw-scanner__progress-head'>
-                                <span>{progress.market}</span>
-                                <span>
-                                    {progress.done}/{progress.total}
-                                </span>
-                            </div>
-                            <div className='mw-scanner__progress-track'>
-                                <div className='mw-scanner__progress-fill' style={{ width: `${percent}%` }} />
+                            <div className='mw-scanner__field mw-scanner__field--static'>
+                                <span>{localize('TICKS')}</span>
+                                <strong>{scan_depth}</strong>
                             </div>
                         </div>
-                    )}
 
-                    <div className='mw-scanner__status'>{status || localize('Not scanned yet')}</div>
+                        <div className='mw-scanner__fields mw-scanner__fields--two'>
+                            <div className='mw-scanner__field mw-scanner__field--static'>
+                                <span>{localize('SELECTED MARKET')}</span>
+                                <strong>
+                                    {best ? `${best.name} (${best.symbol})` : localize('Scan to find the best market')}
+                                </strong>
+                            </div>
+                            <div className='mw-scanner__field mw-scanner__field--static'>
+                                <span>{localize('TRADE TYPE')}</span>
+                                <strong>
+                                    {best
+                                        ? localize('Over {{over}} / Under {{under}}', {
+                                              over: active_mode.over,
+                                              under: active_mode.under,
+                                          })
+                                        : localize('Waiting for scan')}
+                                </strong>
+                            </div>
+                        </div>
 
-                    <div className='mw-scanner__actions'>
-                        <button
-                            type='button'
-                            className='mw-scanner__scan'
-                            onClick={scanMarkets}
-                            disabled={is_scanning || symbols.length === 0}
-                        >
-                            {is_scanning ? localize('Scanning Markets…') : localize('Scan Markets')}
-                        </button>
-                        <button
-                            type='button'
-                            className={`mw-scanner__load ${best ? 'mw-scanner__load--ready' : ''}`}
-                            onClick={() => setShowParams(true)}
-                            disabled={!best}
-                        >
-                            {localize('Load Scanner Bot')}
-                        </button>
-                    </div>
-
-                    <p className='mw-scanner__note'>
-                        {localize(
-                            'Every figure above is counted from real tick history on the market it names. AI score blends the full sample with the last {{recent}} ticks and is reduced when the two disagree. Past behaviour is not a prediction.',
-                            { recent: RECENT_WINDOW }
+                        {best && (
+                            <>
+                                <div className='mw-scanner__metrics'>
+                                    <div>
+                                        <span>{localize('AI SCORE')}</span>
+                                        <strong>{best.score.toFixed(2)}%</strong>
+                                    </div>
+                                    <div>
+                                        <span>{localize('WIN RATE')}</span>
+                                        <strong>{best.win_rate.toFixed(1)}%</strong>
+                                    </div>
+                                    <div>
+                                        <span>{localize('RECENT')}</span>
+                                        <strong>{best.recent_rate.toFixed(1)}%</strong>
+                                    </div>
+                                    <div>
+                                        <span>{localize('SAMPLES')}</span>
+                                        <strong>{best.samples}</strong>
+                                    </div>
+                                </div>
+                                <div className='mw-scanner__heat'>
+                                    {localize(
+                                        'Heatmap: hottest digit {{hot}} | coldest digit {{cold}} | missing {{missing}} | low streak {{low}} | high streak {{high}}',
+                                        {
+                                            hot: best.hottest,
+                                            cold: best.coldest,
+                                            missing: best.missing.length ? best.missing.join(', ') : localize('none'),
+                                            low: best.low_streak,
+                                            high: best.high_streak,
+                                        }
+                                    )}
+                                </div>
+                                <div className='mw-scanner__best'>
+                                    {localize('Best market: {{name}} | {{character}} | AI {{score}}%', {
+                                        name: best.name,
+                                        character: best.character,
+                                        score: best.score.toFixed(2),
+                                    })}
+                                </div>
+                            </>
                         )}
-                    </p>
-                </div>
-            </div>
 
-            {show_params && (
-                <div className='mw-scanner__params' role='dialog' aria-label={localize('Scanner Parameters')}>
-                    <div className='mw-scanner__params-sheet'>
-                        <div className='mw-scanner__params-head'>{localize('Scanner Parameters')}</div>
-                        <div className='mw-scanner__params-grid'>
-                            <label>
-                                <span>{localize('STAKE')}</span>
-                                <input
-                                    type='number'
-                                    value={params.stake}
-                                    min={0.35}
-                                    step={0.1}
-                                    onChange={e => setParams(p => ({ ...p, stake: Number(e.target.value) || 0 }))}
-                                />
-                            </label>
-                            <label>
-                                <span>{localize('MARTINGALE')}</span>
-                                <input
-                                    type='number'
-                                    value={params.martingale}
-                                    min={1}
-                                    step={0.1}
-                                    onChange={e => setParams(p => ({ ...p, martingale: Number(e.target.value) || 1 }))}
-                                />
-                            </label>
-                            <label>
-                                <span>{localize('NUMBER OF WINS')}</span>
-                                <input
-                                    type='number'
-                                    value={params.wins}
-                                    min={1}
-                                    onChange={e => setParams(p => ({ ...p, wins: Number(e.target.value) || 1 }))}
-                                />
-                            </label>
-                            <label>
-                                <span>{localize('NO. OF DIGITS TO CHECK')}</span>
-                                <input
-                                    type='number'
-                                    value={params.digits_to_check}
-                                    min={1}
-                                    onChange={e =>
-                                        setParams(p => ({ ...p, digits_to_check: Number(e.target.value) || 1 }))
-                                    }
-                                />
-                            </label>
-                            <label className='mw-scanner__params-wide'>
-                                <span>{localize('STOP LOSS')}</span>
-                                <input
-                                    type='number'
-                                    value={params.stop_loss}
-                                    min={0}
-                                    onChange={e => setParams(p => ({ ...p, stop_loss: Number(e.target.value) || 0 }))}
-                                />
-                            </label>
+                        {is_scanning && (
+                            <div className='mw-scanner__progress'>
+                                <div className='mw-scanner__progress-head'>
+                                    <span>{progress.market}</span>
+                                    <span>
+                                        {progress.done}/{progress.total}
+                                    </span>
+                                </div>
+                                <div className='mw-scanner__progress-track'>
+                                    <div className='mw-scanner__progress-fill' style={{ width: `${percent}%` }} />
+                                </div>
+                            </div>
+                        )}
+
+                        <div
+                            className={`mw-scanner__status ${is_error ? 'mw-scanner__status--error' : ''}`}
+                            role={is_error ? 'alert' : 'status'}
+                        >
+                            {status || localize('Not scanned yet')}
                         </div>
 
-                        <button
-                            type='button'
-                            className='mw-scanner__params-toggle'
-                            onClick={() => setParams(p => ({ ...p, use_martingale: !p.use_martingale }))}
-                            role='switch'
-                            aria-checked={params.use_martingale}
-                        >
-                            <span>{localize('Use Martingale')}</span>
-                            <span
-                                className={`mw-scanner__params-switch ${params.use_martingale ? 'mw-scanner__params-switch--on' : ''}`}
-                            />
-                        </button>
+                        <div className='mw-scanner__actions'>
+                            <button
+                                type='button'
+                                className='mw-scanner__scan'
+                                onClick={scanMarkets}
+                                disabled={is_scanning || symbols.length === 0}
+                            >
+                                {is_scanning ? localize('Scanning Markets…') : localize('Scan Markets')}
+                            </button>
+                            <button
+                                type='button'
+                                className={`mw-scanner__load ${best ? 'mw-scanner__load--ready' : ''}`}
+                                onClick={() => setShowParams(true)}
+                                disabled={!best}
+                            >
+                                {localize('Load Scanner Bot')}
+                            </button>
+                        </div>
 
                         <p className='mw-scanner__note'>
                             {localize(
-                                'Launch loads the bundled Martingale strategy with these values and starts it - the same builder the Bot Builder uses. Number of wins and digits to check have no field in that strategy, so they are not applied; send me the scanner bot XML and I will wire them.'
+                                'Every figure above is counted from real tick history on the market it names. AI score blends the full sample with the last {{recent}} ticks and is reduced when the two disagree. Past behaviour is not a prediction.',
+                                { recent: RECENT_WINDOW }
                             )}
                         </p>
-
-                        <div className='mw-scanner__params-actions'>
-                            <button type='button' onClick={() => setShowParams(false)}>
-                                {localize('Cancel')}
-                            </button>
-                            <button
-                                type='button'
-                                className='mw-scanner__params-launch'
-                                onClick={launchBot}
-                                disabled={run_panel?.is_running}
-                            >
-                                {localize('Launch Bot')}
-                            </button>
-                        </div>
                     </div>
                 </div>
-            )}
-        </div>
-    );
-});
+
+                {show_params && (
+                    <div className='mw-scanner__params' role='dialog' aria-label={localize('Scanner Parameters')}>
+                        <div className='mw-scanner__params-sheet'>
+                            <div className='mw-scanner__params-head'>{localize('Scanner Parameters')}</div>
+                            <div className='mw-scanner__params-grid'>
+                                <label>
+                                    <span>{localize('STAKE')}</span>
+                                    <input
+                                        type='number'
+                                        value={params.stake}
+                                        min={0.35}
+                                        step={0.1}
+                                        onChange={e => setParams(p => ({ ...p, stake: Number(e.target.value) || 0 }))}
+                                    />
+                                </label>
+                                <label>
+                                    <span>{localize('MARTINGALE')}</span>
+                                    <input
+                                        type='number'
+                                        value={params.martingale}
+                                        min={1}
+                                        step={0.1}
+                                        onChange={e =>
+                                            setParams(p => ({ ...p, martingale: Number(e.target.value) || 1 }))
+                                        }
+                                    />
+                                </label>
+                                <label>
+                                    <span>{localize('NUMBER OF WINS')}</span>
+                                    <input
+                                        type='number'
+                                        value={params.wins}
+                                        min={1}
+                                        onChange={e => setParams(p => ({ ...p, wins: Number(e.target.value) || 1 }))}
+                                    />
+                                </label>
+                                <label>
+                                    <span>{localize('NO. OF DIGITS TO CHECK')}</span>
+                                    <input
+                                        type='number'
+                                        value={params.digits_to_check}
+                                        min={1}
+                                        onChange={e =>
+                                            setParams(p => ({ ...p, digits_to_check: Number(e.target.value) || 1 }))
+                                        }
+                                    />
+                                </label>
+                                <label className='mw-scanner__params-wide'>
+                                    <span>{localize('STOP LOSS')}</span>
+                                    <input
+                                        type='number'
+                                        value={params.stop_loss}
+                                        min={0}
+                                        onChange={e =>
+                                            setParams(p => ({ ...p, stop_loss: Number(e.target.value) || 0 }))
+                                        }
+                                    />
+                                </label>
+                            </div>
+
+                            <button
+                                type='button'
+                                className='mw-scanner__params-toggle'
+                                onClick={() => setParams(p => ({ ...p, use_martingale: !p.use_martingale }))}
+                                role='switch'
+                                aria-checked={params.use_martingale}
+                            >
+                                <span>{localize('Use Martingale')}</span>
+                                <span
+                                    className={`mw-scanner__params-switch ${params.use_martingale ? 'mw-scanner__params-switch--on' : ''}`}
+                                />
+                            </button>
+
+                            <p className='mw-scanner__note'>
+                                {localize(
+                                    'Launch loads the bundled Martingale strategy with these values and starts it - the same builder the Bot Builder uses. Number of wins and digits to check have no field in that strategy, so they are not applied; send me the scanner bot XML and I will wire them.'
+                                )}
+                            </p>
+
+                            <div className='mw-scanner__params-actions'>
+                                <button type='button' onClick={() => setShowParams(false)}>
+                                    {localize('Cancel')}
+                                </button>
+                                <button
+                                    type='button'
+                                    className='mw-scanner__params-launch'
+                                    onClick={launchBot}
+                                    disabled={run_panel?.is_running}
+                                >
+                                    {localize('Launch Bot')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+);
 
 export default EntryScanner;

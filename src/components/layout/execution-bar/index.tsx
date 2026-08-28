@@ -63,6 +63,9 @@ const clampToViewport = ({ x, y }: TPoint): TPoint => ({
 const ExecutionBar = observer(() => {
     const { run_panel } = useStore() ?? {};
     const [is_ai_open, setIsAiOpen] = useState(false);
+    // Reported up by the scanner so the orb can show a scan is under way even
+    // with the modal dismissed behind it.
+    const [is_scanning, setIsScanning] = useState(false);
     const [is_fast, setIsFast] = useState(() => sessionStorage.getItem(SPEED_KEY) !== 'slow');
     // Where the user last put the orb. Null means "wherever the stylesheet
     // parks it", so an untouched orb keeps its default corner.
@@ -219,7 +222,9 @@ const ExecutionBar = observer(() => {
                 untouched orb keeps the corner the stylesheet gives it. */}
             <button
                 type='button'
-                className={`mw-exec-bar__ai ${is_dragging ? 'mw-exec-bar__ai--dragging' : ''}`}
+                className={`mw-exec-bar__ai${is_dragging ? ' mw-exec-bar__ai--dragging' : ''}${
+                    is_scanning ? ' mw-exec-bar__ai--scanning' : ''
+                }`}
                 style={
                     orb_position
                         ? { left: orb_position.x, top: orb_position.y, right: 'auto', bottom: 'auto' }
@@ -239,7 +244,7 @@ const ExecutionBar = observer(() => {
                 <span className='mw-exec-bar__ai-dot' aria-hidden='true' />
             </button>
 
-            {is_ai_open && <EntryScanner onClose={() => setIsAiOpen(false)} />}
+            {is_ai_open && <EntryScanner onClose={() => setIsAiOpen(false)} onScanningChange={setIsScanning} />}
         </>
     );
 });
