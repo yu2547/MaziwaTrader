@@ -173,12 +173,25 @@ export default class TransactionsStore {
             profit: is_completed ? data.profit : 0,
         };
 
-        // Worth knowing: the getter above refuses to read a falsy key, while
-        // this writer will happily create an elements[''] bucket. Anything
-        // filed under '' is therefore written and can never be read back. It
-        // is not currently reachable - getActiveAccountId returns a real id
-        // once the OTP account is populated, confirmed on a live run - but the
-        // two halves disagreeing is a trap for whoever touches this next.
+        // The getter above refuses to read a falsy key, and this writer used to
+        // happily create an elements[''] bucket, so anything filed under ''
+        // was written and could never be read back.
+        //
+        // That is now reachable. Recording the contract at
+        // contract.purchase_received puts the first write earlier in the
+        // session than the first proposal_open_contract, so it can land while
+        // the OTP handshake is still settling and getActiveAccountId still
+        // returns ''. Confirmed by driving the shipped store on the running
+        // app: one push produced elements = { '': [...] } with
+        // `transactions` still reporting 0 rows and the panel still showing
+        // "There are no transactions to display".
+        //
+        // Refusing the write makes the two halves agree. Nothing is lost that
+        // was not already lost: open-contract updates repeat for the life of a
+        // contract, so the row is created by the next one after the account id
+        // resolves, instead of being orphaned in a bucket nobody reads.
+        if (!current_account) return;
+
         if (!this.elements[current_account]) {
             this.elements = {
                 ...this.elements,
@@ -232,15 +245,34 @@ export default class TransactionsStore {
             // ever overwritten by another real value, never blanked by a
             // payload that simply does not carry it yet.
             const existing = this.elements[current_account]?.[same_contract_index]?.data;
-            const merged =
-                typeof existing === 'object' && existing
-                    ? {
-                          ...existing,
-                          ...(Object.fromEntries(
-                              Object.entries(contract).filter(([, value]) => value !== undefined)
-                          ) as TContractInfo),
-                      }
-                    : contract;
+            const has_existing = typeof existing === 'object' && !!existing;
+            const merged = has_existing
+                ? {
+                      ...existing,
+                      ...(Object.fromEntries(
+                          Object.entries(contract).filter(([, value]) => value !== undefined)
+                      ) as TContractInfo),
+                  }
+                : contract;
+
+            // Dropping undefined keys is not enough on its own, because two
+            // fields above are always written: is_completed is `false` and
+            // profit is `0` for anything that is not itself a settlement. Both
+            // are defined, so both survive the filter and overwrite.
+            //
+            // That matters for the one ordering where a contract settles before
+            // its own buy response is handled. The late purchase stub was
+            // un-settling a finished row - is_completed true -> false, profit
+            // 1.08 -> 0 - and because `statistics` only counts completed
+            // contracts, the row silently dropped out of the totals too: runs
+            // and wins went back to 0 on a contract that had genuinely won.
+            //
+            // Settlement is one-way. Once a contract has ended, only its own
+            // result describes it.
+            if (has_existing && existing.is_completed && !is_completed) {
+                merged.is_completed = true;
+                merged.profit = existing.profit;
+            }
 
             this.elements[current_account]?.splice(same_contract_index, 1, {
                 type: transaction_elements.CONTRACT,

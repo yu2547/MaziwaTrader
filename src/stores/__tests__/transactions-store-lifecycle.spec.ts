@@ -19,8 +19,10 @@ const ACCOUNT_ID = 'CR90001';
 const CONTRACT_ID = 111222333;
 const BUY_TRANSACTION_ID = 987654321;
 
+// Mutable so one case can exercise the window before the account id resolves.
+const account = { id: 'CR90001' };
 jest.mock('../../utils/active-account-id', () => ({
-    getActiveAccountId: () => 'CR90001',
+    getActiveAccountId: () => account.id,
     getActiveAccountLabel: () => 'USD',
 }));
 
@@ -268,6 +270,58 @@ describe('contract lifecycle through the production transactions store', () => {
             expect(store.statistics.number_of_runs).toBe(1);
             expect(store.statistics.won_contracts).toBe(1);
             expect(store.statistics.total_profit).toBeCloseTo(1.08, 10);
+        });
+
+        it('a contract that settles before its own buy response is handled stays settled', () => {
+            const store = makeStore();
+
+            // fast settle, slow buy response - the settlement lands first
+            store.onBotContractEvent(
+                openContract({
+                    entry_spot: 622.64,
+                    exit_spot: 623.24,
+                    status: 'won',
+                    is_sold: 1,
+                    profit: '1.08',
+                    payout: '3.08',
+                }) as never
+            );
+            expect(firstContract(store).is_completed).toBe(true);
+            expect(store.statistics.number_of_runs).toBe(1);
+
+            // then the late purchase stub for the same contract arrives
+            store.onBotContractEvent(purchaseStub() as never);
+
+            // settlement is one-way: the stub must not un-settle the row, and
+            // the contract must not drop out of the totals
+            expect(contractRows(store)).toHaveLength(1);
+            expect(firstContract(store).is_completed).toBe(true);
+            expect(firstContract(store).exit_tick).toBe(623.24);
+            expect(store.statistics.number_of_runs).toBe(1);
+            expect(store.statistics.won_contracts).toBe(1);
+            expect(store.statistics.total_profit).toBeCloseTo(1.08, 10);
+        });
+
+        it('does not orphan the contract into an unreadable bucket before the account id resolves', () => {
+            const store = makeStore();
+            account.id = '';
+
+            try {
+                // The purchase write is the earliest one in the session, so it
+                // can land while the OTP handshake is still settling. The
+                // getter refuses a falsy key, so anything filed under '' could
+                // never be read back - the panel kept showing its empty state
+                // with the contract sitting in the store.
+                store.onBotContractEvent(purchaseStub() as never);
+                expect(Object.keys(store.elements)).not.toContain('');
+            } finally {
+                account.id = ACCOUNT_ID;
+            }
+
+            // and the very next update, once the id is known, still builds the row
+            store.onBotContractEvent(openContract({ entry_spot: 622.64 }) as never);
+            expect(contractRows(store)).toHaveLength(1);
+            expect(firstContract(store).entry_tick).toBe(622.64);
         });
 
         it('case C/§20 - three purchased contracts stay three rows, updated independently', () => {
