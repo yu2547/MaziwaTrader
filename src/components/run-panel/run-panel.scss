@@ -1,5 +1,11 @@
 @use 'components/shared/styles/mixins' as *;
 
+// Navy fill behind the selected tab on the phone sheet, per the reference.
+// Deliberately darker than the existing --mw-blue (#2f7dff) and analysis-tool
+// $mw-blue (#1a5cff): both are link-bright and, as a full-height block under
+// white text, neither reads as a selected surface.
+$mw-tab-active: #1a3d7c;
+
 /**
 * @define -panel
 **/
@@ -346,6 +352,67 @@
                 overflow: hidden;
                 text-overflow: ellipsis;
                 padding: 0 0.8rem;
+            }
+        }
+
+        // Reference shows the selected tab as a solid navy block with white
+        // text filling the tab's full height. tabs.scss marks the active tab
+        // with weight 700 plus a 2px coral underline (__active and
+        // __active-line), which reads as almost nothing at phone size - the
+        // three tabs look alike and the selected one is easy to lose.
+        // Scoped to the phone sheet on purpose: Tabs is shared with the rest
+        // of the app, and desktop keeps the underline treatment it already has.
+        // 768px rather than the mobile-or-tablet-screen mixin (1279px), because
+        // that mixin's range covers 769-1279px, where run-panel.tsx is still
+        // rendering the desktop panel - the fill would have landed on desktop
+        // at 1024px and not at 1280px. This matches the isDesktop split the
+        // component actually branches on.
+        @media (width <= 768px) {
+            .dc-tabs__list {
+                display: flex;
+                align-items: stretch;
+
+                // The list is a <ul>, so it still carries the UA's default
+                // padding-inline-start: 40px, and tabs.scss gives it
+                // `width: 100%` under content-box - a 393px panel got a 433px
+                // strip. It went unnoticed while the items sized to their own
+                // labels and the row happened to fit inside the overhang; once
+                // they fill the width, the 40px pushes the third tab off the
+                // edge and Journal is clipped.
+                padding-inline: 0;
+            }
+
+            .dc-tabs__item {
+                // Equal thirds, and the fill spans the whole cell rather than
+                // hugging the label. tabs.scss sizes each item with
+                // `width: var(--tab-width)`, which the Tabs component sets from
+                // the widest label - so the tabs came out uneven and the active
+                // block ended up narrower than its slot. A definite flex-basis
+                // of 0 takes over sizing from that width without having to
+                // out-specify it.
+                flex: 1 1 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 1.6rem 0.8rem;
+                font-size: 1.5rem;
+                line-height: 1.2;
+                background: var(--general-main-1);
+                transition:
+                    background 140ms ease,
+                    color 140ms ease;
+
+                &.dc-tabs__active {
+                    background: $mw-tab-active;
+                    color: #fff;
+                    font-weight: 700;
+                }
+            }
+
+            // The coral line would sit under the filled block and read as an
+            // artefact; the fill is the selected state here.
+            .dc-tabs__active-line {
+                display: none;
             }
         }
     }

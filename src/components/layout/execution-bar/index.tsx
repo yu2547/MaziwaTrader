@@ -34,7 +34,11 @@ import './execution-bar.scss';
  */
 const SPEED_KEY = 'mw_execution_speed';
 const ORB_POS_KEY = 'mw_ai_orb_position';
-const ORB_SIZE = 64;
+// Must track the orb's rendered width (8.4rem in execution-bar.scss at the
+// app's 10px root). It was 64 while the orb drew at 84, so every clamp allowed
+// it 20px past the right and bottom edges - the corner it is most often
+// dragged to, and the one where it then sat half off a narrow phone.
+const ORB_SIZE = 84;
 const ORB_MARGIN = 8;
 /** Past this much movement a press is a drag, not a click. */
 const DRAG_SLOP = 4;
@@ -62,7 +66,15 @@ const ExecutionBar = observer(() => {
     const [is_fast, setIsFast] = useState(() => sessionStorage.getItem(SPEED_KEY) !== 'slow');
     // Where the user last put the orb. Null means "wherever the stylesheet
     // parks it", so an untouched orb keeps its default corner.
-    const [orb_position, setOrbPosition] = useState<TPoint | null>(readStoredPosition);
+    // Clamped on the way in, not just on resize: the stored point was written
+    // against whatever viewport the user last dragged it on, so restoring it on
+    // a narrower phone - or in portrait after landscape - put the orb partly or
+    // wholly off-screen, and the resize listener below only fires if the window
+    // then changes again.
+    const [orb_position, setOrbPosition] = useState<TPoint | null>(() => {
+        const stored = readStoredPosition();
+        return stored ? clampToViewport(stored) : null;
+    });
     const [is_dragging, setIsDragging] = useState(false);
     const drag = useRef({ active: false, moved: false, dx: 0, dy: 0 });
     // A callback ref rather than useRef: the bar does not render on the first
