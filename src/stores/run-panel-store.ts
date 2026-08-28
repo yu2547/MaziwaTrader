@@ -1,7 +1,7 @@
 import { action, computed, makeObservable, observable, reaction, runInAction } from 'mobx';
 import { botNotification } from '@/components/bot-notification/bot-notification';
 import { notification_message } from '@/components/bot-notification/bot-notification-utils';
-import { isSafari, mobileOSDetect, standalone_routes } from '@/components/shared';
+import { extractInfoFromShortcode, isSafari, mobileOSDetect, standalone_routes } from '@/components/shared';
 import { redirectToSignUp } from '@/components/shared';
 import { contract_stages, TContractStage } from '@/constants/contract-stage';
 import { run_panel } from '@/constants/run-panel';
@@ -23,6 +23,7 @@ import { Buy, ProposalOpenContract } from '@deriv/api-types';
 import { TStores } from '@deriv/stores/types';
 import { localize } from '@deriv-com/translations';
 import { TDbot } from 'Types';
+import { TContractInfo } from '../components/summary/summary-card.types';
 import RootStore from './root-store';
 
 export type TContractState = {
@@ -693,6 +694,35 @@ export default class RunPanelStore {
         }
     };
 
+    /**
+     * The buy response, shaped as the partial contract the transactions store
+     * already understands. Every field here is one the Buy type genuinely
+     * carries (@deriv/api-types: balance_after, buy_price, contract_id,
+     * longcode, payout, purchase_time, shortcode, start_time, transaction_id)
+     * plus the symbol/type decoded from the shortcode and the account currency.
+     * Nothing is guessed, and the fields a purchase cannot know are left off
+     * so the row shows its pending state for them.
+     */
+    buildPurchaseTransaction = (buy: Buy) => {
+        const { underlying, category } = extractInfoFromShortcode(buy.shortcode ?? '') ?? {};
+
+        return {
+            contract_id: buy.contract_id,
+            transaction_ids: { buy: buy.transaction_id },
+            buy_price: buy.buy_price,
+            payout: buy.payout,
+            currency: this.core?.client?.currency,
+            underlying,
+            // Upper-cased because the trade-type icon and getContractTypeName
+            // both key off the API's own casing (DIGITOVER, CALL), while the
+            // shortcode parser returns the category as it appears in the code.
+            contract_type: category ? category.toUpperCase() : undefined,
+            date_start: buy.start_time ?? buy.purchase_time,
+            longcode: buy.longcode,
+            shortcode: buy.shortcode,
+        } as TContractInfo;
+    };
+
     onContractStatusEvent = (contract_status: TContractState) => {
         switch (contract_status.id) {
             case 'contract.purchase_sent': {
@@ -707,6 +737,30 @@ export default class RunPanelStore {
 
                 if (!is_virtual && buy) {
                     GTM?.pushDataLayer?.({ event: 'dbot_purchase', buy_price: buy.buy_price });
+                }
+
+                // The row used to be created only when the first
+                // proposal_open_contract for this contract arrived and passed
+                // OpenContract.expectedContractId(). Until then a purchase that
+                // had genuinely succeeded showed nothing at all - on a slow
+                // first update the panel still read "There are no transactions
+                // to display" with money already committed.
+                //
+                // Recording it here closes that gap using what the buy response
+                // actually returned, and nothing else: contract id, buy price,
+                // payout and times come straight off it, the symbol and trade
+                // type are read out of its shortcode with the app's own
+                // extractInfoFromShortcode, and the currency is the account's.
+                // The fields the purchase genuinely cannot know - entry spot,
+                // exit spot, profit - are simply absent, so the row renders the
+                // existing pending skeleton for them rather than a made-up
+                // number.
+                //
+                // transaction_ids.buy is the join key pushTransaction already
+                // dedupes on, so every later open-contract update lands on this
+                // same row instead of adding a second one.
+                if (buy) {
+                    this.root_store.transactions.onBotContractEvent(this.buildPurchaseTransaction(buy));
                 }
 
                 break;

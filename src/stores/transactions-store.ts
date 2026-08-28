@@ -219,9 +219,32 @@ export default class TransactionsStore {
             });
         } else {
             // If data belongs to existing contract in memory, update it.
+            //
+            // Merged rather than replaced, and undefined values in the incoming
+            // payload are dropped. Two payload shapes reach the same row now -
+            // the purchase stub (contract id, buy price, currency, type; no
+            // spots and no profit yet) and the proposal_open_contract updates
+            // that enrich it - and they can arrive in either order. A straight
+            // replace meant whichever landed second won outright, so a
+            // purchase response arriving after the first open-contract update
+            // wiped the entry spot back to a loading skeleton.
+            // Dropping undefined keys makes an update additive: a field is only
+            // ever overwritten by another real value, never blanked by a
+            // payload that simply does not carry it yet.
+            const existing = this.elements[current_account]?.[same_contract_index]?.data;
+            const merged =
+                typeof existing === 'object' && existing
+                    ? {
+                          ...existing,
+                          ...(Object.fromEntries(
+                              Object.entries(contract).filter(([, value]) => value !== undefined)
+                          ) as TContractInfo),
+                      }
+                    : contract;
+
             this.elements[current_account]?.splice(same_contract_index, 1, {
                 type: transaction_elements.CONTRACT,
-                data: contract,
+                data: merged,
             });
         }
 

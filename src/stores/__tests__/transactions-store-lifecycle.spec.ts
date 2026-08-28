@@ -181,4 +181,119 @@ describe('contract lifecycle through the production transactions store', () => {
         expect(store.statistics.number_of_runs).toBe(0);
         expect(store.statistics.total_profit).toBe(0);
     });
+
+    describe('the purchase response opens the row, before any open-contract update', () => {
+        /**
+         * What run-panel-store.buildPurchaseTransaction() produces from a real
+         * `buy` response. Only fields the Buy type actually carries, plus the
+         * symbol/type decoded from the shortcode and the account currency -
+         * no spots and no profit, because a purchase cannot know them.
+         */
+        const purchaseStub = (overrides: Record<string, unknown> = {}) => ({
+            contract_id: CONTRACT_ID,
+            transaction_ids: { buy: BUY_TRANSACTION_ID },
+            buy_price: 2,
+            payout: 3.08,
+            currency: 'USD',
+            underlying: '1HZ100V',
+            contract_type: 'CALL',
+            date_start: 1735689600,
+            longcode: 'Win payout if...',
+            shortcode: 'CALL_1HZ100V_3.08_1735689600_1735689900_S0P_0',
+            ...overrides,
+        });
+
+        it('renders a row as soon as the purchase succeeds, with the spots still pending', () => {
+            const store = makeStore();
+
+            store.onBotContractEvent(purchaseStub() as never);
+
+            // the panel must not still be saying "no transactions to display"
+            expect(contractRows(store)).toHaveLength(1);
+            const row = firstContract(store);
+            expect(row.buy_price).toBe(2);
+            expect(row.currency).toBe('USD');
+            expect(row.underlying).toBe('1HZ100V');
+            // pending, not invented
+            expect(row.entry_tick).toBeUndefined();
+            expect(row.exit_tick).toBeUndefined();
+            expect(row.is_completed).toBe(false);
+            // nothing has settled, so nothing is counted
+            expect(store.statistics.number_of_runs).toBe(0);
+        });
+
+        it('case A - purchase then open-contract enriches the same row', () => {
+            const store = makeStore();
+
+            store.onBotContractEvent(purchaseStub() as never);
+            store.onBotContractEvent(openContract({ entry_spot: 622.64 }) as never);
+
+            expect(contractRows(store)).toHaveLength(1);
+            expect(firstContract(store).entry_tick).toBe(622.64);
+        });
+
+        it('case B - open-contract first, and the later purchase must not blank the entry spot', () => {
+            const store = makeStore();
+
+            store.onBotContractEvent(openContract({ entry_spot: 622.64 }) as never);
+            store.onBotContractEvent(purchaseStub() as never);
+
+            expect(contractRows(store)).toHaveLength(1);
+            // the purchase stub carries no entry spot; a straight replace would
+            // have reset this cell to its loading skeleton
+            expect(firstContract(store).entry_tick).toBe(622.64);
+            expect(firstContract(store).buy_price).toBe(2);
+        });
+
+        it('case D - a contract that settles immediately still ends as one complete row', () => {
+            const store = makeStore();
+
+            store.onBotContractEvent(purchaseStub() as never);
+            store.onBotContractEvent(
+                openContract({
+                    entry_spot: 622.64,
+                    exit_spot: 623.24,
+                    status: 'won',
+                    is_sold: 1,
+                    profit: '1.08',
+                    payout: '3.08',
+                }) as never
+            );
+
+            expect(contractRows(store)).toHaveLength(1);
+            const row = firstContract(store);
+            expect(row.is_completed).toBe(true);
+            expect(row.entry_tick).toBe(622.64);
+            expect(row.exit_tick).toBe(623.24);
+            expect(store.statistics.number_of_runs).toBe(1);
+            expect(store.statistics.won_contracts).toBe(1);
+            expect(store.statistics.total_profit).toBeCloseTo(1.08, 10);
+        });
+
+        it('case C/§20 - three purchased contracts stay three rows, updated independently', () => {
+            const store = makeStore();
+            const ids = [
+                { contract_id: 1, transaction_ids: { buy: 101 } },
+                { contract_id: 2, transaction_ids: { buy: 102 } },
+                { contract_id: 3, transaction_ids: { buy: 103 } },
+            ];
+
+            ids.forEach(id => store.onBotContractEvent(purchaseStub(id) as never));
+            expect(contractRows(store)).toHaveLength(3);
+
+            // updates arrive out of order, each must find its own row
+            store.onBotContractEvent(openContract({ ...ids[2], entry_spot: 3.3 }) as never);
+            store.onBotContractEvent(openContract({ ...ids[0], entry_spot: 1.1 }) as never);
+            store.onBotContractEvent(openContract({ ...ids[1], entry_spot: 2.2 }) as never);
+
+            expect(contractRows(store)).toHaveLength(3);
+            const byBuyId = Object.fromEntries(
+                contractRows(store).map(r => {
+                    const d = r.data as Record<string, never>;
+                    return [(d.transaction_ids as { buy: number }).buy, d.entry_tick];
+                })
+            );
+            expect(byBuyId).toEqual({ 101: 1.1, 102: 2.2, 103: 3.3 });
+        });
+    });
 });
