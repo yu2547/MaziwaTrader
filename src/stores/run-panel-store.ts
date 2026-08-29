@@ -316,6 +316,15 @@ export default class RunPanelStore {
             this.setIsRunning(true);
             ui.setPromptHandler(true);
             this.toggleDrawer(true);
+            // Opening the panel on Summary shows a card for a run that has not
+            // traded yet, while the thing the user pressed Run to watch - the
+            // contracts as they are bought and settled - is one tab away.
+            // active_index defaults to SUMMARY (0) and nothing moved it for a
+            // run; the only other writers are handleInvalidToken and the
+            // journal error path, neither of which is this.
+            // One-shot, on the Run path only, alongside the drawer it opens -
+            // so a user who then picks Summary or Journal keeps it.
+            this.setActiveTabIndex(run_panel.TRANSACTIONS);
             this.run_id = `run-${Date.now()}`;
 
             summary_card.clear();
