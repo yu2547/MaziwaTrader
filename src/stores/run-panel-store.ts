@@ -117,6 +117,12 @@ export default class RunPanelStore {
     is_sell_requested = false;
     show_bot_stop_message = false;
     is_contracy_buying_in_progress = false;
+    /**
+     * Whether this run has already opened the panel for an error. Plain
+     * bookkeeping, not observable - nothing renders from it; it only stops
+     * showErrorMessage reopening a collapsed panel on every error in a stream.
+     */
+    has_opened_for_error = false;
 
     run_id = '';
     onOkButtonClick: (() => void) | null = null;
@@ -625,6 +631,7 @@ export default class RunPanelStore {
             () => this.is_running,
             (is_running, was_running) => {
                 if (is_running && !was_running) {
+                    this.has_opened_for_error = false;
                     this.toggleDrawer(true);
                     this.setActiveTabIndex(run_panel.TRANSACTIONS);
                 }
@@ -852,13 +859,26 @@ export default class RunPanelStore {
         const { ui } = this.core;
         journal.onError(data);
         if (journal.journal_filters.some(filter => filter === MessageTypes.ERROR)) {
-            this.toggleDrawer(true);
             // Deliberately does NOT switch the tab. This ran on every
             // ui.log.error, so the first error after pressing Run threw the
             // user from Transactions onto Journal - which is what "Run takes
             // me to the Journal" actually was. The error is still recorded
             // above and the panel is still opened; where the user is looking
             // is left to the user, and Journal is one click away.
+            //
+            // Opened once per run rather than once per error, for the same
+            // reason. Errors arrive in streams - a rejected contract can log
+            // several in a row - and reopening on each one overrode a panel
+            // the user had deliberately collapsed, every few seconds, with no
+            // way to keep it shut while the bot ran. The first error still
+            // brings the panel up, which is the part worth having; the rest
+            // are recorded in the journal and left there. Reset on the
+            // not-running -> running transition, so the next run surfaces its
+            // first error the same way.
+            if (!this.has_opened_for_error) {
+                this.has_opened_for_error = true;
+                this.toggleDrawer(true);
+            }
             ui.setPromptHandler(false);
         } else {
             // TODO: fix notifications
