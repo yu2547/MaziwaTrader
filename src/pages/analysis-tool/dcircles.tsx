@@ -311,9 +311,16 @@ const Dcircles = observer(() => {
                     />
                 ))}
             </div>
+            {/* One label per state the circles above actually show. This was
+                two spans reading 'current digit / most' and 'least frequency',
+                which the flex gap then pushed apart into "current digit / most
+                … least frequency" - the phrase had been split mid-way, so the
+                word it needed ("frequency") was missing from the first half and
+                neither fragment was translatable on its own. */}
             <div className='mw-dcircles__legend'>
-                <span>{localize('current digit / most')}</span>
-                <span>{localize('least frequency')}</span>
+                <span>{localize('current digit')}</span>
+                <span>{localize('most frequent')}</span>
+                <span>{localize('least frequent')}</span>
             </div>
 
             {/* Directly under the digit circles: this is where someone decides

@@ -385,9 +385,18 @@ $mw-grey: #7d8fa3;
     &__legend {
         display: flex;
         justify-content: center;
-        gap: 2.4rem;
+
+        // Three labels where there were two, so the row has to be able to give.
+        // Wrapping rather than a smaller font keeps it readable on a 375px
+        // phone; the tighter gap means it usually does not need to wrap at all.
+        flex-wrap: wrap;
+        gap: 0.4rem 2.4rem;
         font-size: 1.2rem;
         color: var(--text-less-prominent);
+
+        @media (width <= 420px) {
+            gap: 0.4rem 1.4rem;
+        }
     }
 
     &__heading {
