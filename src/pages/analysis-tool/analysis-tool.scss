@@ -153,22 +153,6 @@ $mw-grey: #7d8fa3;
         cursor: pointer;
     }
 
-    &__config {
-        // It sits under the circles now, directly in the column, and the
-        // column stretches its children. Left alone the button would span the
-        // full width; centring keeps the compact pill it has always been.
-        align-self: center;
-        padding: 0.9rem 1.6rem;
-        border: none;
-        border-radius: 6px;
-        background: $mw-blue;
-        color: #fff;
-        font-size: 1.3rem;
-        font-weight: 700;
-        white-space: nowrap;
-        cursor: pointer;
-    }
-
     &__note {
         margin: 0;
         padding: 1.2rem;
@@ -473,11 +457,11 @@ $mw-grey: #7d8fa3;
         border-radius: 10px;
         background: var(--general-main-1);
 
-        // Contained rather than stretched: at 1920 a full-bleed row leaves the
-        // market selector a metre wide with the controls stranded at each end.
-        // The section still fills a phone, where max-width never binds.
+        // Full width on every screen. A 72rem cap read better in the abstract,
+        // but it packed the ten circles into the left third of a laptop and
+        // left the rest of the row empty - and the distribution is the one
+        // thing on this page worth reading across the whole screen.
         width: 100%;
-        max-width: 72rem;
     }
 
     &__config-title {

@@ -1,9 +1,6 @@
-import { startTransition, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { useNavigate } from 'react-router-dom';
-import { DBOT_TABS } from '@/constants/bot-contents';
 import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
-import { useStore } from '@/hooks/useStore';
 import { getDigitDistribution, getLastDigit, toDecimalPlaces } from '@/utils/market-data/last-digit';
 import { TActiveSymbol, TTick } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
@@ -100,9 +97,7 @@ const RecentStrip = ({
 
 const Dcircles = observer(() => {
     const { feed, isConnected } = usePublicMarketFeed();
-    const { dashboard, quick_strategy } = useStore() ?? {};
     const { localize } = useTranslations();
-    const navigate = useNavigate();
 
     const [symbols, setSymbols] = useState<TActiveSymbol[]>([]);
     const [selected_symbol, setSelectedSymbol] = useState(DEFAULT_SYMBOL);
@@ -208,14 +203,6 @@ const Dcircles = observer(() => {
         text: digit === barrier ? 'M' : 'D',
         tone: (digit === barrier ? 'good' : 'bad') as 'good' | 'bad',
     }));
-
-    const openTradingConfiguration = () => {
-        startTransition(() => {
-            navigate('/');
-            dashboard?.setActiveTab(DBOT_TABS.BOT_BUILDER);
-            quick_strategy?.setFormVisibility(true);
-        });
-    };
 
     return (
         <div className='mw-dcircles'>
@@ -373,19 +360,6 @@ const Dcircles = observer(() => {
                     </span>
                 </div>
             </section>
-
-            {/* Directly under the digit circles: this is where someone decides
-                a distribution is worth trading, so the way into the trade
-                settings belongs at that point rather than up in the header.
-                Its behaviour is unchanged - it still opens Quick Strategy in
-                the Bot Builder. Only the label is: it read "Trading
-                Configuration", which is the name of the section above it, so
-                the one control on this screen that leaves the Analysis Tool
-                was the one carrying the name of the panel that stays on it.
-                The label now says where it goes. */}
-            <button type='button' className='mw-dcircles__config' onClick={openTradingConfiguration}>
-                {localize('Configure bot in Bot Builder')}
-            </button>
 
             <h3 className='mw-dcircles__heading'>{localize('Even/Odd')}</h3>
             <div className='mw-dcircles__panels mw-dcircles__panels--two'>
