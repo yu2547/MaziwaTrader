@@ -290,8 +290,22 @@ const RunPanelContent = observer(() => {
         return () => onUnmount();
     }, [onMount, onUnmount]);
 
+    // Start collapsed on a phone so the Bot Builder workspace is not covered
+    // before there is anything to look at - but never while a bot is running.
+    //
+    // This fires on mount, and mount is not once: the component returns null
+    // for the bot-builder tour a few lines below, and anything that unmounts
+    // and restores this subtree runs it again. Unconditionally, that closed the
+    // panel out from under a live session - onRunButtonClick opens the drawer
+    // as it starts the bot (run-panel-store.ts:318), and this would then shut
+    // it again, leaving the bot running with Stop visible and no panel, which
+    // is precisely the state being reported.
+    //
+    // is_running is read rather than is_drawer_open on purpose: the question is
+    // not whether the panel happens to be open, it is whether there is a
+    // session whose panel the user is entitled to keep.
     React.useEffect(() => {
-        if (!isDesktop) {
+        if (!isDesktop && !run_panel.is_running) {
             toggleDrawer(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps

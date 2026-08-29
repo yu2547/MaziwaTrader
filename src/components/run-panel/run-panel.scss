@@ -40,8 +40,16 @@ $mw-tab-active: #1a3d7c;
     // clickable again. Desktop is untouched: it keeps this same wrapper class
     // but is outside the query, and the open state is unaffected because the
     // wrapper is then --mobile and no longer matches.
+    // Keyed on the drawer's own open state, not on this wrapper class.
+    // run-panel.tsx:338 picks the wrapper from `!isDesktop && is_drawer_open`,
+    // so an OPEN drawer still lands in this `run-panel` wrapper whenever
+    // useDevice() reports isDesktop - which it does on the first render before
+    // its media query resolves, and would on any phone it misreads. Keyed on
+    // the wrapper, this rule would then hide a panel the user had just opened,
+    // which is the opposite of the point. dc-drawer--open comes from the same
+    // is_drawer_open state via drawer.tsx:49, so it cannot disagree with it.
     @media (width <= 768px) {
-        > .dc-drawer {
+        > .dc-drawer:not(.dc-drawer--open) {
             display: none;
         }
     }
