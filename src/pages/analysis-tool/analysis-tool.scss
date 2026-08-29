@@ -380,23 +380,77 @@ $mw-grey: #7d8fa3;
         font-weight: 600;
         line-height: 1.1;
         opacity: 0.85;
+
+        // Ten per row on a desktop, five on a phone - so the phone circle is
+        // the same 6rem but carries half as many neighbours, and there is room
+        // for the figure to be read at arm's length rather than squinted at.
+        // The circle itself is untouched: the figure tracks the width the same
+        // way the circle does, so it reaches 1.2rem at 375px and holds there,
+        // and on a 320px phone - where the circle is only 44px - it stays the
+        // size that still clears the ring rather than pressing against it.
+        @media (width <= 700px) {
+            font-size: clamp(1rem, 3.2vw, 1.2rem);
+        }
     }
 
     &__legend {
         display: flex;
         justify-content: center;
 
-        // Three labels where there were two, so the row has to be able to give.
-        // Wrapping rather than a smaller font keeps it readable on a 375px
-        // phone; the tighter gap means it usually does not need to wrap at all.
+        // One entry per state the circles can be in, so the row has to be able
+        // to give. Wrapping rather than a smaller font keeps it readable on a
+        // 375px phone; each entry is itself unbreakable, so a wrap never splits
+        // a swatch from the words it explains.
         flex-wrap: wrap;
-        gap: 0.4rem 2.4rem;
+        gap: 0.6rem 1.8rem;
         font-size: 1.2rem;
         color: var(--text-less-prominent);
 
         @media (width <= 420px) {
-            gap: 0.4rem 1.4rem;
+            gap: 0.6rem 1.2rem;
         }
+    }
+
+    &__legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        white-space: nowrap;
+    }
+
+    // The words alone named three states and coloured none of them. These are
+    // the circle fills at legend size, so the colour on the circle is the thing
+    // being read here.
+    &__legend-swatch {
+        width: 1rem;
+        height: 1rem;
+        flex-shrink: 0;
+        border-radius: 50%;
+
+        &--highest {
+            background: $mw-green;
+        }
+
+        &--second_highest {
+            background: $mw-blue;
+        }
+
+        &--second_lowest {
+            background: $mw-orange;
+        }
+
+        &--lowest {
+            background: $mw-red;
+        }
+    }
+
+    // The current digit is not a fill - it is the marker above the circle and
+    // the ring around it, so the legend shows the marker.
+    &__legend-marker {
+        flex-shrink: 0;
+        font-size: 1rem;
+        line-height: 1;
+        color: $mw-blue;
     }
 
     &__heading {

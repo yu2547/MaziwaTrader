@@ -328,16 +328,49 @@ const Dcircles = observer(() => {
                         />
                     ))}
                 </div>
-                {/* One label per state the circles above actually show. This was
-                two spans reading 'current digit / most' and 'least frequency',
-                which the flex gap then pushed apart into "current digit / most
-                … least frequency" - the phrase had been split mid-way, so the
-                word it needed ("frequency") was missing from the first half and
-                neither fragment was translatable on its own. */}
+                {/* One entry per state the circles above can actually be in.
+                The circles rank four ways - highest, second highest, second
+                lowest, lowest - and mark the current digit on top of that, but
+                the legend named only three of the five and carried no colour at
+                all, so the blue and orange circles had nothing explaining them.
+                The swatches are the circle fills; the ▼ is the marker the
+                current digit already wears. Ranking, colours and counts are
+                untouched - this only says out loud what they already mean. */}
                 <div className='mw-dcircles__legend'>
-                    <span>{localize('current digit')}</span>
-                    <span>{localize('most frequent')}</span>
-                    <span>{localize('least frequent')}</span>
+                    <span className='mw-dcircles__legend-item'>
+                        <span className='mw-dcircles__legend-marker' aria-hidden='true'>
+                            ▼
+                        </span>
+                        {localize('current digit')}
+                    </span>
+                    <span className='mw-dcircles__legend-item'>
+                        <span
+                            className='mw-dcircles__legend-swatch mw-dcircles__legend-swatch--highest'
+                            aria-hidden='true'
+                        />
+                        {localize('most frequent')}
+                    </span>
+                    <span className='mw-dcircles__legend-item'>
+                        <span
+                            className='mw-dcircles__legend-swatch mw-dcircles__legend-swatch--second_highest'
+                            aria-hidden='true'
+                        />
+                        {localize('2nd most frequent')}
+                    </span>
+                    <span className='mw-dcircles__legend-item'>
+                        <span
+                            className='mw-dcircles__legend-swatch mw-dcircles__legend-swatch--second_lowest'
+                            aria-hidden='true'
+                        />
+                        {localize('2nd least frequent')}
+                    </span>
+                    <span className='mw-dcircles__legend-item'>
+                        <span
+                            className='mw-dcircles__legend-swatch mw-dcircles__legend-swatch--lowest'
+                            aria-hidden='true'
+                        />
+                        {localize('least frequent')}
+                    </span>
                 </div>
             </section>
 
