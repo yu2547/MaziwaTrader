@@ -313,18 +313,12 @@ export default class RunPanelStore {
             )
         );
         runInAction(() => {
+            // setIsRunning drives the panel: registerReactions watches this
+            // flag and opens the panel on Transactions when it goes true. It is
+            // done there rather than here so that one mechanism owns it, and so
+            // it survives anything that closes the drawer after this point.
             this.setIsRunning(true);
             ui.setPromptHandler(true);
-            this.toggleDrawer(true);
-            // Opening the panel on Summary shows a card for a run that has not
-            // traded yet, while the thing the user pressed Run to watch - the
-            // contracts as they are bought and settled - is one tab away.
-            // active_index defaults to SUMMARY (0) and nothing moved it for a
-            // run; the only other writers are handleInvalidToken and the
-            // journal error path, neither of which is this.
-            // One-shot, on the Run path only, alongside the drawer it opens -
-            // so a user who then picks Summary or Journal keeps it.
-            this.setActiveTabIndex(run_panel.TRANSACTIONS);
             this.run_id = `run-${Date.now()}`;
 
             summary_card.clear();
@@ -608,6 +602,35 @@ export default class RunPanelStore {
             }
         );
 
+        // Open the panel on the not-running -> running transition, rather than
+        // only inside onRunButtonClick.
+        //
+        // That handler does open it, and it is reached on every start path -
+        // there is one dbot.runBot() call in the app and it sits below every
+        // early return. But opening it there is a single instruction at one
+        // moment: anything that closes the drawer afterwards leaves a bot
+        // running with no panel and nothing to reopen it, which is the reported
+        // state. RunPanelContent unmounts for the bot-builder tour and remounts
+        // with a mount effect that closes the drawer, and a start that arrives
+        // through quick-strategy-store waits on a Blockly block event first, so
+        // there is more than one way for the open to be undone or to land
+        // before the panel is listening.
+        //
+        // A reaction on the transition survives all of it: whatever sets
+        // is_running, false -> true opens the panel exactly once. It is not
+        // `if (is_running) open()` on every render - prevValue is what makes it
+        // a transition - so a user who then collapses the panel keeps it
+        // collapsed until the next run.
+        const disposeRunTransitionListener = reaction(
+            () => this.is_running,
+            (is_running, was_running) => {
+                if (is_running && !was_running) {
+                    this.toggleDrawer(true);
+                    this.setActiveTabIndex(run_panel.TRANSACTIONS);
+                }
+            }
+        );
+
         return () => {
             if (typeof disposeIsSocketOpenedListener === 'function') {
                 disposeIsSocketOpenedListener();
@@ -619,6 +642,10 @@ export default class RunPanelStore {
 
             if (typeof disposeStopBotListener === 'function') {
                 disposeStopBotListener();
+            }
+
+            if (typeof disposeRunTransitionListener === 'function') {
+                disposeRunTransitionListener();
             }
         };
     };
