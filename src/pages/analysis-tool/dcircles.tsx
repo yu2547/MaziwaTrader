@@ -257,77 +257,101 @@ const Dcircles = observer(() => {
                 </p>
             )}
 
-            <label className='mw-dcircles__market'>
-                <span>{localize('Select Market:')}</span>
-                <select value={selected_symbol} onChange={event => setSelectedSymbol(event.target.value)}>
-                    {symbols.length === 0 && <option value={selected_symbol}>{selected_symbol}</option>}
-                    {symbols.map(item => (
-                        <option key={item.underlying_symbol} value={item.underlying_symbol}>
-                            {item.underlying_symbol_name}
-                        </option>
-                    ))}
-                </select>
-            </label>
+            {/* Trading Configuration. Every control below already existed and
+                already rendered in this order - market, price and current
+                digit, tick window, sample size, the digit circles, the legend.
+                What did not exist was any statement that they are one thing:
+                they read as six loose rows, and the name "Trading
+                Configuration" was taken by the button under them, which leaves
+                the Analysis Tool for the Bot Builder. Naming the section here
+                puts the title on the controls it describes. Nothing is moved,
+                duplicated or re-wired - this is a wrapper around the existing
+                elements, reading from the existing feed. */}
+            <section className='mw-dcircles__config-panel' aria-labelledby='mw-trading-configuration'>
+                <h3 className='mw-dcircles__config-title' id='mw-trading-configuration'>
+                    {localize('Trading Configuration')}
+                </h3>
 
-            <div className='mw-dcircles__quote'>
-                <span className='mw-dcircles__quote-value'>{last_tick ? last_tick.quote.toFixed(decimals) : '—'}</span>
-                <span className='mw-dcircles__quote-digit'>{current_digit ?? '—'}</span>
-            </div>
+                <label className='mw-dcircles__market'>
+                    <span>{localize('Select Market:')}</span>
+                    <select value={selected_symbol} onChange={event => setSelectedSymbol(event.target.value)}>
+                        {symbols.length === 0 && <option value={selected_symbol}>{selected_symbol}</option>}
+                        {symbols.map(item => (
+                            <option key={item.underlying_symbol} value={item.underlying_symbol}>
+                                {item.underlying_symbol_name}
+                            </option>
+                        ))}
+                    </select>
+                </label>
 
-            <div className='mw-dcircles__window'>
-                <span>{localize('Ticks window:')}</span>
-                <input
-                    type='number'
-                    value={tick_window}
-                    min={MIN_TICK_WINDOW}
-                    max={MAX_TICK_WINDOW}
-                    step={50}
-                    onChange={event =>
-                        setTickWindow(
-                            Math.min(MAX_TICK_WINDOW, Math.max(MIN_TICK_WINDOW, Number(event.target.value) || 0))
-                        )
-                    }
-                />
-                <span className='mw-dcircles__window-range'>
-                    ({MIN_TICK_WINDOW}–{MAX_TICK_WINDOW})
-                </span>
-            </div>
+                <div className='mw-dcircles__quote'>
+                    <span className='mw-dcircles__quote-value'>
+                        {last_tick ? last_tick.quote.toFixed(decimals) : '—'}
+                    </span>
+                    <span className='mw-dcircles__quote-digit'>{current_digit ?? '—'}</span>
+                </div>
 
-            <div className='mw-dcircles__dist-head'>
-                <span>{localize('Last {{count}} ticks digit distribution', { count: tick_window })}</span>
-                <span className='mw-dcircles__dist-count'>
-                    {sample.length}/{tick_window}
-                </span>
-            </div>
-
-            <div className='mw-dcircles__grid'>
-                {distribution.map((percentage, digit) => (
-                    <DigitCircle
-                        key={digit}
-                        digit={digit}
-                        percentage={percentage}
-                        standing={standings[digit]}
-                        is_current={digit === current_digit}
+                <div className='mw-dcircles__window'>
+                    <span>{localize('Ticks window:')}</span>
+                    <input
+                        type='number'
+                        value={tick_window}
+                        min={MIN_TICK_WINDOW}
+                        max={MAX_TICK_WINDOW}
+                        step={50}
+                        onChange={event =>
+                            setTickWindow(
+                                Math.min(MAX_TICK_WINDOW, Math.max(MIN_TICK_WINDOW, Number(event.target.value) || 0))
+                            )
+                        }
                     />
-                ))}
-            </div>
-            {/* One label per state the circles above actually show. This was
+                    <span className='mw-dcircles__window-range'>
+                        ({MIN_TICK_WINDOW}–{MAX_TICK_WINDOW})
+                    </span>
+                </div>
+
+                <div className='mw-dcircles__dist-head'>
+                    <span>{localize('Last {{count}} ticks digit distribution', { count: tick_window })}</span>
+                    <span className='mw-dcircles__dist-count'>
+                        {sample.length}/{tick_window}
+                    </span>
+                </div>
+
+                <div className='mw-dcircles__grid'>
+                    {distribution.map((percentage, digit) => (
+                        <DigitCircle
+                            key={digit}
+                            digit={digit}
+                            percentage={percentage}
+                            standing={standings[digit]}
+                            is_current={digit === current_digit}
+                        />
+                    ))}
+                </div>
+                {/* One label per state the circles above actually show. This was
                 two spans reading 'current digit / most' and 'least frequency',
                 which the flex gap then pushed apart into "current digit / most
                 … least frequency" - the phrase had been split mid-way, so the
                 word it needed ("frequency") was missing from the first half and
                 neither fragment was translatable on its own. */}
-            <div className='mw-dcircles__legend'>
-                <span>{localize('current digit')}</span>
-                <span>{localize('most frequent')}</span>
-                <span>{localize('least frequent')}</span>
-            </div>
+                <div className='mw-dcircles__legend'>
+                    <span>{localize('current digit')}</span>
+                    <span>{localize('most frequent')}</span>
+                    <span>{localize('least frequent')}</span>
+                </div>
+            </section>
 
             {/* Directly under the digit circles: this is where someone decides
                 a distribution is worth trading, so the way into the trade
-                settings belongs at that point rather than up in the header. */}
+                settings belongs at that point rather than up in the header.
+                Its behaviour is unchanged - it still opens Quick Strategy in
+                the Bot Builder. Only the label is: it read "Trading
+                Configuration", which is the name of the section above it, so
+                the one control on this screen that leaves the Analysis Tool
+                was the one carrying the name of the panel that stays on it.
+                The label now says where it goes. */}
             <button type='button' className='mw-dcircles__config' onClick={openTradingConfiguration}>
-                {localize('Trading Configuration')}
+                {localize('Configure bot in Bot Builder')}
             </button>
 
             <h3 className='mw-dcircles__heading'>{localize('Even/Odd')}</h3>

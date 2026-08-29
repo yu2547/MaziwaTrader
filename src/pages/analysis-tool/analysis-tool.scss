@@ -406,6 +406,33 @@ $mw-grey: #7d8fa3;
         color: var(--text-prominent);
     }
 
+    // The Trading Configuration section: the market, price, tick window and
+    // digit analysis as one bounded block rather than six loose rows. The
+    // parent is already a flex column, so the children keep the order and
+    // spacing they had - this gives them an edge and a title, nothing more.
+    &__config-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 1.4rem;
+        padding: 1.6rem;
+        border: 1px solid var(--general-section-1);
+        border-radius: 10px;
+        background: var(--general-main-1);
+
+        // Contained rather than stretched: at 1920 a full-bleed row leaves the
+        // market selector a metre wide with the controls stranded at each end.
+        // The section still fills a phone, where max-width never binds.
+        width: 100%;
+        max-width: 72rem;
+    }
+
+    &__config-title {
+        margin: 0;
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text-prominent);
+    }
+
     &__panels {
         display: grid;
         gap: 1.6rem;
