@@ -189,7 +189,13 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
         Object.keys(fields_to_update).forEach(key => {
             const value = fields_to_update[key as keyof typeof fields_to_update];
 
-            if (!isNaN(value as number) && key !== 'growthrate') {
+            // growthrate and candleinterval are dropdown selections that happen
+            // to look numeric ('0.01', '60'), so isNaN alone sends them to the
+            // value inputs - which have no node to match - and the choice is
+            // dropped without a word. growthrate was already excluded for that
+            // reason; candleinterval is the same case. No existing caller sends
+            // one, so this only changes what happens when a caller does.
+            if (!isNaN(value as number) && key !== 'growthrate' && key !== 'candleinterval') {
                 modifyValueInputs(key, value as number);
             } else if (typeof value === 'string') {
                 modifyFieldDropdownValues(key, value);

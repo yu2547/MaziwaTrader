@@ -4,6 +4,7 @@ import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
 import { getDigitDistribution, getLastDigit, toDecimalPlaces } from '@/utils/market-data/last-digit';
 import { TActiveSymbol, TTick } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
+import TradingConfiguration from './trading-configuration';
 
 const DEFAULT_SYMBOL = '1HZ100V';
 const DEFAULT_TICK_WINDOW = 1000;
@@ -108,6 +109,7 @@ const Dcircles = observer(() => {
     const [history_decimals, setHistoryDecimals] = useState<number | null>(null);
     const [is_ai_open, setIsAiOpen] = useState(false);
     const [is_info_open, setIsInfoOpen] = useState(false);
+    const [is_config_open, setIsConfigOpen] = useState(false);
     const [expanded, setExpanded] = useState({ eo: false, ou: false, md: false });
 
     // Every market Deriv offers, not a curated subset - the reference lists
@@ -206,6 +208,28 @@ const Dcircles = observer(() => {
 
     return (
         <div className='mw-dcircles'>
+            {/* Top right, under the Run button - the trade settings sit at the
+                corner of the analysis, not in the middle of it. */}
+            <div className='mw-dcircles__bar'>
+                <button
+                    type='button'
+                    className='mw-dcircles__config'
+                    onClick={() => setIsConfigOpen(true)}
+                    aria-haspopup='dialog'
+                    aria-expanded={is_config_open}
+                >
+                    {localize('Trading Configuration')}
+                </button>
+            </div>
+
+            {is_config_open && (
+                <TradingConfiguration
+                    default_symbol={selected_symbol}
+                    feed_symbols={symbols}
+                    onClose={() => setIsConfigOpen(false)}
+                />
+            )}
+
             <div className='mw-dcircles__actions'>
                 <button type='button' className='mw-dcircles__action mw-dcircles__action--eye'>
                     {localize('Wide Eye')}
