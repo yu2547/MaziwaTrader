@@ -383,78 +383,95 @@ const Dcircles = observer(() => {
                         {localize('least frequent')}
                     </span>
                 </div>
+
+                {/* Everything from here down used to sit outside the panel as
+                    loose rows, so scrolling past the circles left the card
+                    behind and the rest of the analysis floated on the page with
+                    nothing tying it to the market it was counted from. It is
+                    all one reading of one symbol, so it is now one block: the
+                    card runs to the end, and each section below is separated by
+                    a rule rather than by a gap in mid-air. */}
+                <h3 className='mw-dcircles__heading'>{localize('Even/Odd')}</h3>
+                <div className='mw-dcircles__panels mw-dcircles__panels--two'>
+                    <Bar
+                        label={localize('Even')}
+                        count={even_count}
+                        percentage={(even_count / total) * 100}
+                        tone='good'
+                    />
+                    <Bar
+                        label={localize('Odd')}
+                        count={sample.length - even_count}
+                        percentage={((sample.length - even_count) / total) * 100}
+                        tone='bad'
+                    />
+                </div>
+                <RecentStrip
+                    title={localize('Recent E/O')}
+                    items={eo_items}
+                    expanded={expanded.eo}
+                    onToggle={() => setExpanded(prev => ({ ...prev, eo: !prev.eo }))}
+                />
+
+                <label className='mw-dcircles__barrier'>
+                    <span>{localize('Over/Under:')}</span>
+                    <select value={barrier} onChange={event => setBarrier(Number(event.target.value))}>
+                        {Array.from({ length: 10 }, (_, digit) => (
+                            <option key={digit} value={digit}>
+                                {digit}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+                <div className='mw-dcircles__panels mw-dcircles__panels--three'>
+                    <Bar
+                        label={localize('Under')}
+                        count={under_count}
+                        percentage={(under_count / total) * 100}
+                        tone='good'
+                    />
+                    <Bar
+                        label={localize('Equal')}
+                        count={equal_count}
+                        percentage={(equal_count / total) * 100}
+                        tone='flat'
+                    />
+                    <Bar
+                        label={localize('Over')}
+                        count={over_count}
+                        percentage={(over_count / total) * 100}
+                        tone='bad'
+                    />
+                </div>
+                <RecentStrip
+                    title={localize('Recent U/= /O')}
+                    items={ou_items}
+                    expanded={expanded.ou}
+                    onToggle={() => setExpanded(prev => ({ ...prev, ou: !prev.ou }))}
+                />
+
+                <h3 className='mw-dcircles__heading'>{localize('Matches/Differs')}</h3>
+                <div className='mw-dcircles__panels mw-dcircles__panels--two'>
+                    <Bar
+                        label={localize('Matches')}
+                        count={equal_count}
+                        percentage={(equal_count / total) * 100}
+                        tone='good'
+                    />
+                    <Bar
+                        label={localize('Differs')}
+                        count={sample.length - equal_count}
+                        percentage={((sample.length - equal_count) / total) * 100}
+                        tone='bad'
+                    />
+                </div>
+                <RecentStrip
+                    title={localize('Recent M/D')}
+                    items={md_items}
+                    expanded={expanded.md}
+                    onToggle={() => setExpanded(prev => ({ ...prev, md: !prev.md }))}
+                />
             </section>
-
-            <h3 className='mw-dcircles__heading'>{localize('Even/Odd')}</h3>
-            <div className='mw-dcircles__panels mw-dcircles__panels--two'>
-                <Bar label={localize('Even')} count={even_count} percentage={(even_count / total) * 100} tone='good' />
-                <Bar
-                    label={localize('Odd')}
-                    count={sample.length - even_count}
-                    percentage={((sample.length - even_count) / total) * 100}
-                    tone='bad'
-                />
-            </div>
-            <RecentStrip
-                title={localize('Recent E/O')}
-                items={eo_items}
-                expanded={expanded.eo}
-                onToggle={() => setExpanded(prev => ({ ...prev, eo: !prev.eo }))}
-            />
-
-            <label className='mw-dcircles__barrier'>
-                <span>{localize('Over/Under:')}</span>
-                <select value={barrier} onChange={event => setBarrier(Number(event.target.value))}>
-                    {Array.from({ length: 10 }, (_, digit) => (
-                        <option key={digit} value={digit}>
-                            {digit}
-                        </option>
-                    ))}
-                </select>
-            </label>
-            <div className='mw-dcircles__panels mw-dcircles__panels--three'>
-                <Bar
-                    label={localize('Under')}
-                    count={under_count}
-                    percentage={(under_count / total) * 100}
-                    tone='good'
-                />
-                <Bar
-                    label={localize('Equal')}
-                    count={equal_count}
-                    percentage={(equal_count / total) * 100}
-                    tone='flat'
-                />
-                <Bar label={localize('Over')} count={over_count} percentage={(over_count / total) * 100} tone='bad' />
-            </div>
-            <RecentStrip
-                title={localize('Recent U/= /O')}
-                items={ou_items}
-                expanded={expanded.ou}
-                onToggle={() => setExpanded(prev => ({ ...prev, ou: !prev.ou }))}
-            />
-
-            <h3 className='mw-dcircles__heading'>{localize('Matches/Differs')}</h3>
-            <div className='mw-dcircles__panels mw-dcircles__panels--two'>
-                <Bar
-                    label={localize('Matches')}
-                    count={equal_count}
-                    percentage={(equal_count / total) * 100}
-                    tone='good'
-                />
-                <Bar
-                    label={localize('Differs')}
-                    count={sample.length - equal_count}
-                    percentage={((sample.length - equal_count) / total) * 100}
-                    tone='bad'
-                />
-            </div>
-            <RecentStrip
-                title={localize('Recent M/D')}
-                items={md_items}
-                expanded={expanded.md}
-                onToggle={() => setExpanded(prev => ({ ...prev, md: !prev.md }))}
-            />
         </div>
     );
 });

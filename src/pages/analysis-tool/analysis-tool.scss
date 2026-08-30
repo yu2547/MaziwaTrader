@@ -224,6 +224,11 @@ $mw-grey: #7d8fa3;
         align-items: center;
         gap: 1.2rem;
 
+        // Over/Under opens its own section, so it carries a rule like the
+        // headings do - see __heading for why.
+        border-top: 1px solid var(--general-section-1);
+        padding-top: 1.4rem;
+
         select {
             flex: 1;
         }
@@ -460,8 +465,14 @@ $mw-grey: #7d8fa3;
         color: $mw-blue;
     }
 
+    // Even/Odd, Matches/Differs. These used to float on the page below the
+    // card, where the white space around them was separation enough. Inside one
+    // tall panel it is not: a gap between two grey rows reads as padding, not
+    // as a new section, so each heading now opens with a rule across the card.
     &__heading {
-        margin: 0.8rem 0 0;
+        margin: 0;
+        border-top: 1px solid var(--general-section-1);
+        padding-top: 1.4rem;
         font-size: 1.5rem;
         font-weight: 600;
         color: var(--text-prominent);
