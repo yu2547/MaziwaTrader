@@ -200,13 +200,20 @@ const FreeBots = observer(({ allowed_categories, subtitle, title }: TFreeBotsPro
 
     return (
         <div className='free-bots'>
-            <div className='free-bots__header'>
-                <h1 className='free-bots__title'>{title ?? 'Free Trading Bots'}</h1>
-                <p className='free-bots__subtitle'>
-                    {subtitle ??
-                        'Explore our collection of pre-built trading bots. Click on any bot to load it into the Bot Builder.'}
-                </p>
-            </div>
+            {/* Only the scoped views name themselves. On the Free Bots tab the
+                header said "Free Trading Bots" directly under a tab already
+                reading "Free Bots", above a page that is visibly a grid of
+                bots - a heading, a subtitle and a paragraph of instructions for
+                something the screen was already showing. The callers that do
+                pass a title (Scalper Bots, SpeedBots, Strategies) still get
+                one, because there the name says which slice of the catalogue
+                is on screen. */}
+            {(title || subtitle) && (
+                <div className='free-bots__header'>
+                    {title && <h1 className='free-bots__title'>{title}</h1>}
+                    {subtitle && <p className='free-bots__subtitle'>{subtitle}</p>}
+                </div>
+            )}
 
             <div className='free-bots__search'>
                 <svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
