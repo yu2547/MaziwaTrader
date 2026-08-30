@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useTranslations } from '@deriv-com/translations';
 import Dcircles from './dcircles';
+import Signals from './signals';
 import './analysis-tool.scss';
 
 type TAnalysisView = 'dcircles' | 'signals' | 'analysis_tool' | 'sl_tools' | 'all_analysis' | 'tick_analyser';
@@ -16,10 +17,10 @@ const VIEWS: { id: TAnalysisView; label: string }[] = [
 ];
 
 /**
- * Only Dcircles and Analysis Tool have something behind them: Dcircles reads
- * the app's live tick feed, Analysis Tool is the hosted tool this page has
- * always embedded. Signals, SL Tools and All Analysis have no data source in
- * this build, so they say so instead of rendering numbers nobody measured.
+ * Dcircles, Signals and Analysis Tool have something behind them: the first two
+ * read the app's live tick feed, Analysis Tool is the hosted tool this page has
+ * always embedded. SL Tools, All Analysis and Tick Analyser have no data source
+ * in this build, so they say so instead of rendering numbers nobody measured.
  */
 const NotConnected = ({ title }: { title: string }) => {
     const { localize } = useTranslations();
@@ -70,7 +71,7 @@ const AnalysisTool = observer(() => {
                         />
                     </div>
                 )}
-                {view === 'signals' && <NotConnected title={localize('Signals')} />}
+                {view === 'signals' && <Signals />}
                 {view === 'sl_tools' && <NotConnected title={localize('SL Tools')} />}
                 {view === 'all_analysis' && <NotConnected title={localize('All Analysis')} />}
                 {view === 'tick_analyser' && <NotConnected title={localize('Tick Analyser')} />}

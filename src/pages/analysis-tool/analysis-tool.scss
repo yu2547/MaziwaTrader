@@ -788,3 +788,228 @@ $mw-grey: #7d8fa3;
         }
     }
 }
+
+// The Signal Analyzer. A dark console on a field of scrolling log lines, per
+// the reference screenshots.
+.mw-signals {
+    position: relative;
+    min-height: 52rem;
+    padding: 2.4rem 1.6rem;
+    overflow: hidden;
+    background: #000;
+}
+
+// Scenery. Three columns of log chatter travelling upward at different rates,
+// behind a scrim so nothing in it competes with the console for attention.
+// aria-hidden in the markup: there is nothing here for a screen reader to read.
+.mw-signals__rain {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    gap: 2.4rem;
+    padding: 0 1.6rem;
+    opacity: 0.55;
+    pointer-events: none;
+
+    &:after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse at center, rgb(0 0 0 / 82%) 0%, rgb(0 0 0 / 45%) 100%);
+    }
+}
+
+.mw-signals__rain-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-width: 0;
+    font-family: 'Courier New', monospace;
+    font-size: 1.2rem;
+    line-height: 1.5;
+    color: #00e05a;
+    white-space: nowrap;
+    animation-name: mw-signals-rain;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+}
+
+// Half the stack is a copy of the other half, so travelling exactly -50% lands
+// the copy where the original started and the loop has no seam.
+@keyframes mw-signals-rain {
+    from {
+        transform: translateY(0);
+    }
+
+    to {
+        transform: translateY(-50%);
+    }
+}
+
+.mw-signals__console {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    width: 100%;
+    max-width: 48rem;
+    margin: 0 auto;
+    padding: 2.4rem 2rem;
+    border: 1px solid rgb(0 224 90 / 35%);
+    border-radius: 10px;
+    background: rgb(0 0 0 / 88%);
+    box-shadow: 0 0 3.2rem rgb(0 224 90 / 18%);
+}
+
+.mw-signals__title {
+    margin: 0 0 0.8rem;
+    text-align: center;
+    font-size: 3.2rem;
+    font-weight: 800;
+    color: #ff2b2b;
+    text-shadow: 0 0 1.2rem rgb(255 43 43 / 45%);
+}
+
+.mw-signals__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-width: 0;
+
+    > span {
+        text-align: center;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #fff;
+    }
+
+    select {
+        width: 100%;
+        padding: 1.1rem 1.2rem;
+        border: 1px solid rgb(0 224 90 / 30%);
+        border-radius: 6px;
+        background: #0a0a0a;
+        color: #ff2b2b;
+        font-size: 1.5rem;
+        font-weight: 700;
+        text-align: center;
+        outline: none;
+
+        &:focus {
+            border-color: #00e05a;
+        }
+    }
+}
+
+.mw-signals__readout {
+    margin: 0.4rem 0;
+    padding: 1.6rem;
+    border-radius: 6px;
+    background: #0a0a0a;
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    color: #00e05a;
+
+    p {
+        margin: 0.4rem 0;
+        font-size: 1.8rem;
+    }
+
+    b {
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.mw-signals__analyse {
+    align-self: center;
+    padding: 1rem 3.2rem;
+    border: none;
+    border-radius: 6px;
+    background: #16a34a;
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.08);
+    }
+
+    &:disabled {
+        opacity: 0.65;
+        cursor: progress;
+    }
+}
+
+.mw-signals__dash {
+    position: relative;
+    width: 100%;
+    max-width: 64rem;
+    margin: 1.6rem auto 0;
+    border: 1px solid rgb(0 224 90 / 45%);
+    border-radius: 8px;
+    background: #000;
+    overflow: hidden;
+}
+
+.mw-signals__dash-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.8rem 1.2rem;
+    border-bottom: 1px solid rgb(0 224 90 / 20%);
+}
+
+.mw-signals__dot {
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 50%;
+    background: #ff2b2b;
+}
+
+.mw-signals__close {
+    margin-inline-start: auto;
+    padding: 0.2rem 0.9rem;
+    border: none;
+    border-radius: 4px;
+    background: #ff2b2b;
+    color: #fff;
+    font-size: 1.3rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mw-signals__dash-body {
+    max-height: 26rem;
+    overflow-y: auto;
+    padding: 1.2rem 1.6rem;
+    font-family: 'Courier New', monospace;
+    font-size: 1.4rem;
+    line-height: 1.6;
+}
+
+.mw-signals__line {
+    margin: 0;
+    color: #d6ffe4;
+
+    &--head {
+        color: #00e05a;
+        font-weight: 700;
+    }
+
+    &--warn {
+        color: #ff6b6b;
+    }
+
+    &--dim {
+        color: #7bbf95;
+    }
+}
+
+// The rain is decoration and nothing depends on it moving.
+@media (prefers-reduced-motion: reduce) {
+    .mw-signals__rain-col {
+        animation: none;
+    }
+}
