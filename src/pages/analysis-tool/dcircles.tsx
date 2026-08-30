@@ -278,11 +278,11 @@ const Dcircles = observer(() => {
                 puts the title on the controls it describes. Nothing is moved,
                 duplicated or re-wired - this is a wrapper around the existing
                 elements, reading from the existing feed. */}
-            <section className='mw-dcircles__config-panel' aria-labelledby='mw-trading-configuration'>
-                <h3 className='mw-dcircles__config-title' id='mw-trading-configuration'>
-                    {localize('Trading Configuration')}
-                </h3>
-
+            {/* No visible heading: the panel opens on Select Market. The name
+                is carried as aria-label rather than dropped outright, because a
+                screen reader announcing this region still needs to know what it
+                is, and the button above it already says the word on screen. */}
+            <section className='mw-dcircles__config-panel' aria-label={localize('Trading Configuration')}>
                 <label className='mw-dcircles__market'>
                     <span>{localize('Select Market:')}</span>
                     <select value={selected_symbol} onChange={event => setSelectedSymbol(event.target.value)}>
