@@ -1,0 +1,628 @@
+<xml xmlns="http://www.w3.org/1999/xhtml" is_dbot="true" collection="false">
+  <variables>
+    <variable type="" id="da_profitThreshold" islocal="false" iscloud="false">dalembert:profitThreshold</variable>
+    <variable type="" id="da_lossThreshold" islocal="false" iscloud="false">dalembert:lossThreshold</variable>
+    <variable type="" id="da_initialStake" islocal="false" iscloud="false">dalembert:initialStake</variable>
+    <variable type="" id="da_alembertUnit" islocal="false" iscloud="false">dalembert:alembert_unit</variable>
+    <variable type="" id="da_units" islocal="false" iscloud="false">dalembert:units</variable>
+    <variable type="" id="da_totalProfit" islocal="false" iscloud="false">dalembert:totalProfit</variable>
+    <variable type="" id="da_tradeAgain" islocal="false" iscloud="false">dalembert:tradeAgain</variable>
+    <variable type="" id="da_profit" islocal="false" iscloud="false">dalembert:profit</variable>
+    <variable type="" id="da_resultIsWin" islocal="false" iscloud="false">dalembert:resultIsWin</variable>
+    <variable type="" id="da_won" islocal="false" iscloud="false">won</variable>
+    <variable type="" id="da_lost" islocal="false" iscloud="false">lost</variable>
+    <variable type="" id="da_totalProfitText" islocal="false" iscloud="false">total profit</variable>
+    <variable type="" id="da_maxLoss" islocal="false" iscloud="false">max loss</variable>
+    <variable type="" id="da_expectedProfit" islocal="false" iscloud="false">expected profit</variable>
+  </variables>
+
+  <block type="trade_definition" id="da_trade_root" x="40" y="40">
+    <statement name="TRADE_OPTIONS">
+      <block type="trade_definition_market" id="da_market" deletable="false" movable="false">
+        <field name="MARKET_LIST">synthetic_index</field>
+        <field name="SUBMARKET_LIST">random_index</field>
+        <field name="SYMBOL_LIST">1HZ100V</field>
+        <next>
+          <block type="trade_definition_tradetype" id="da_tradetype" deletable="false" movable="false">
+            <field name="TRADETYPECAT_LIST">callput</field>
+            <field name="TRADETYPE_LIST">callput</field>
+            <next>
+              <block type="trade_definition_contracttype" id="da_contracttype" deletable="false" movable="false">
+                <field name="TYPE_LIST">both</field>
+                <next>
+                  <block type="trade_definition_candleinterval" id="da_candle" deletable="false" movable="false">
+                    <field name="CANDLEINTERVAL_LIST">60</field>
+                    <next>
+                      <block type="trade_definition_restartbuysell" id="da_restart_buy_sell" deletable="false" movable="false">
+                        <field name="TIME_MACHINE_ENABLED">FALSE</field>
+                        <next>
+                          <block type="trade_definition_restartonerror" id="da_restart_error" deletable="false" movable="false">
+                            <field name="RESTARTONERROR">TRUE</field>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+
+    <statement name="INITIALIZATION"></statement>
+
+    <statement name="SUBMARKET">
+      <block type="trade_definition_tradeoptions" id="da_trade_options">
+        <mutation xmlns="http://www.w3.org/1999/xhtml" has_first_barrier="false" has_second_barrier="false" has_prediction="false"></mutation>
+        <field name="DURATIONTYPE_LIST">t</field>
+        <value name="DURATION">
+          <shadow type="math_number" id="da_duration_shadow"><field name="NUM">1</field></shadow>
+          <block type="math_number" id="da_duration"><field name="NUM">1</field></block>
+        </value>
+        <value name="AMOUNT">
+          <shadow type="math_number" id="da_amount_shadow"><field name="NUM">1</field></shadow>
+          <block type="procedures_callreturn" id="da_call_trade_amount">
+            <mutation xmlns="http://www.w3.org/1999/xhtml" name="D'Alembert Trade Amount"></mutation>
+          </block>
+        </value>
+      </block>
+    </statement>
+  </block>
+
+  <block type="before_purchase" id="da_before" x="40" y="560">
+    <statement name="BEFOREPURCHASE_STACK">
+      <block type="purchase" id="da_purchase">
+        <field name="PURCHASE_LIST">CALL</field>
+      </block>
+    </statement>
+  </block>
+
+  <block type="after_purchase" id="da_after" x="40" y="700">
+    <statement name="AFTERPURCHASE_STACK">
+      <block type="controls_if" id="da_after_if">
+        <value name="IF0">
+          <block type="procedures_callreturn" id="da_call_trade_again">
+            <mutation xmlns="http://www.w3.org/1999/xhtml" name="D'Alembert Trade Again After Purchase">
+              <arg name="dalembert:profit"></arg>
+              <arg name="dalembert:resultIsWin"></arg>
+            </mutation>
+            <value name="ARG0">
+              <block type="read_details" id="da_detail_profit"><field name="DETAIL_INDEX">4</field></block>
+            </value>
+            <value name="ARG1">
+              <block type="contract_check_result" id="da_check_win"><field name="CHECK_RESULT">win</field></block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="trade_again" id="da_trade_again"></block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+
+  <block type="procedures_defreturn" id="da_fn_amount" x="40" y="900">
+    <mutation xmlns="http://www.w3.org/1999/xhtml"></mutation>
+    <field name="NAME">D'Alembert Trade Amount</field>
+    <statement name="STACK">
+      <block type="controls_if" id="da_if_profit_threshold">
+        <value name="IF0">
+          <block type="logic_compare" id="da_cmp_profit_threshold">
+            <field name="OP">EQ</field>
+            <value name="A">
+              <block type="variables_get" id="da_get_profit_threshold"><field name="VAR" id="da_profitThreshold">dalembert:profitThreshold</field></block>
+            </value>
+            <value name="B">
+              <block type="logic_null" id="da_null_profit_threshold"></block>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="variables_set" id="da_set_profit_threshold">
+            <field name="VAR" id="da_profitThreshold">dalembert:profitThreshold</field>
+            <value name="VALUE">
+              <block type="text_prompt_ext" id="da_prompt_profit">
+                <field name="TYPE">NUMBER</field>
+                <value name="TEXT">
+                  <shadow type="text" id="da_prompt_profit_text"><field name="TEXT">Expected Profit</field></shadow>
+                </value>
+              </block>
+            </value>
+          </block>
+        </statement>
+        <next>
+          <block type="controls_if" id="da_if_loss_threshold">
+            <value name="IF0">
+              <block type="logic_compare" id="da_cmp_loss_threshold">
+                <field name="OP">EQ</field>
+                <value name="A">
+                  <block type="variables_get" id="da_get_loss_threshold"><field name="VAR" id="da_lossThreshold">dalembert:lossThreshold</field></block>
+                </value>
+                <value name="B">
+                  <block type="logic_null" id="da_null_loss_threshold"></block>
+                </value>
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="variables_set" id="da_set_loss_threshold">
+                <field name="VAR" id="da_lossThreshold">dalembert:lossThreshold</field>
+                <value name="VALUE">
+                  <block type="text_prompt_ext" id="da_prompt_loss">
+                    <field name="TYPE">NUMBER</field>
+                    <value name="TEXT">
+                      <shadow type="text" id="da_prompt_loss_text"><field name="TEXT">Maximum Loss Amount</field></shadow>
+                    </value>
+                  </block>
+                </value>
+              </block>
+            </statement>
+            <next>
+              <block type="controls_if" id="da_if_initial_stake">
+                <value name="IF0">
+                  <block type="logic_compare" id="da_cmp_initial_stake">
+                    <field name="OP">EQ</field>
+                    <value name="A">
+                      <block type="variables_get" id="da_get_initial_stake"><field name="VAR" id="da_initialStake">dalembert:initialStake</field></block>
+                    </value>
+                    <value name="B">
+                      <block type="logic_null" id="da_null_initial_stake"></block>
+                    </value>
+                  </block>
+                </value>
+                <statement name="DO0">
+                  <block type="variables_set" id="da_set_initial_stake">
+                    <field name="VAR" id="da_initialStake">dalembert:initialStake</field>
+                    <value name="VALUE">
+                      <block type="text_prompt_ext" id="da_prompt_stake">
+                        <field name="TYPE">NUMBER</field>
+                        <value name="TEXT">
+                          <shadow type="text" id="da_prompt_stake_text"><field name="TEXT">Trade Amount</field></shadow>
+                        </value>
+                      </block>
+                    </value>
+                  </block>
+                </statement>
+                <next>
+                  <block type="controls_if" id="da_if_unit">
+                    <value name="IF0">
+                      <block type="logic_compare" id="da_cmp_unit">
+                        <field name="OP">EQ</field>
+                        <value name="A">
+                          <block type="variables_get" id="da_get_unit_init"><field name="VAR" id="da_alembertUnit">dalembert:alembert_unit</field></block>
+                        </value>
+                        <value name="B">
+                          <block type="logic_null" id="da_null_unit"></block>
+                        </value>
+                      </block>
+                    </value>
+                    <statement name="DO0">
+                      <block type="variables_set" id="da_set_unit_init">
+                        <field name="VAR" id="da_alembertUnit">dalembert:alembert_unit</field>
+                        <value name="VALUE">
+                          <block type="math_number" id="da_num_unit_init"><field name="NUM">0</field></block>
+                        </value>
+                      </block>
+                    </statement>
+                    <next>
+                      <block type="controls_if" id="da_if_units">
+                        <value name="IF0">
+                          <block type="logic_compare" id="da_cmp_units">
+                            <field name="OP">EQ</field>
+                            <value name="A">
+                              <block type="variables_get" id="da_get_units_init"><field name="VAR" id="da_units">dalembert:units</field></block>
+                            </value>
+                            <value name="B">
+                              <block type="logic_null" id="da_null_units"></block>
+                            </value>
+                          </block>
+                        </value>
+                        <statement name="DO0">
+                          <block type="variables_set" id="da_set_units_init">
+                            <field name="VAR" id="da_units">dalembert:units</field>
+                            <value name="VALUE">
+                              <block type="math_number" id="da_num_units_init"><field name="NUM">0</field></block>
+                            </value>
+                          </block>
+                        </statement>
+                        <next>
+                          <block type="controls_if" id="da_if_total_profit">
+                            <value name="IF0">
+                              <block type="logic_compare" id="da_cmp_total_profit">
+                                <field name="OP">EQ</field>
+                                <value name="A">
+                                  <block type="variables_get" id="da_get_total_profit_init"><field name="VAR" id="da_totalProfit">dalembert:totalProfit</field></block>
+                                </value>
+                                <value name="B">
+                                  <block type="logic_null" id="da_null_total_profit"></block>
+                                </value>
+                              </block>
+                            </value>
+                            <statement name="DO0">
+                              <block type="variables_set" id="da_set_total_profit_init">
+                                <field name="VAR" id="da_totalProfit">dalembert:totalProfit</field>
+                                <value name="VALUE">
+                                  <block type="math_number" id="da_num_total_profit_init"><field name="NUM">0</field></block>
+                                </value>
+                              </block>
+                            </statement>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+    <value name="RETURN">
+      <block type="math_arithmetic" id="da_return_amount">
+        <field name="OP">ADD</field>
+        <value name="A">
+          <shadow type="math_number" id="da_return_a_shadow"><field name="NUM">0</field></shadow>
+          <block type="variables_get" id="da_get_unit_return"><field name="VAR" id="da_alembertUnit">dalembert:alembert_unit</field></block>
+        </value>
+        <value name="B">
+          <shadow type="math_number" id="da_return_b_shadow"><field name="NUM">0</field></shadow>
+          <block type="variables_get" id="da_get_stake_return"><field name="VAR" id="da_initialStake">dalembert:initialStake</field></block>
+        </value>
+      </block>
+    </value>
+  </block>
+
+  <block type="procedures_defnoreturn" id="da_fn_core" x="40" y="1500">
+    <mutation xmlns="http://www.w3.org/1999/xhtml">
+      <arg name="dalembert:resultIsWin" varid="da_resultIsWin"></arg>
+    </mutation>
+    <field name="NAME">D'Alembert Core Functionality</field>
+    <statement name="STACK">
+      <block type="controls_if" id="da_core_if">
+        <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
+        <value name="IF0">
+          <block type="variables_get" id="da_core_get_result"><field name="VAR" id="da_resultIsWin">dalembert:resultIsWin</field></block>
+        </value>
+        <statement name="DO0">
+          <block type="controls_if" id="da_core_if_unit">
+            <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
+            <value name="IF0">
+              <block type="logic_compare" id="da_core_cmp_unit">
+                <field name="OP">GTE</field>
+                <value name="A">
+                  <block type="variables_get" id="da_core_get_unit"><field name="VAR" id="da_alembertUnit">dalembert:alembert_unit</field></block>
+                </value>
+                <value name="B">
+                  <block type="variables_get" id="da_core_get_units"><field name="VAR" id="da_units">dalembert:units</field></block>
+                </value>
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="variables_set" id="da_core_set_unit_down">
+                <field name="VAR" id="da_alembertUnit">dalembert:alembert_unit</field>
+                <value name="VALUE">
+                  <block type="math_arithmetic" id="da_core_minus">
+                    <field name="OP">MINUS</field>
+                    <value name="A">
+                      <shadow type="math_number" id="da_core_minus_a_shadow"><field name="NUM">0</field></shadow>
+                      <block type="variables_get" id="da_core_get_unit2"><field name="VAR" id="da_alembertUnit">dalembert:alembert_unit</field></block>
+                    </value>
+                    <value name="B">
+                      <shadow type="math_number" id="da_core_minus_b_shadow"><field name="NUM">0</field></shadow>
+                      <block type="variables_get" id="da_core_get_units2"><field name="VAR" id="da_units">dalembert:units</field></block>
+                    </value>
+                  </block>
+                </value>
+              </block>
+            </statement>
+            <statement name="ELSE">
+              <block type="notify" id="da_core_notify_session">
+                <field name="NOTIFICATION_TYPE">success</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <block type="text" id="da_core_notify_text"><field name="TEXT">One D'Alembert session finished successfully</field></block>
+                </value>
+              </block>
+            </statement>
+          </block>
+        </statement>
+        <statement name="ELSE">
+          <block type="variables_set" id="da_core_set_unit_up">
+            <field name="VAR" id="da_alembertUnit">dalembert:alembert_unit</field>
+            <value name="VALUE">
+              <block type="math_arithmetic" id="da_core_plus">
+                <field name="OP">ADD</field>
+                <value name="A">
+                  <shadow type="math_number" id="da_core_plus_a_shadow"><field name="NUM">0</field></shadow>
+                  <block type="variables_get" id="da_core_get_unit3"><field name="VAR" id="da_alembertUnit">dalembert:alembert_unit</field></block>
+                </value>
+                <value name="B">
+                  <shadow type="math_number" id="da_core_plus_b_shadow"><field name="NUM">0</field></shadow>
+                  <block type="variables_get" id="da_core_get_units3"><field name="VAR" id="da_units">dalembert:units</field></block>
+                </value>
+              </block>
+            </value>
+          </block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+
+  <block type="procedures_defreturn" id="da_fn_again" x="40" y="2000">
+    <mutation xmlns="http://www.w3.org/1999/xhtml">
+      <arg name="dalembert:profit" varid="da_profit"></arg>
+      <arg name="dalembert:resultIsWin" varid="da_resultIsWin"></arg>
+    </mutation>
+    <field name="NAME">D'Alembert Trade Again After Purchase</field>
+    <statement name="STACK">
+      <block type="math_change" id="da_again_change_total">
+        <field name="VAR" id="da_totalProfit">dalembert:totalProfit</field>
+        <value name="DELTA">
+          <shadow type="math_number" id="da_again_delta_shadow"><field name="NUM">0</field></shadow>
+          <block type="variables_get" id="da_again_get_profit"><field name="VAR" id="da_profit">dalembert:profit</field></block>
+        </value>
+        <next>
+          <block type="variables_set" id="da_again_round_total">
+            <field name="VAR" id="da_totalProfit">dalembert:totalProfit</field>
+            <value name="VALUE">
+              <block type="math_arithmetic" id="da_again_divide">
+                <field name="OP">DIVIDE</field>
+                <value name="A">
+                  <shadow type="math_number" id="da_again_divide_a_shadow"><field name="NUM">0</field></shadow>
+                  <block type="math_round" id="da_again_round">
+                    <field name="OP">ROUND</field>
+                    <value name="NUM">
+                      <shadow type="math_number" id="da_again_round_shadow"><field name="NUM">0</field></shadow>
+                      <block type="math_arithmetic" id="da_again_multiply">
+                        <field name="OP">MULTIPLY</field>
+                        <value name="A">
+                          <shadow type="math_number" id="da_again_multiply_a_shadow"><field name="NUM">0</field></shadow>
+                          <block type="variables_get" id="da_again_get_total"><field name="VAR" id="da_totalProfit">dalembert:totalProfit</field></block>
+                        </value>
+                        <value name="B">
+                          <shadow type="math_number" id="da_again_multiply_b_shadow"><field name="NUM">100</field></shadow>
+                          <block type="math_number" id="da_again_hundred_a"><field name="NUM">100</field></block>
+                        </value>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+                <value name="B">
+                  <shadow type="math_number" id="da_again_divide_b_shadow"><field name="NUM">100</field></shadow>
+                  <block type="math_number" id="da_again_hundred_b"><field name="NUM">100</field></block>
+                </value>
+              </block>
+            </value>
+            <next>
+              <block type="controls_if" id="da_again_if_win">
+                <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
+                <value name="IF0">
+                  <block type="variables_get" id="da_again_get_result"><field name="VAR" id="da_resultIsWin">dalembert:resultIsWin</field></block>
+                </value>
+                <statement name="DO0">
+                  <block type="text_join" id="da_again_join_won">
+                    <field name="VARIABLE" id="da_won">won</field>
+                    <statement name="STACK">
+                      <block type="text_statement" id="da_again_won_label">
+                        <value name="TEXT">
+                          <shadow type="text" id="da_again_won_label_text"><field name="TEXT">Won: </field></shadow>
+                        </value>
+                        <next>
+                          <block type="text_statement" id="da_again_won_value">
+                            <value name="TEXT">
+                              <block type="variables_get" id="da_again_get_profit_won"><field name="VAR" id="da_profit">dalembert:profit</field></block>
+                            </value>
+                          </block>
+                        </next>
+                      </block>
+                    </statement>
+                    <next>
+                      <block type="notify" id="da_again_notify_won">
+                        <field name="NOTIFICATION_TYPE">success</field>
+                        <field name="NOTIFICATION_SOUND">silent</field>
+                        <value name="MESSAGE">
+                          <block type="variables_get" id="da_again_get_won"><field name="VAR" id="da_won">won</field></block>
+                        </value>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+                <statement name="ELSE">
+                  <block type="text_join" id="da_again_join_lost">
+                    <field name="VARIABLE" id="da_lost">lost</field>
+                    <statement name="STACK">
+                      <block type="text_statement" id="da_again_lost_label">
+                        <value name="TEXT">
+                          <shadow type="text" id="da_again_lost_label_text"><field name="TEXT">Lost: </field></shadow>
+                        </value>
+                        <next>
+                          <block type="text_statement" id="da_again_lost_value">
+                            <value name="TEXT">
+                              <block type="math_single" id="da_again_abs_profit">
+                                <field name="OP">ABS</field>
+                                <value name="NUM">
+                                  <shadow type="math_number" id="da_again_abs_shadow"><field name="NUM">0</field></shadow>
+                                  <block type="variables_get" id="da_again_get_profit_lost"><field name="VAR" id="da_profit">dalembert:profit</field></block>
+                                </value>
+                              </block>
+                            </value>
+                          </block>
+                        </next>
+                      </block>
+                    </statement>
+                    <next>
+                      <block type="notify" id="da_again_notify_lost">
+                        <field name="NOTIFICATION_TYPE">warn</field>
+                        <field name="NOTIFICATION_SOUND">silent</field>
+                        <value name="MESSAGE">
+                          <block type="variables_get" id="da_again_get_lost"><field name="VAR" id="da_lost">lost</field></block>
+                        </value>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+                <next>
+                  <block type="procedures_callnoreturn" id="da_again_call_core">
+                    <mutation xmlns="http://www.w3.org/1999/xhtml" name="D'Alembert Core Functionality">
+                      <arg name="dalembert:resultIsWin"></arg>
+                    </mutation>
+                    <value name="ARG0">
+                      <block type="variables_get" id="da_again_core_arg"><field name="VAR" id="da_resultIsWin">dalembert:resultIsWin</field></block>
+                    </value>
+                    <next>
+                      <block type="text_join" id="da_again_join_total">
+                        <field name="VARIABLE" id="da_totalProfitText">total profit</field>
+                        <statement name="STACK">
+                          <block type="text_statement" id="da_again_total_label">
+                            <value name="TEXT">
+                              <shadow type="text" id="da_again_total_label_text"><field name="TEXT">Total Profit: </field></shadow>
+                            </value>
+                            <next>
+                              <block type="text_statement" id="da_again_total_value">
+                                <value name="TEXT">
+                                  <block type="variables_get" id="da_again_get_total_text"><field name="VAR" id="da_totalProfit">dalembert:totalProfit</field></block>
+                                </value>
+                              </block>
+                            </next>
+                          </block>
+                        </statement>
+                        <next>
+                          <block type="notify" id="da_again_notify_total">
+                            <field name="NOTIFICATION_TYPE">info</field>
+                            <field name="NOTIFICATION_SOUND">silent</field>
+                            <value name="MESSAGE">
+                              <block type="variables_get" id="da_again_get_total_msg"><field name="VAR" id="da_totalProfitText">total profit</field></block>
+                            </value>
+                            <next>
+                              <block type="variables_set" id="da_again_set_false">
+                                <field name="VAR" id="da_tradeAgain">dalembert:tradeAgain</field>
+                                <value name="VALUE">
+                                  <block type="logic_boolean" id="da_again_false"><field name="BOOL">FALSE</field></block>
+                                </value>
+                                <next>
+                                  <block type="controls_if" id="da_again_if_threshold">
+                                    <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
+                                    <value name="IF0">
+                                      <block type="logic_compare" id="da_again_cmp_profit">
+                                        <field name="OP">LT</field>
+                                        <value name="A">
+                                          <block type="variables_get" id="da_again_get_total_cmp"><field name="VAR" id="da_totalProfit">dalembert:totalProfit</field></block>
+                                        </value>
+                                        <value name="B">
+                                          <block type="variables_get" id="da_again_get_profit_threshold"><field name="VAR" id="da_profitThreshold">dalembert:profitThreshold</field></block>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <statement name="DO0">
+                                      <block type="controls_if" id="da_again_if_loss">
+                                        <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
+                                        <value name="IF0">
+                                          <block type="logic_compare" id="da_again_cmp_loss">
+                                            <field name="OP">GT</field>
+                                            <value name="A">
+                                              <block type="variables_get" id="da_again_get_total_loss"><field name="VAR" id="da_totalProfit">dalembert:totalProfit</field></block>
+                                            </value>
+                                            <value name="B">
+                                              <block type="math_single" id="da_again_neg_loss">
+                                                <field name="OP">NEG</field>
+                                                <value name="NUM">
+                                                  <shadow type="math_number" id="da_again_neg_loss_shadow"><field name="NUM">0</field></shadow>
+                                                  <block type="variables_get" id="da_again_get_loss_threshold"><field name="VAR" id="da_lossThreshold">dalembert:lossThreshold</field></block>
+                                                </value>
+                                              </block>
+                                            </value>
+                                          </block>
+                                        </value>
+                                        <statement name="DO0">
+                                          <block type="variables_set" id="da_again_set_true">
+                                            <field name="VAR" id="da_tradeAgain">dalembert:tradeAgain</field>
+                                            <value name="VALUE">
+                                              <block type="logic_boolean" id="da_again_true"><field name="BOOL">TRUE</field></block>
+                                            </value>
+                                          </block>
+                                        </statement>
+                                        <statement name="ELSE">
+                                          <block type="text_join" id="da_again_join_maxloss">
+                                            <field name="VARIABLE" id="da_maxLoss">max loss</field>
+                                            <statement name="STACK">
+                                              <block type="text_statement" id="da_again_maxloss_label">
+                                                <value name="TEXT">
+                                                  <shadow type="text" id="da_again_maxloss_label_text"><field name="TEXT">Maximum Loss Occurred! Total Loss: </field></shadow>
+                                                </value>
+                                                <next>
+                                                  <block type="text_statement" id="da_again_maxloss_value">
+                                                    <value name="TEXT">
+                                                      <block type="math_single" id="da_again_neg_total">
+                                                        <field name="OP">NEG</field>
+                                                        <value name="NUM">
+                                                          <shadow type="math_number" id="da_again_neg_total_shadow"><field name="NUM">0</field></shadow>
+                                                          <block type="variables_get" id="da_again_get_total_neg"><field name="VAR" id="da_totalProfit">dalembert:totalProfit</field></block>
+                                                        </value>
+                                                      </block>
+                                                    </value>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </statement>
+                                            <next>
+                                              <block type="text_print" id="da_again_print_maxloss">
+                                                <value name="TEXT">
+                                                  <shadow type="text" id="da_again_print_maxloss_shadow"><field name="TEXT"></field></shadow>
+                                                  <block type="variables_get" id="da_again_get_maxloss"><field name="VAR" id="da_maxLoss">max loss</field></block>
+                                                </value>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </statement>
+                                      </block>
+                                    </statement>
+                                    <statement name="ELSE">
+                                      <block type="text_join" id="da_again_join_expected">
+                                        <field name="VARIABLE" id="da_expectedProfit">expected profit</field>
+                                        <statement name="STACK">
+                                          <block type="text_statement" id="da_again_expected_label">
+                                            <value name="TEXT">
+                                              <shadow type="text" id="da_again_expected_label_text"><field name="TEXT">Expected Profit Made! Total Profit: </field></shadow>
+                                            </value>
+                                            <next>
+                                              <block type="text_statement" id="da_again_expected_value">
+                                                <value name="TEXT">
+                                                  <block type="variables_get" id="da_again_get_total_expected"><field name="VAR" id="da_totalProfit">dalembert:totalProfit</field></block>
+                                                </value>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </statement>
+                                        <next>
+                                          <block type="text_print" id="da_again_print_expected">
+                                            <value name="TEXT">
+                                              <shadow type="text" id="da_again_print_expected_shadow"><field name="TEXT"></field></shadow>
+                                              <block type="variables_get" id="da_again_get_expected"><field name="VAR" id="da_expectedProfit">expected profit</field></block>
+                                            </value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </statement>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+    <value name="RETURN">
+      <block type="variables_get" id="da_again_return"><field name="VAR" id="da_tradeAgain">dalembert:tradeAgain</field></block>
+    </value>
+  </block>
+</xml>

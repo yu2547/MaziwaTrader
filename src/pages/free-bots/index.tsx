@@ -90,6 +90,17 @@ const BOTS: Bot[] = [
         rating: 5,
     },
     {
+        id: 'dalembert-premium',
+        name: "D'Alembert Premium Bot",
+        description:
+            "D'Alembert Premium Bot - Rise/Fall bot on Volatility 100 (1s). Asks for your trade amount, profit target and maximum loss on the first run, then trades one tick at a time and ends the session as soon as either threshold is reached.",
+        fileName: 'D_Alembert_Premium_Bot.xml',
+        category: 'Premium',
+        icon: '⚡',
+        is_premium: true,
+        rating: 5,
+    },
+    {
         id: '11',
         name: 'Even Odd Thunder AI Pro',
         description:
