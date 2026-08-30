@@ -249,6 +249,11 @@ $exec-bar-gap: 1.2rem;
         bottom: calc(3.6rem + 1.6rem);
         z-index: 9;
 
+        // The resting glow. The orb is a dark sphere on a light page, so
+        // without this it reads as a flat disc; the halo is what makes it look
+        // lit from inside rather than printed on.
+        filter: drop-shadow(0 0 0.9rem rgb(37 99 235 / 45%));
+
         // Carries the hover/press/scanning states below. Only transform and
         // filter, both compositor properties, so the orb stays on the GPU and
         // does not relayout while the rings are animating.
@@ -268,14 +273,57 @@ $exec-bar-gap: 1.2rem;
         cursor: grab;
         touch-action: none;
 
-        // The bloom the rings sit in - what stops them reading as flat
-        // outlines drawn on the page.
+        // The leading edge of the sweep, turning in step with the wedge below.
+        // The scanner's radar has the same pair (.mw-scanner__radar:after) and
+        // for the same reason: a wedge on its own reads as a shimmer, and it is
+        // the bright spoke that makes the eye see something turning.
+        // The gradient is empty for the first half of its length because that
+        // half is behind the 4.6rem sphere - all of the spoke that can actually
+        // be seen lies in the ring of space between the sphere and the rim.
+        // This used to be the halo; that moved onto the core's box-shadow,
+        // where it blooms from the sphere instead of filling the whole orb and
+        // washing out the 1px rings crossing it.
         &:before {
             content: '';
             position: absolute;
-            inset: -0.8rem;
+            top: 50%;
+            inset-inline-start: 50%;
+            width: 4.2rem;
+            height: 2px;
+            margin-top: -1px;
+            transform-origin: 0 50%;
+            background: linear-gradient(
+                90deg,
+                rgb(191 219 254 / 0%) 0%,
+                rgb(191 219 254 / 0%) 52%,
+                rgb(191 219 254 / 95%) 64%,
+                rgb(191 219 254 / 0%) 100%
+            );
+            animation: mw-radar-turn 2.6s linear infinite;
+            pointer-events: none;
+        }
+
+        // The sweep. A conic wedge turning behind the sphere, the same beam the
+        // Entry Scanner's radar runs (.mw-scanner__radar:before) and on the same
+        // keyframes - the orb is the button that opens that panel, so it should
+        // read as the same instrument. This is the part that makes it a
+        // detector rather than a pulsing dot: expanding rings alone read as a
+        // heartbeat, and only a turning beam reads as something sweeping for a
+        // signal. It sits above the rings and below the core, which carries
+        // z-index 2, so the beam passes behind the "AI" and never washes it out.
+        &:after {
+            content: '';
+            position: absolute;
+            inset: 0.6rem;
             border-radius: 50%;
-            background: radial-gradient(circle, rgb(167 139 250 / 22%) 0%, rgb(167 139 250 / 0%) 68%);
+            background: conic-gradient(
+                from 0deg,
+                rgb(96 165 250 / 0%) 0deg,
+                rgb(96 165 250 / 38%) 62deg,
+                rgb(147 197 253 / 78%) 88deg,
+                rgb(96 165 250 / 0%) 92deg
+            );
+            animation: mw-radar-turn 2.6s linear infinite;
             pointer-events: none;
         }
 
@@ -353,15 +401,25 @@ $exec-bar-gap: 1.2rem;
         width: 4.6rem;
         height: 4.6rem;
         border-radius: 50%;
-        background: radial-gradient(circle at 32% 26%, #c4b5fd 0%, #a78bfa 26%, #7c3aed 68%, #5b21b6 100%);
+
+        // Dark blue, ending on the navy the scanner's own header is built from
+        // (#16294a, line ~523). The light stop at 32%/26% is the only bright
+        // part - it is what keeps this a lit sphere rather than a blue circle.
+        background: radial-gradient(circle at 32% 26%, #60a5fa 0%, #2563eb 28%, #1e40af 68%, #16294a 100%);
         color: #fff;
         font-size: 1.6rem;
         font-weight: 700;
         letter-spacing: 0.02em;
+
+        // The first shadow is the halo, blooming out of the sphere itself
+        // rather than out of the button box - that keeps the brightest part of
+        // the glow tight around the core, so the rings and the beam still have
+        // a dark enough field to be seen against.
         box-shadow:
-            0 8px 26px rgb(124 58 237 / 42%),
-            inset 0 -0.7rem 1.3rem rgb(76 29 149 / 50%),
-            inset 0 0.6rem 1rem rgb(255 255 255 / 30%);
+            0 0 2.2rem rgb(37 99 235 / 45%),
+            0 8px 26px rgb(30 64 175 / 48%),
+            inset 0 -0.7rem 1.3rem rgb(15 34 74 / 55%),
+            inset 0 0.6rem 1rem rgb(255 255 255 / 28%);
         transition: transform 150ms ease;
 
         // No idle animation here by design: the sphere is the one part that
@@ -378,7 +436,7 @@ $exec-bar-gap: 1.2rem;
     @media (hover: hover) {
         &__ai:hover {
             transform: scale(1.06);
-            filter: drop-shadow(0 0 1.2rem rgb(167 139 250 / 55%));
+            filter: drop-shadow(0 0 1.4rem rgb(96 165 250 / 65%));
         }
     }
 
@@ -386,35 +444,52 @@ $exec-bar-gap: 1.2rem;
         transform: scale(0.94);
     }
 
-    // A scan is running. Deliberately only the rings and halo - the sphere and
-    // its "AI" stay put, per the reference, so the centre never jitters.
+    // A scan is running. Deliberately only the rings, beam and halo - the
+    // sphere and its "AI" stay put, per the reference, so the centre never
+    // jitters. The instrument speeds up; it does not change shape.
     &__ai--scanning {
-        filter: drop-shadow(0 0 1.4rem rgb(167 139 250 / 70%));
+        filter: drop-shadow(0 0 1.6rem rgb(125 211 252 / 75%));
+    }
+
+    &__ai--scanning:before,
+    &__ai--scanning:after {
+        animation-duration: 1.2s;
     }
 
     &__ai--scanning &__ai-ring {
-        animation-duration: 1.1s;
-        border-color: rgb(196 181 253 / 95%);
+        animation-duration: 1.2s;
+        border-color: rgb(186 230 253 / 95%);
     }
 
+    // Pings, not a heartbeat. All three rings are the same circle on the same
+    // keyframes and differ only in when they start, so each is born at the
+    // sphere's edge and dies at the orb's rim - a new one every 0.87s, three in
+    // flight at once. They used to sit at three fixed radii breathing in place,
+    // which reads as an idle glow rather than something being emitted.
+    // mw-radar-sweep (0.7 -> 1.15) is the scanner's own ring animation: at this
+    // inset that starts the ring at 5rem, just clear of the 4.6rem core, and
+    // ends it at 8.3rem, just inside the 8.4rem button.
     &__ai-ring {
         position: absolute;
-        inset: 1.3rem;
+        inset: 0.6rem;
         border-radius: 50%;
-        border: 1px solid rgb(167 139 250 / 85%);
-        animation: mw-ai-pulse 3.4s ease-out infinite;
+
+        // A hairline on its own disappeared into the halo. The shadow gives the
+        // ping a little light of its own, and rides the element's opacity, so
+        // it fades out with the ring rather than lingering behind it.
+        border: 1px solid rgb(191 219 254 / 90%);
+        box-shadow:
+            0 0 0.5rem rgb(96 165 250 / 50%),
+            inset 0 0 0.5rem rgb(96 165 250 / 40%);
+        animation: mw-radar-sweep 2.6s ease-out infinite;
     }
 
     &__ai-ring--mid {
-        inset: 0.7rem;
-        border-color: rgb(167 139 250 / 60%);
-        animation-delay: 1.1s;
+        animation-delay: 0.86s;
     }
 
     &__ai-ring--wide {
-        inset: 0.1rem;
-        border-color: rgb(167 139 250 / 38%);
-        animation-delay: 2.2s;
+        animation-delay: 1.73s;
     }
 
     &__ai-dot {
@@ -446,27 +521,18 @@ $exec-bar-gap: 1.2rem;
     }
 }
 
-@keyframes mw-ai-pulse {
-    0% {
-        transform: scale(0.94);
-        opacity: 0.45;
-    }
-
-    50% {
-        transform: scale(1.04);
-        opacity: 1;
-    }
-
-    100% {
-        transform: scale(0.94);
-        opacity: 0.45;
-    }
-}
-
 @media (prefers-reduced-motion: reduce) {
     .mw-exec-bar__ai-ring,
     .mw-exec-bar__ai-dot {
         animation: none;
+    }
+
+    // The rings stop at a legible resting circle, but a beam and a spoke frozen
+    // mid-turn are just marks across the orb with nothing to explain them - so
+    // they go. The sphere keeps its halo, so the orb still looks lit.
+    .mw-exec-bar__ai:before,
+    .mw-exec-bar__ai:after {
+        display: none;
     }
 }
 
