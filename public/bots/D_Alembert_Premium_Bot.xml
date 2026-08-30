@@ -221,8 +221,9 @@
                         <statement name="DO0">
                           <block type="variables_set" id="da_set_units_init">
                             <field name="VAR" id="da_units">dalembert:units</field>
+                            <comment pinned="false" h="80" w="360">SETTING: the D'Alembert step. The stake is this unit count plus your Trade Amount, so 1 adds 1.00 of your account currency after each loss and takes 1.00 back off after each win. Lower it for a gentler progression.</comment>
                             <value name="VALUE">
-                              <block type="math_number" id="da_num_units_init"><field name="NUM">0</field></block>
+                              <block type="math_number" id="da_num_units_init"><field name="NUM">1</field></block>
                             </value>
                           </block>
                         </statement>
