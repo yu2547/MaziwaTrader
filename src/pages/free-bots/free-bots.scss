@@ -244,7 +244,13 @@
         gap: 8px;
         width: 100%;
         padding: 12px 20px;
-        background: linear-gradient(135deg, var(--brand-red-coral) 0%, #ff6b6b 100%);
+
+        // Dark blue into dark maroon, left to right. Horizontal rather than the
+        // 135deg the coral used, because the blend has to read as two colours
+        // meeting across the width of the button - on a diagonal at this height
+        // the maroon end is squeezed into the bottom corner and the button just
+        // looks muddy.
+        background: linear-gradient(90deg, #0e1c3d 0%, #291a3a 52%, #4a1c30 100%);
         color: #fff;
         border: none;
         border-radius: 8px;
@@ -255,7 +261,7 @@
 
         &:hover:not(:disabled) {
             transform: scale(1.02);
-            box-shadow: 0 4px 12px rgb(255 68 68 / 30%);
+            box-shadow: 0 4px 12px rgb(74 28 48 / 42%);
         }
 
         &:disabled {
@@ -263,19 +269,21 @@
             cursor: not-allowed;
         }
 
-        // Blue rather than the catalogue's coral, so the featured card's call
-        // to action is distinguishable at a glance from the other eleven.
+        // Premium keeps the same blue-to-maroon fill as every other card - it
+        // is set apart by weight and size instead, which is the difference that
+        // survives the two of them sitting in one grid. It used to carry its
+        // own blue so it stood out against a coral catalogue; there is no coral
+        // left to stand out against.
         &--premium {
             padding: 14px 20px;
             border-radius: 10px;
-            background: linear-gradient(135deg, #2f5fe0 0%, #1e3f9e 100%);
             font-size: 1.4rem;
             font-weight: 800;
             letter-spacing: 0.06em;
             text-transform: uppercase;
 
             &:hover:not(:disabled) {
-                box-shadow: 0 4px 14px rgb(47 95 224 / 42%);
+                box-shadow: 0 4px 14px rgb(74 28 48 / 48%);
             }
         }
 
