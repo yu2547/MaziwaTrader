@@ -1315,3 +1315,81 @@ $mw-grey: #7d8fa3;
         animation: none;
     }
 }
+
+// The Analysis Dashboard: the scan window from the reference, floating over the
+// console with the traffic lights and the red close box.
+.mw-signals__dash {
+    position: absolute;
+    z-index: 3;
+    inset-block-start: 12%;
+    inset-inline: 50%;
+    width: min(72rem, calc(100% - 3.2rem));
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    max-height: 70%;
+    border: 2px solid #22d3ee;
+    border-radius: 4px;
+    background: #000;
+    box-shadow: 0 0 4rem rgb(0 0 0 / 85%);
+    overflow: hidden;
+}
+
+.mw-signals__dash-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 1rem 1.2rem;
+}
+
+.mw-signals__dash-close {
+    margin-inline-start: auto;
+    min-width: 3.2rem;
+    min-height: 3.2rem;
+    padding: 0.2rem 1rem;
+    border: none;
+    border-radius: 4px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.mw-signals__dash-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 1.6rem 1.6rem;
+    font-family: 'Courier New', monospace;
+    font-size: 1.4rem;
+    line-height: 1.65;
+}
+
+.mw-signals__dash-line {
+    margin: 0;
+    color: #d6ffe4;
+    overflow-wrap: anywhere;
+
+    &--head {
+        color: #00ff41;
+        font-weight: 700;
+        text-shadow: 0 0 1rem rgb(0 255 65 / 45%);
+    }
+
+    &--warn {
+        color: #ff5a5a;
+    }
+
+    &--dim {
+        color: #4f9e6d;
+    }
+}
+
+// The three lights on the dashboard bar, as in the reference.
+.mw-signals__dot {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: #ef4444;
+}

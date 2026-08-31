@@ -14,8 +14,28 @@ const HISTORY_LIMIT = 20;
 /** The alert asset the app already ships, in assets/media. */
 const ALERT_SOUND = 'assets/media/announcement.mp3';
 const SOUND_KEY = 'mw_signals_sound';
+const COUNTDOWN_FROM = 5;
 
 type TStatus = 'error' | 'waiting' | 'scanning' | 'no_signal' | 'good_market';
+
+/** One market's reading during an all-market scan. */
+type TScanEntry = {
+    digits: number[];
+    evaluation: ReturnType<typeof evaluateWindow>;
+    name: string;
+    symbol: string;
+};
+
+/** What the scan settled on, once a market cleared every condition. */
+type TScanResult = {
+    digits: number[];
+    name: string;
+    pct: number;
+    sample: number;
+    side: string;
+    symbol: string;
+    z: number;
+};
 
 type TRecord = {
     edge: number;
@@ -179,43 +199,51 @@ const Signals = observer(() => {
     }, [isConnected, feed, symbol, retry_token]);
 
     const symbol_name = symbols.find(item => item.underlying_symbol === symbol)?.underlying_symbol_name ?? symbol;
+    const strategy_label = localize(STRATEGIES.find(item => item.id === strategy)?.label ?? '');
     const current_digit = digits[0] ?? null;
 
     // One pass over the window per change of window, not per render.
-    const sides = useMemo<TSide[]>(() => {
-        if (!digits.length) return [];
-        const total = digits.length;
-        const distribution = getDigitDistribution(digits);
-        const ranked = distribution.map((pct, digit) => ({ digit, pct })).sort((a, b) => b.pct - a.pct);
-        const even = (digits.filter(digit => digit % 2 === 0).length / total) * 100;
-        const under = (digits.filter(digit => digit < 5).length / total) * 100;
-        const over = (digits.filter(digit => digit > 5).length / total) * 100;
+    // One implementation of the sides, used by the live panel and by the
+    // all-market scan, so the two can never disagree about what a market says.
+    const makeSides = useCallback(
+        (window_digits: number[], for_strategy: TStrategy): TSide[] => {
+            if (!window_digits.length) return [];
+            const total = window_digits.length;
+            const distribution = getDigitDistribution(window_digits);
+            const ranked = distribution.map((pct, digit) => ({ digit, pct })).sort((a, b) => b.pct - a.pct);
+            const even = (window_digits.filter(digit => digit % 2 === 0).length / total) * 100;
+            const under = (window_digits.filter(digit => digit < 5).length / total) * 100;
+            const over = (window_digits.filter(digit => digit > 5).length / total) * 100;
 
-        if (strategy === 'even_odd') {
+            if (for_strategy === 'even_odd') {
+                return [
+                    { baseline: 50, label: localize('EVEN'), pct: even },
+                    { baseline: 50, label: localize('ODD'), pct: 100 - even },
+                ];
+            }
+            if (for_strategy === 'over_under') {
+                // Under 5 is five digits, over 5 is four - so they do not share
+                // a baseline and cannot be compared on raw percentage.
+                return [
+                    { baseline: 50, label: localize('UNDER 5'), pct: under },
+                    { baseline: 40, label: localize('OVER 5'), pct: over },
+                ];
+            }
+            const top = ranked[0];
+            const bottom = ranked[ranked.length - 1];
             return [
-                { baseline: 50, label: localize('EVEN'), pct: even },
-                { baseline: 50, label: localize('ODD'), pct: 100 - even },
+                { baseline: 10, label: localize('MATCHES {{digit}}', { digit: top.digit }), pct: top.pct },
+                {
+                    baseline: 90,
+                    label: localize('DIFFERS from {{digit}}', { digit: bottom.digit }),
+                    pct: 100 - bottom.pct,
+                },
             ];
-        }
-        if (strategy === 'over_under') {
-            // Under 5 is five digits, over 5 is four - so they do not share a
-            // baseline and cannot be compared on raw percentage.
-            return [
-                { baseline: 50, label: localize('UNDER 5'), pct: under },
-                { baseline: 40, label: localize('OVER 5'), pct: over },
-            ];
-        }
-        const top = ranked[0];
-        const bottom = ranked[ranked.length - 1];
-        return [
-            { baseline: 10, label: localize('MATCHES {{digit}}', { digit: top.digit }), pct: top.pct },
-            {
-                baseline: 90,
-                label: localize('DIFFERS from {{digit}}', { digit: bottom.digit }),
-                pct: 100 - bottom.pct,
-            },
-        ];
-    }, [digits, strategy, localize]);
+        },
+        [localize]
+    );
+
+    const sides = useMemo(() => makeSides(digits, strategy), [makeSides, digits, strategy]);
 
     // The verdict comes from one pure function so it can be exercised without a
     // feed, a socket or a DOM - see signal-quality.ts and its spec. Sides are
@@ -338,17 +366,185 @@ const Signals = observer(() => {
             .catch(() => setSoundBlocked(true));
     };
 
+    // ---------------------------------------------------------------------
+    // The Analysis Dashboard: press Analyse and every market is read once,
+    // scored by the same rules the live panel uses, and ranked. Nothing here
+    // invents a reading - a market that fails to answer is reported as failing
+    // to answer, which is why the log has an error tone at all.
+    // ---------------------------------------------------------------------
+    const [scan_phase, setScanPhase] = useState<'idle' | 'scanning' | 'done'>('idle');
+    const [scan_log, setScanLog] = useState<{ text: string; tone: 'ok' | 'warn' | 'head' | 'dim' }[]>([]);
+    const [scan_result, setScanResult] = useState<TScanResult | null>(null);
+    const [countdown, setCountdown] = useState<number | null>(null);
+    const scan_token = useRef(0);
+
+    const pushScan = (text: string, tone: 'ok' | 'warn' | 'head' | 'dim' = 'ok') =>
+        setScanLog(prev => [...prev, { text, tone }]);
+
+    const closeScan = () => {
+        scan_token.current += 1;
+        setScanPhase('idle');
+        setScanLog([]);
+        setScanResult(null);
+        setCountdown(null);
+    };
+
+    const runScan = async () => {
+        const token = ++scan_token.current;
+        setScanPhase('scanning');
+        setScanResult(null);
+        setCountdown(null);
+        setScanLog([
+            {
+                text: localize('Analysis Dashboard - {{strategy}} on {{symbol}}', {
+                    strategy: strategy_label,
+                    symbol,
+                }),
+                tone: 'head',
+            },
+        ]);
+        playAlert();
+
+        const list = symbols.length ? symbols : [];
+        if (!list.length) {
+            pushScan(localize('No market list available. Check the connection and try again.'), 'warn');
+            setScanPhase('done');
+            return;
+        }
+
+        pushScan(
+            localize('Analysing {{strategy}} across {{count}} markets...', {
+                count: list.length,
+                strategy: strategy_label,
+            })
+        );
+        pushScan(localize('Retrieving market data...'));
+
+        const scored: TScanEntry[] = [];
+        // Small parallel batches: one at a time is slow enough to feel broken,
+        // and all at once is what makes the API start refusing.
+        const BATCH = 4;
+        for (let i = 0; i < list.length; i += BATCH) {
+            if (token !== scan_token.current) return;
+            const batch = list.slice(i, i + BATCH);
+            // eslint-disable-next-line no-await-in-loop
+            const settled = await Promise.all(
+                batch.map(async item => {
+                    try {
+                        const { pip_size, prices } = await feed.getTickHistory(item.underlying_symbol, SAMPLE_SIZE);
+                        const places = toDecimalPlaces(pip_size) ?? 2;
+                        const window_digits = prices.map(price => getLastDigit(price, places)).reverse();
+                        const evaluation_for = evaluateWindow({
+                            digits: window_digits,
+                            has_feed: true,
+                            sides: makeSides(window_digits, strategy),
+                            strategy,
+                        });
+                        return { digits: window_digits, evaluation: evaluation_for, item, ok: true as const };
+                    } catch {
+                        return { item, ok: false as const };
+                    }
+                })
+            );
+            if (token !== scan_token.current) return;
+
+            settled.forEach(entry => {
+                if (!entry.ok) {
+                    pushScan(
+                        localize('Error: no data from {{market}}...', { market: entry.item.underlying_symbol_name }),
+                        'warn'
+                    );
+                    return;
+                }
+                const { evaluation: market_evaluation, item } = entry;
+                const lead = market_evaluation.leader;
+                scored.push({
+                    digits: entry.digits,
+                    evaluation: market_evaluation,
+                    name: item.underlying_symbol_name,
+                    symbol: item.underlying_symbol,
+                });
+                pushScan(
+                    localize('{{market}}: {{side}} {{z}} SE', {
+                        market: item.underlying_symbol_name,
+                        side: lead ? lead.label : localize('no reading'),
+                        z: lead ? lead.z.toFixed(2) : '--',
+                    }),
+                    'dim'
+                );
+            });
+            // eslint-disable-next-line no-await-in-loop
+            await new Promise(resolve => setTimeout(resolve, 120));
+        }
+
+        if (token !== scan_token.current) return;
+
+        // Only markets that clear every gate are eligible; among those, the
+        // strongest evidence wins. If none qualify the scan says so rather than
+        // promoting the least bad one.
+        const eligible = scored.filter(entry => entry.evaluation.qualifies);
+        const ranked = [...eligible].sort((a, b) => (b.evaluation.leader?.z ?? 0) - (a.evaluation.leader?.z ?? 0));
+        const best = ranked[0] ?? null;
+
+        pushScan(localize('Analysis complete.'), 'head');
+        pushScan(
+            localize('{{scanned}} markets read, {{eligible}} met every condition.', {
+                eligible: eligible.length,
+                scanned: scored.length,
+            })
+        );
+
+        if (!best || !best.evaluation.leader) {
+            const closest = [...scored].sort(
+                (a, b) => (b.evaluation.leader?.z ?? 0) - (a.evaluation.leader?.z ?? 0)
+            )[0];
+            pushScan(localize('No market currently meets the entry conditions.'), 'warn');
+            if (closest?.evaluation.leader) {
+                pushScan(
+                    localize('Closest was {{market}} at {{z}} SE, against the {{required}} SE required.', {
+                        market: closest.name,
+                        required: closest.evaluation.required_z.toFixed(2),
+                        z: closest.evaluation.leader.z.toFixed(2),
+                    }),
+                    'dim'
+                );
+            }
+            setScanPhase('done');
+            return;
+        }
+
+        const lead = best.evaluation.leader;
+        setScanResult({
+            digits: best.digits.slice(0, 8),
+            name: best.name,
+            pct: lead.pct,
+            sample: best.digits.length,
+            side: lead.label,
+            symbol: best.symbol,
+            z: lead.z,
+        });
+        playAlert();
+        setScanPhase('done');
+        setCountdown(COUNTDOWN_FROM);
+    };
+
+    useEffect(() => {
+        if (countdown === null || countdown < 0) return undefined;
+        const timer = setTimeout(() => setCountdown(value => (value === null ? null : value - 1)), 1000);
+        return () => clearTimeout(timer);
+    }, [countdown]);
+
     return (
         <div className='mw-signals'>
             {/* Six columns rather than three: the reference fills the whole
                 field with chatter, and three left visible gutters between them. */}
             <div className='mw-signals__rain' aria-hidden='true'>
-                <RainColumn duration={26} seed={1} />
-                <RainColumn duration={34} seed={7} />
-                <RainColumn duration={30} seed={4} />
-                <RainColumn duration={38} seed={9} />
-                <RainColumn duration={28} seed={2} />
-                <RainColumn duration={32} seed={5} />
+                <RainColumn duration={11} seed={1} />
+                <RainColumn duration={14} seed={7} />
+                <RainColumn duration={12} seed={4} />
+                <RainColumn duration={16} seed={9} />
+                <RainColumn duration={13} seed={2} />
+                <RainColumn duration={15} seed={5} />
             </div>
 
             <div className='mw-signals__panel'>
@@ -390,11 +586,17 @@ const Signals = observer(() => {
                     </p>
                 </div>
 
-                {/* Re-seeds the window from tick history and resubscribes - the
-                    same path the error state's Retry uses. The scanner never
-                    stopped running, so this is a fresh read rather than a start. */}
-                <button type='button' className='mw-signals__analyse' onClick={() => setRetryToken(value => value + 1)}>
-                    {localize('Analyse')}
+                {/* Opens the Analysis Dashboard, which reads every market once
+                    and ranks them. The live panel below keeps running
+                    throughout - this is a sweep across markets, not a start
+                    button for the scanner. */}
+                <button
+                    type='button'
+                    className='mw-signals__analyse'
+                    onClick={runScan}
+                    disabled={scan_phase === 'scanning'}
+                >
+                    {scan_phase === 'scanning' ? localize('Analysing...') : localize('Analyse')}
                 </button>
 
                 <div className={`mw-signals__status mw-signals__status--${status}`} role='status' aria-live='polite'>
@@ -521,6 +723,93 @@ const Signals = observer(() => {
                     </div>
                 )}
             </div>
+
+            {scan_phase !== 'idle' && (
+                <div
+                    className='mw-signals__dash'
+                    role='dialog'
+                    aria-modal='true'
+                    aria-label={localize('Analysis Dashboard')}
+                >
+                    <div className='mw-signals__dash-bar'>
+                        <span className='mw-signals__dot' />
+                        <span className='mw-signals__dot' />
+                        <span className='mw-signals__dot' />
+                        <button
+                            type='button'
+                            className='mw-signals__dash-close'
+                            onClick={closeScan}
+                            aria-label={localize('Close the analysis dashboard')}
+                        >
+                            X
+                        </button>
+                    </div>
+
+                    <div className='mw-signals__dash-body' aria-live='polite'>
+                        {scan_log.map((line, index) => (
+                            <p key={index} className={`mw-signals__dash-line mw-signals__dash-line--${line.tone}`}>
+                                {line.text}
+                            </p>
+                        ))}
+
+                        {scan_phase === 'scanning' && (
+                            <p className='mw-signals__dash-line'>
+                                {localize('Scanning')}
+                                <span className='mw-signals__dots' aria-hidden='true'>
+                                    <i />
+                                    <i />
+                                    <i />
+                                </span>
+                            </p>
+                        )}
+
+                        {scan_result && (
+                            <>
+                                <p className='mw-signals__dash-line mw-signals__dash-line--head'>
+                                    {localize('Best market: {{market}}', { market: scan_result.name })}
+                                </p>
+                                <p className='mw-signals__dash-line'>
+                                    {localize('{{side}} at {{pct}}% of the last {{sample}} ticks', {
+                                        pct: scan_result.pct.toFixed(1),
+                                        sample: scan_result.sample,
+                                        side: scan_result.side,
+                                    })}
+                                </p>
+                                <p className='mw-signals__dash-line mw-signals__dash-line--dim'>
+                                    {localize('Signal deviation {{z}} SE above baseline', {
+                                        z: scan_result.z.toFixed(2),
+                                    })}
+                                </p>
+                                <p className='mw-signals__dash-line mw-signals__dash-line--dim'>
+                                    {localize('Recent digits: {{digits}}', { digits: scan_result.digits.join(', ') })}
+                                </p>
+                                {/* The setup is the contract this reading points at,
+                                    which is a fact about the reading. No entry rule is
+                                    invented here and nothing is promised about the
+                                    next tick. */}
+                                <p className='mw-signals__dash-line'>
+                                    {localize('Setup: {{side}} on {{symbol}}', {
+                                        side: scan_result.side,
+                                        symbol: scan_result.symbol,
+                                    })}
+                                </p>
+                                {countdown !== null && countdown >= 0 && (
+                                    <p className='mw-signals__dash-line'>
+                                        {localize('Ready in {{count}} seconds...', { count: countdown })}
+                                    </p>
+                                )}
+                                {countdown !== null && countdown < 0 && (
+                                    <p className='mw-signals__dash-line mw-signals__dash-line--head'>
+                                        {localize(
+                                            'Signal ready. Load this setup in the Bot Builder to trade it - nothing is placed from here.'
+                                        )}
+                                    </p>
+                                )}
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 });
