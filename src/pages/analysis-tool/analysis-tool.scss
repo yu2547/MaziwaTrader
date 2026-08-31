@@ -797,23 +797,27 @@ $mw-grey: #7d8fa3;
     min-height: 52rem;
     padding: 2rem 1.6rem 3.2rem;
     overflow: hidden;
-    background: #05070a;
+    background: #000;
 }
 
 .mw-signals__rain {
     position: absolute;
     inset: 0;
     display: flex;
-    gap: 2.4rem;
-    padding: 0 1.6rem;
-    opacity: 0.5;
+    gap: 1.6rem;
+    padding: 0 0.8rem;
+
+    // Denser and brighter than a backdrop would be, because in the reference
+    // the chatter is the surface the console sits on rather than a wash behind
+    // it. The scrim is only strong enough to keep the panel edge readable.
+    opacity: 0.9;
     pointer-events: none;
 
     &:after {
         content: '';
         position: absolute;
         inset: 0;
-        background: radial-gradient(ellipse at center, rgb(5 7 10 / 88%) 0%, rgb(5 7 10 / 55%) 100%);
+        background: radial-gradient(ellipse at center, rgb(0 0 0 / 72%) 0%, rgb(0 0 0 / 12%) 100%);
     }
 }
 
@@ -824,9 +828,9 @@ $mw-grey: #7d8fa3;
     gap: 0.6rem;
     min-width: 0;
     font-family: 'Courier New', monospace;
-    font-size: 1.2rem;
-    line-height: 1.5;
-    color: #00e05a;
+    font-size: 1.25rem;
+    line-height: 1.45;
+    color: #00ff41;
     white-space: nowrap;
     animation-name: mw-signals-rain;
     animation-timing-function: linear;
@@ -854,31 +858,32 @@ $mw-grey: #7d8fa3;
     max-width: 76rem;
     margin: 0 auto;
     padding: 2rem 1.6rem;
-    border: 1px solid rgb(0 224 90 / 28%);
-    border-radius: 10px;
-    background: rgb(0 0 0 / 88%);
-    box-shadow: 0 0 3.2rem rgb(0 224 90 / 14%);
+
+    // Cyan edge and a hard black fill, so the console reads as a window cut
+    // into the log field rather than a card floating over it.
+    border: 2px solid #22d3ee;
+    border-radius: 4px;
+    background: rgb(0 0 0 / 94%);
+    box-shadow: 0 0 3.2rem rgb(34 211 238 / 22%);
 }
 
 .mw-signals__title {
     margin: 0;
     text-align: center;
-    font-size: 2.4rem;
+    font-size: 3.2rem;
     font-weight: 800;
-    letter-spacing: 0.08em;
-    color: #fff;
+    letter-spacing: 0.02em;
+    color: #ff2b2b;
+    text-shadow: 0 0 1.6rem rgb(255 43 43 / 45%);
 }
 
-// One column on a phone, two once there is room for both controls side by side
-// without either being squeezed.
+// Stacked at every width, as in the reference: strategy above market, each
+// label centred over its own full-width control. Two-up read fine but put the
+// two labels side by side, which is not the console the screenshots show.
 .mw-signals__controls {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 1.2rem;
-
-    @media (width >= 620px) {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
 }
 
 .mw-signals__field {
@@ -888,9 +893,10 @@ $mw-grey: #7d8fa3;
     min-width: 0;
 
     > span {
-        font-size: 1.3rem;
-        font-weight: 600;
-        color: #9fb3c8;
+        text-align: center;
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #fff;
     }
 
     select {
@@ -898,17 +904,72 @@ $mw-grey: #7d8fa3;
 
         // Comfortably past the 44px touch target on a phone.
         padding: 1.2rem;
-        border: 1px solid rgb(0 224 90 / 25%);
-        border-radius: 6px;
-        background: #0a0d12;
-        color: #00e05a;
+        border: 1px solid rgb(34 211 238 / 35%);
+        border-radius: 4px;
+        background: #000;
+        color: #ff2b2b;
         font-size: 1.5rem;
         font-weight: 700;
+        text-align: center;
+        text-align-last: center;
         outline: none;
 
         &:focus {
-            border-color: #00e05a;
+            border-color: #22d3ee;
         }
+
+        option {
+            text-align: center;
+        }
+    }
+}
+
+// The headline readout from the reference: the two live numbers, large, green
+// and centred on their own black field, sitting above everything the scanner
+// concludes from them.
+.mw-signals__readout {
+    padding: 2rem 1.6rem;
+    border-radius: 4px;
+    background: #000;
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    color: #00ff41;
+
+    p {
+        margin: 0.6rem 0;
+        font-size: 2.4rem;
+        font-weight: 700;
+    }
+
+    b {
+        font-variant-numeric: tabular-nums;
+        overflow-wrap: anywhere;
+    }
+
+    @media (width <= 420px) {
+        padding: 1.6rem 1rem;
+
+        p {
+            font-size: 2rem;
+        }
+    }
+}
+
+// Re-reads the window. Centred and green, as in the reference.
+.mw-signals__analyse {
+    align-self: center;
+    min-height: 4.4rem;
+    padding: 1rem 3.6rem;
+    border: none;
+    border-radius: 4px;
+    background: #16a34a;
+    color: #fff;
+    font-size: 1.6rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+        filter: brightness(1.1);
     }
 }
 

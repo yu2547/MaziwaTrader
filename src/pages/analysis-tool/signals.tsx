@@ -340,18 +340,34 @@ const Signals = observer(() => {
 
     return (
         <div className='mw-signals'>
+            {/* Six columns rather than three: the reference fills the whole
+                field with chatter, and three left visible gutters between them. */}
             <div className='mw-signals__rain' aria-hidden='true'>
                 <RainColumn duration={26} seed={1} />
                 <RainColumn duration={34} seed={7} />
                 <RainColumn duration={30} seed={4} />
+                <RainColumn duration={38} seed={9} />
+                <RainColumn duration={28} seed={2} />
+                <RainColumn duration={32} seed={5} />
             </div>
 
             <div className='mw-signals__panel'>
-                <h2 className='mw-signals__title'>{localize('Signals')}</h2>
+                <h2 className='mw-signals__title'>{localize('Signal Analyzer')}</h2>
 
                 <div className='mw-signals__controls'>
                     <label className='mw-signals__field'>
-                        <span>{localize('Market')}</span>
+                        <span>{localize('Select Strategy')}</span>
+                        <select value={strategy} onChange={event => setStrategy(event.target.value as TStrategy)}>
+                            {STRATEGIES.map(item => (
+                                <option key={item.id} value={item.id}>
+                                    {localize(item.label)}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+
+                    <label className='mw-signals__field'>
+                        <span>{localize('Select Market')}</span>
                         <select value={symbol} onChange={event => setSymbol(event.target.value)}>
                             {symbols.length === 0 && <option value={symbol}>{symbol}</option>}
                             {symbols.map(item => (
@@ -361,18 +377,25 @@ const Signals = observer(() => {
                             ))}
                         </select>
                     </label>
-
-                    <label className='mw-signals__field'>
-                        <span>{localize('Signal type')}</span>
-                        <select value={strategy} onChange={event => setStrategy(event.target.value as TStrategy)}>
-                            {STRATEGIES.map(item => (
-                                <option key={item.id} value={item.id}>
-                                    {localize(item.label)}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
                 </div>
+
+                {/* The reference's headline readout: the two live numbers, big,
+                    green and centred, above everything the scanner concludes. */}
+                <div className='mw-signals__readout'>
+                    <p>
+                        {localize('Latest Tick:')} <b>{quote === null ? '--' : quote.toFixed(decimals)}</b>
+                    </p>
+                    <p>
+                        {localize('Last Digit:')} <b>{current_digit ?? '--'}</b>
+                    </p>
+                </div>
+
+                {/* Re-seeds the window from tick history and resubscribes - the
+                    same path the error state's Retry uses. The scanner never
+                    stopped running, so this is a fresh read rather than a start. */}
+                <button type='button' className='mw-signals__analyse' onClick={() => setRetryToken(value => value + 1)}>
+                    {localize('Analyse')}
+                </button>
 
                 <div className={`mw-signals__status mw-signals__status--${status}`} role='status' aria-live='polite'>
                     <span className='mw-signals__status-label'>{localize(STATUS_LABEL[status])}</span>
@@ -403,15 +426,9 @@ const Signals = observer(() => {
                     </div>
                 )}
 
+                {/* The tick and the digit moved up into the headline readout, so
+                    this row carries only what the scanner works out from them. */}
                 <div className='mw-signals__grid'>
-                    <div className='mw-signals__cell'>
-                        <span>{localize('Latest tick')}</span>
-                        <b>{quote === null ? '--' : quote.toFixed(decimals)}</b>
-                    </div>
-                    <div className='mw-signals__cell'>
-                        <span>{localize('Current digit')}</span>
-                        <b>{current_digit ?? '--'}</b>
-                    </div>
                     <div className='mw-signals__cell'>
                         {/* Deliberately not "confidence": this is how many
                             standard errors the window sits from uniform, which
