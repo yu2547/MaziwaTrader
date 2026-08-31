@@ -5,42 +5,17 @@ import useUtcClock from '@/hooks/useUtcClock';
 import { getDigitDistribution, getLastDigit, toDecimalPlaces } from '@/utils/market-data/last-digit';
 import { TActiveSymbol, TTick } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
+import { evaluateWindow, MIN_ENTROPY, MIN_SAMPLE, MIN_SEPARATION_Z, TSide, TStrategy } from './signal-quality';
 
 const DEFAULT_SYMBOL = 'R_10';
 const SAMPLE_SIZE = 1000;
-const MIN_SAMPLE = 200;
 const HISTORY_LIMIT = 20;
-
-/**
- * The two numbers that decide a good market, in percentage points.
- *
- * The analysis this file already did - a digit distribution over the live
- * window - never said whether what it found was worth acting on. These are that
- * missing half, and they are thresholds rather than probabilities: MIN_EDGE is
- * how far a side has to sit above the rate it would run at if digits were
- * uniform, and MIN_SEPARATION is how far clear of the other side it has to be.
- * Both are shown in the Conditions list so the bar is visible rather than
- * buried here.
- */
-const MIN_EDGE = 2.5;
-const MIN_SEPARATION = 1.5;
-
-/** How many of the ten digits must actually appear before a window counts as a digit market. */
-const MIN_DIGIT_SPREAD = 8;
 
 /** The alert asset the app already ships, in assets/media. */
 const ALERT_SOUND = 'assets/media/announcement.mp3';
 const SOUND_KEY = 'mw_signals_sound';
 
-type TStrategy = 'matches_differs' | 'even_odd' | 'over_under';
 type TStatus = 'error' | 'waiting' | 'scanning' | 'no_signal' | 'good_market';
-
-type TSide = {
-    /** What the side would run at with uniform digits - 50% for EVEN, 10% for a single digit. */
-    baseline: number;
-    label: string;
-    pct: number;
-};
 
 type TRecord = {
     edge: number;
@@ -242,53 +217,53 @@ const Signals = observer(() => {
         ];
     }, [digits, strategy, localize]);
 
-    // Edge over baseline is what makes the sides comparable: a 12% matches rate
-    // and a 91% differs rate are the same distribution read two ways, and only
-    // the distance from what uniform digits would give says which is the
-    // stronger reading.
-    const scored = useMemo(
-        () => sides.map(side => ({ ...side, edge: side.pct - side.baseline })).sort((a, b) => b.edge - a.edge),
-        [sides]
+    // The verdict comes from one pure function so it can be exercised without a
+    // feed, a socket or a DOM - see signal-quality.ts and its spec. Sides are
+    // ranked by evidence rather than by raw point gap, because a point is not
+    // the same size of surprise on a 10% baseline as on a 50% one.
+    const has_feed = isConnected && !history_error;
+    const evaluation = useMemo(
+        () => evaluateWindow({ digits, has_feed, sides, strategy }),
+        [digits, has_feed, sides, strategy]
     );
-    const leader = scored[0] ?? null;
-    const runner_up = scored[1] ?? null;
+    const { entropy, leader, required_z, scored, separation_z } = evaluation;
 
-    const distinct_digits = useMemo(() => new Set(digits).size, [digits]);
-
-    const conditions = useMemo(() => {
-        const separation = leader && runner_up ? leader.edge - runner_up.edge : 0;
-        return [
-            { label: localize('Live tick feed connected'), pass: isConnected && !history_error },
+    const conditions = useMemo(
+        () => [
+            { label: localize('Live tick feed connected'), pass: has_feed },
             {
                 label: localize('Sample of at least {{count}} ticks', { count: MIN_SAMPLE }),
                 pass: digits.length >= MIN_SAMPLE,
             },
-            // Range Break 100 quotes to one decimal and always ends in 0, which
-            // reads as MATCHES 0 at 100% and a 90 point edge - arithmetically
-            // true and worthless, because the digit never varies. A market whose
-            // last digit barely moves is not a weak signal, it is not a digit
-            // market at all.
             {
-                label: localize('Last digit varies across at least {{count}} values', { count: MIN_DIGIT_SPREAD }),
-                pass: distinct_digits >= MIN_DIGIT_SPREAD,
+                label: localize('Digit spread at least {{floor}} of 1.00 (now {{value}})', {
+                    floor: MIN_ENTROPY.toFixed(2),
+                    value: entropy.toFixed(3),
+                }),
+                pass: entropy >= MIN_ENTROPY,
             },
             {
-                label: localize('Leading side at least {{edge}} points above its baseline', { edge: MIN_EDGE }),
-                pass: !!leader && leader.edge >= MIN_EDGE,
+                label: localize('Leading side at least {{required}} SE from its baseline', {
+                    required: required_z.toFixed(2),
+                }),
+                pass: !!leader && leader.z >= required_z,
             },
             {
-                label: localize('Clear of the other side by {{gap}} points', { gap: MIN_SEPARATION }),
-                pass: separation >= MIN_SEPARATION,
+                label: localize('Clear of the other reading by {{gap}} SE', {
+                    gap: MIN_SEPARATION_Z.toFixed(2),
+                }),
+                pass: separation_z >= MIN_SEPARATION_Z,
             },
-        ];
-    }, [isConnected, history_error, digits.length, distinct_digits, leader, runner_up, localize]);
+        ],
+        [has_feed, digits.length, entropy, leader, required_z, separation_z, localize]
+    );
 
     const status = useMemo<TStatus>(() => {
-        if (!isConnected || history_error) return 'error';
+        if (!has_feed) return 'error';
         if (!digits.length) return 'waiting';
         if (digits.length < MIN_SAMPLE) return 'scanning';
-        return conditions.every(condition => condition.pass) ? 'good_market' : 'no_signal';
-    }, [isConnected, history_error, digits.length, conditions]);
+        return evaluation.qualifies ? 'good_market' : 'no_signal';
+    }, [has_feed, digits.length, evaluation.qualifies]);
 
     // Identity, not a timer, is what stops a signal alerting twice: the same
     // market, strategy and side is the same signal however many ticks it
@@ -438,12 +413,13 @@ const Signals = observer(() => {
                         <b>{current_digit ?? '--'}</b>
                     </div>
                     <div className='mw-signals__cell'>
-                        <span>{localize('Signal strength')}</span>
-                        <b>
-                            {leader && status !== 'error'
-                                ? localize('{{edge}} pts', { edge: leader.edge.toFixed(2) })
-                                : '--'}
-                        </b>
+                        {/* Deliberately not "confidence": this is how many
+                            standard errors the window sits from uniform, which
+                            is a description of the sample, not a probability of
+                            anything happening next. The points figure it is
+                            derived from stays visible on the rows below. */}
+                        <span>{localize('Signal deviation')}</span>
+                        <b>{leader && status !== 'error' ? localize('{{z}} SE', { z: leader.z.toFixed(2) }) : '--'}</b>
                     </div>
                     <div className='mw-signals__cell'>
                         <span>{localize('Sample')}</span>
@@ -466,7 +442,10 @@ const Signals = observer(() => {
                                 <i>
                                     {side.edge >= 0 ? '+' : ''}
                                     {side.edge.toFixed(2)}{' '}
-                                    {localize('vs {{baseline}}% baseline', { baseline: side.baseline })}
+                                    {localize('pts vs {{baseline}}% baseline · {{z}} SE', {
+                                        baseline: side.baseline,
+                                        z: side.z.toFixed(2),
+                                    })}
                                 </i>
                             </li>
                         ))}
