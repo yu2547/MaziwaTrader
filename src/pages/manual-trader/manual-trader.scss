@@ -1,0 +1,379 @@
+$mw-accent: #16c784;
+$mw-panel: #131518;
+$mw-field: #1b1e22;
+$mw-line: rgb(255 255 255 / 8%);
+$mw-muted: #8b949e;
+
+.mw-manual {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    background: #0b0c0e;
+    color: #e6edf3;
+}
+
+// Market and trade type, as two cards across the top.
+.mw-manual__bar {
+    display: flex;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+    padding: 1.6rem;
+    border-bottom: 1px solid $mw-line;
+}
+
+.mw-manual__card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex: 1 1 24rem;
+    min-width: 0;
+    padding: 1rem 1.4rem;
+    border: 1px solid $mw-line;
+    border-radius: 8px;
+    background: $mw-panel;
+
+    > span {
+        font-size: 1.2rem;
+        color: $mw-muted;
+    }
+
+    select {
+        border: none;
+        background: transparent;
+        color: #fff;
+        font-size: 1.6rem;
+        font-weight: 600;
+        outline: none;
+        cursor: pointer;
+
+        option {
+            background: $mw-panel;
+        }
+    }
+}
+
+// Analysis on the left, the ticket on the right; one column on a phone.
+.mw-manual__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.6rem;
+    padding: 1.6rem;
+
+    @media (width >= 900px) {
+        grid-template-columns: minmax(0, 1fr) 34rem;
+        align-items: start;
+    }
+}
+
+.mw-manual__analysis {
+    display: flex;
+    flex-direction: column;
+    gap: 2.4rem;
+    min-width: 0;
+}
+
+.mw-manual__analysis-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+
+    > div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    span {
+        font-size: 1.2rem;
+        color: $mw-muted;
+    }
+
+    b {
+        font-size: 1.6rem;
+        font-weight: 700;
+    }
+}
+
+.mw-manual__sample {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 1.2rem;
+    color: $mw-muted;
+
+    input {
+        width: 6.4rem;
+        padding: 0.6rem;
+        border: 1px solid $mw-line;
+        border-radius: 6px;
+        background: $mw-field;
+        color: #fff;
+        font-size: 1.3rem;
+        text-align: center;
+        outline: none;
+    }
+}
+
+.mw-manual__signal {
+    display: flex;
+    align-items: center;
+    gap: 1.6rem;
+    flex-wrap: wrap;
+
+    > span {
+        flex: 1 1 100%;
+        font-size: 1.3rem;
+        color: $mw-muted;
+    }
+
+    strong {
+        font-size: 3.2rem;
+        font-weight: 700;
+    }
+
+    em {
+        padding: 0.6rem 1.4rem;
+        border-radius: 999px;
+        background: $mw-field;
+        font-style: normal;
+        font-size: 1.3rem;
+        color: $mw-muted;
+    }
+}
+
+// The outcome rings. Wrapping rather than shrinking, so three of them still
+// read at 375px.
+.mw-manual__rings {
+    display: flex;
+    justify-content: center;
+    gap: 2.4rem;
+    flex-wrap: wrap;
+}
+
+.mw-manual__ring {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    width: 14rem;
+    height: 14rem;
+    border: 3px solid rgb(255 255 255 / 10%);
+    border-radius: 50%;
+
+    b {
+        font-size: 2.8rem;
+        font-weight: 700;
+    }
+
+    span {
+        font-size: 1.4rem;
+        font-weight: 600;
+    }
+
+    i {
+        font-style: normal;
+        font-size: 1.2rem;
+        color: $mw-muted;
+    }
+
+    &--lead {
+        border-color: $mw-accent;
+        box-shadow: 0 0 2.4rem rgb(22 199 132 / 25%);
+    }
+
+    @media (width <= 420px) {
+        width: 10.4rem;
+        height: 10.4rem;
+        gap: 0;
+
+        b {
+            font-size: 2rem;
+        }
+
+        span {
+            font-size: 1.2rem;
+        }
+    }
+}
+
+.mw-manual__empty,
+.mw-manual__latest {
+    margin: 0;
+    text-align: center;
+    font-size: 1.3rem;
+    color: $mw-muted;
+
+    b {
+        color: #fff;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.mw-manual__panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    padding: 1.6rem;
+    border: 1px solid $mw-line;
+    border-radius: 10px;
+    background: $mw-panel;
+}
+
+.mw-manual__panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1.2rem;
+    padding-bottom: 1.2rem;
+    border-bottom: 1px solid $mw-line;
+
+    h2 {
+        margin: 0;
+        font-size: 1.6rem;
+        font-weight: 700;
+    }
+
+    span {
+        font-size: 1.2rem;
+        color: $mw-muted;
+    }
+}
+
+.mw-manual__sides {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+    padding: 0.4rem;
+    border-radius: 999px;
+    background: $mw-field;
+}
+
+.mw-manual__side {
+    min-height: 4.4rem;
+    padding: 1rem;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: $mw-muted;
+    font-size: 1.4rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &--on {
+        background: #22262b;
+        color: $mw-accent;
+    }
+}
+
+.mw-manual__field {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 1rem 1.4rem;
+    border: 1px solid $mw-line;
+    border-radius: 8px;
+    background: $mw-field;
+
+    > span {
+        flex: 1;
+        font-size: 1.2rem;
+        color: $mw-muted;
+    }
+
+    input,
+    select {
+        width: 8rem;
+        border: none;
+        background: transparent;
+        color: #fff;
+        font-size: 1.5rem;
+        font-weight: 600;
+        text-align: right;
+        outline: none;
+
+        option {
+            background: $mw-panel;
+        }
+    }
+
+    i {
+        font-style: normal;
+        font-size: 1.2rem;
+        color: $mw-muted;
+    }
+}
+
+.mw-manual__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.2rem;
+    min-height: 4.4rem;
+    padding: 0.6rem 1.4rem;
+    border: 1px solid $mw-line;
+    border-radius: 8px;
+    background: $mw-field;
+    font-size: 1.3rem;
+    color: $mw-muted;
+
+    input {
+        width: 4rem;
+        height: 2.2rem;
+    }
+}
+
+.mw-manual__payout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.2rem;
+    padding-top: 0.8rem;
+
+    span {
+        display: block;
+        font-size: 1.2rem;
+        color: $mw-muted;
+    }
+
+    b {
+        font-size: 1.6rem;
+    }
+}
+
+.mw-manual__note {
+    margin: 0;
+    font-size: 1.15rem;
+    line-height: 1.5;
+    color: $mw-muted;
+}
+
+.mw-manual__error {
+    margin: 0;
+    padding: 0.8rem 1.2rem;
+    border-radius: 6px;
+    background: rgb(224 75 75 / 12%);
+    font-size: 1.25rem;
+    color: #ff9a9a;
+}
+
+.mw-manual__run {
+    min-height: 5.2rem;
+    border: none;
+    border-radius: 8px;
+    background: $mw-accent;
+    color: #04150d;
+    font-size: 1.7rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.06);
+    }
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+}

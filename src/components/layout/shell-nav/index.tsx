@@ -83,6 +83,11 @@ const TAB_DESTINATIONS: TTabDestination[] = [
 const ROUTE_DESTINATIONS: TRouteDestination[] = [
     {
         icon: <LabelPairedGrid2CaptionRegularIcon {...ICON_PROPS} />,
+        label: <Localize i18n_default_text='Manual' />,
+        path: '/manual',
+    },
+    {
+        icon: <LabelPairedGrid2CaptionRegularIcon {...ICON_PROPS} />,
         label: <Localize i18n_default_text='Bulk Trader' />,
         path: '/bulk-trader',
     },
