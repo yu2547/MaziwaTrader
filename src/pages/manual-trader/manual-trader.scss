@@ -1,15 +1,14 @@
+// The signal green is the one fixed colour here - it means "leading side" in
+// both themes and reads on either ground. Everything else is a theme token, so
+// the page is white by default and dark only when the app is.
 $mw-accent: #16c784;
-$mw-panel: #131518;
-$mw-field: #1b1e22;
-$mw-line: rgb(255 255 255 / 8%);
-$mw-muted: #8b949e;
 
 .mw-manual {
     display: flex;
     flex-direction: column;
     min-height: 100%;
-    background: #0b0c0e;
-    color: #e6edf3;
+    background: var(--general-main-1);
+    color: var(--text-prominent);
 }
 
 // Market and trade type, as two cards across the top.
@@ -18,7 +17,7 @@ $mw-muted: #8b949e;
     gap: 1.2rem;
     flex-wrap: wrap;
     padding: 1.6rem;
-    border-bottom: 1px solid $mw-line;
+    border-bottom: 1px solid var(--general-section-1);
 }
 
 .mw-manual__card {
@@ -28,40 +27,45 @@ $mw-muted: #8b949e;
     flex: 1 1 24rem;
     min-width: 0;
     padding: 1rem 1.4rem;
-    border: 1px solid $mw-line;
+    border: 1px solid var(--general-section-1);
     border-radius: 8px;
-    background: $mw-panel;
+    background: var(--general-section-1);
 
     > span {
         font-size: 1.2rem;
-        color: $mw-muted;
+        color: var(--text-less-prominent);
     }
 
     select {
         border: none;
         background: transparent;
-        color: #fff;
+        color: var(--text-prominent);
         font-size: 1.6rem;
         font-weight: 600;
         outline: none;
         cursor: pointer;
 
         option {
-            background: $mw-panel;
+            background: var(--general-main-1);
+            color: var(--text-prominent);
         }
     }
 }
 
-// Analysis on the left, the ticket on the right; one column on a phone.
+// Analysis fills what is left, the ticket sits beside it and scrolls on its
+// own - so the rings stay put rather than being pushed off the bottom by a
+// long panel, which is how the reference behaves.
 .mw-manual__body {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 1.6rem;
+    flex: 1;
+    min-height: 0;
     padding: 1.6rem;
 
     @media (width >= 900px) {
         grid-template-columns: minmax(0, 1fr) 34rem;
-        align-items: start;
+        align-items: stretch;
     }
 }
 
@@ -87,7 +91,7 @@ $mw-muted: #8b949e;
 
     span {
         font-size: 1.2rem;
-        color: $mw-muted;
+        color: var(--text-less-prominent);
     }
 
     b {
@@ -101,19 +105,30 @@ $mw-muted: #8b949e;
     align-items: center;
     gap: 0.8rem;
     font-size: 1.2rem;
-    color: $mw-muted;
+    color: var(--text-less-prominent);
 
     input {
         width: 6.4rem;
         padding: 0.6rem;
-        border: 1px solid $mw-line;
+        border: 1px solid var(--general-section-1);
         border-radius: 6px;
-        background: $mw-field;
-        color: #fff;
+        background: var(--general-section-1);
+        color: var(--text-prominent);
         font-size: 1.3rem;
         text-align: center;
         outline: none;
     }
+}
+
+// The reading is the middle of the page in the reference, so it takes the
+// space the panel does not and centres in it.
+.mw-manual__reading {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2.4rem;
+    min-height: 0;
 }
 
 .mw-manual__signal {
@@ -121,11 +136,13 @@ $mw-muted: #8b949e;
     align-items: center;
     gap: 1.6rem;
     flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
 
     > span {
         flex: 1 1 100%;
         font-size: 1.3rem;
-        color: $mw-muted;
+        color: var(--text-less-prominent);
     }
 
     strong {
@@ -136,15 +153,19 @@ $mw-muted: #8b949e;
     em {
         padding: 0.6rem 1.4rem;
         border-radius: 999px;
-        background: $mw-field;
+        background: var(--general-section-1);
         font-style: normal;
         font-size: 1.3rem;
-        color: $mw-muted;
+        color: var(--text-general);
+    }
+
+    &--strong em {
+        background: rgb(22 199 132 / 16%);
+        color: $mw-accent;
     }
 }
 
-// The outcome rings. Wrapping rather than shrinking, so three of them still
-// read at 375px.
+// Wrapping rather than shrinking, so three of them still read at 375px.
 .mw-manual__rings {
     display: flex;
     justify-content: center;
@@ -160,7 +181,7 @@ $mw-muted: #8b949e;
     gap: 0.2rem;
     width: 14rem;
     height: 14rem;
-    border: 3px solid rgb(255 255 255 / 10%);
+    border: 3px solid var(--general-section-1);
     border-radius: 50%;
 
     b {
@@ -176,12 +197,12 @@ $mw-muted: #8b949e;
     i {
         font-style: normal;
         font-size: 1.2rem;
-        color: $mw-muted;
+        color: var(--text-less-prominent);
     }
 
     &--lead {
         border-color: $mw-accent;
-        box-shadow: 0 0 2.4rem rgb(22 199 132 / 25%);
+        box-shadow: 0 0 2.4rem rgb(22 199 132 / 22%);
     }
 
     @media (width <= 420px) {
@@ -204,10 +225,10 @@ $mw-muted: #8b949e;
     margin: 0;
     text-align: center;
     font-size: 1.3rem;
-    color: $mw-muted;
+    color: var(--text-less-prominent);
 
     b {
-        color: #fff;
+        color: var(--text-prominent);
         font-variant-numeric: tabular-nums;
     }
 }
@@ -216,10 +237,16 @@ $mw-muted: #8b949e;
     display: flex;
     flex-direction: column;
     gap: 1.2rem;
+    min-height: 0;
     padding: 1.6rem;
-    border: 1px solid $mw-line;
+    border: 1px solid var(--general-section-1);
     border-radius: 10px;
-    background: $mw-panel;
+    background: var(--general-main-1);
+
+    // Its own scrollbar, so a tall ticket never pushes the reading off screen.
+    @media (width >= 900px) {
+        overflow-y: auto;
+    }
 }
 
 .mw-manual__panel-head {
@@ -228,7 +255,7 @@ $mw-muted: #8b949e;
     justify-content: space-between;
     gap: 1.2rem;
     padding-bottom: 1.2rem;
-    border-bottom: 1px solid $mw-line;
+    border-bottom: 1px solid var(--general-section-1);
 
     h2 {
         margin: 0;
@@ -238,7 +265,7 @@ $mw-muted: #8b949e;
 
     span {
         font-size: 1.2rem;
-        color: $mw-muted;
+        color: var(--text-less-prominent);
     }
 }
 
@@ -248,7 +275,7 @@ $mw-muted: #8b949e;
     gap: 0.4rem;
     padding: 0.4rem;
     border-radius: 999px;
-    background: $mw-field;
+    background: var(--general-section-1);
 }
 
 .mw-manual__side {
@@ -257,13 +284,13 @@ $mw-muted: #8b949e;
     border: none;
     border-radius: 999px;
     background: transparent;
-    color: $mw-muted;
+    color: var(--text-general);
     font-size: 1.4rem;
     font-weight: 700;
     cursor: pointer;
 
     &--on {
-        background: #22262b;
+        background: var(--general-main-1);
         color: $mw-accent;
     }
 }
@@ -273,14 +300,14 @@ $mw-muted: #8b949e;
     align-items: center;
     gap: 0.8rem;
     padding: 1rem 1.4rem;
-    border: 1px solid $mw-line;
+    border: 1px solid var(--general-section-1);
     border-radius: 8px;
-    background: $mw-field;
+    background: var(--general-section-1);
 
     > span {
         flex: 1;
         font-size: 1.2rem;
-        color: $mw-muted;
+        color: var(--text-less-prominent);
     }
 
     input,
@@ -288,21 +315,22 @@ $mw-muted: #8b949e;
         width: 8rem;
         border: none;
         background: transparent;
-        color: #fff;
+        color: var(--text-prominent);
         font-size: 1.5rem;
         font-weight: 600;
         text-align: right;
         outline: none;
 
         option {
-            background: $mw-panel;
+            background: var(--general-main-1);
+            color: var(--text-prominent);
         }
     }
 
     i {
         font-style: normal;
         font-size: 1.2rem;
-        color: $mw-muted;
+        color: var(--text-less-prominent);
     }
 }
 
@@ -313,11 +341,11 @@ $mw-muted: #8b949e;
     gap: 1.2rem;
     min-height: 4.4rem;
     padding: 0.6rem 1.4rem;
-    border: 1px solid $mw-line;
+    border: 1px solid var(--general-section-1);
     border-radius: 8px;
-    background: $mw-field;
+    background: var(--general-section-1);
     font-size: 1.3rem;
-    color: $mw-muted;
+    color: var(--text-general);
 
     input {
         width: 4rem;
@@ -334,7 +362,7 @@ $mw-muted: #8b949e;
     span {
         display: block;
         font-size: 1.2rem;
-        color: $mw-muted;
+        color: var(--text-less-prominent);
     }
 
     b {
@@ -346,7 +374,7 @@ $mw-muted: #8b949e;
     margin: 0;
     font-size: 1.15rem;
     line-height: 1.5;
-    color: $mw-muted;
+    color: var(--text-less-prominent);
 }
 
 .mw-manual__error {
@@ -355,7 +383,7 @@ $mw-muted: #8b949e;
     border-radius: 6px;
     background: rgb(224 75 75 / 12%);
     font-size: 1.25rem;
-    color: #ff9a9a;
+    color: #e04b4b;
 }
 
 .mw-manual__run {

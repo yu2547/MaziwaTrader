@@ -14,6 +14,13 @@ const DEFAULT_SAMPLE = 100;
 const MIN_SAMPLE = 10;
 
 /**
+ * Percentage points of lead at which the edge pill lights up. A display
+ * threshold and nothing more - it makes a wide gap easy to spot, and says
+ * nothing about whether the next tick will follow it.
+ */
+const STRONG_EDGE = 10;
+
+/**
  * Volatility indices only. The synthetic list also carries Boom, Crash, Jump,
  * Step and Range Break; several of those quote to a precision that leaves the
  * last digit barely moving, which makes a digit reading meaningless on them.
@@ -243,29 +250,33 @@ const ManualTrader = observer(() => {
                         </label>
                     </header>
 
-                    <div className='mw-manual__signal'>
-                        <span>{localize('Current signal')}</span>
-                        <strong>{leader ? leader.label : '--'}</strong>
-                        <em>{localize('{{edge}}% edge', { edge: edge.toFixed(1) })}</em>
-                    </div>
+                    <div className='mw-manual__reading'>
+                        <div className={`mw-manual__signal${edge >= STRONG_EDGE ? ' mw-manual__signal--strong' : ''}`}>
+                            <span>{localize('Current signal')}</span>
+                            <strong>{leader ? leader.label : '--'}</strong>
+                            <em>{localize('{{edge}}% edge', { edge: edge.toFixed(1) })}</em>
+                        </div>
 
-                    <div className='mw-manual__rings'>
-                        {outcomes.map(outcome => (
-                            <div
-                                key={outcome.label}
-                                className={`mw-manual__ring${outcome === leader ? ' mw-manual__ring--lead' : ''}`}
-                            >
-                                <b>{outcome.pct.toFixed(0)}%</b>
-                                <span>{outcome.label}</span>
-                                <i>{localize('{{count}} ticks', { count: outcome.count })}</i>
-                            </div>
-                        ))}
-                        {!outcomes.length && <p className='mw-manual__empty'>{localize('Waiting for tick data...')}</p>}
-                    </div>
+                        <div className='mw-manual__rings'>
+                            {outcomes.map(outcome => (
+                                <div
+                                    key={outcome.label}
+                                    className={`mw-manual__ring${outcome === leader ? ' mw-manual__ring--lead' : ''}`}
+                                >
+                                    <b>{outcome.pct.toFixed(0)}%</b>
+                                    <span>{outcome.label}</span>
+                                    <i>{localize('{{count}} ticks', { count: outcome.count })}</i>
+                                </div>
+                            ))}
+                            {!outcomes.length && (
+                                <p className='mw-manual__empty'>{localize('Waiting for tick data...')}</p>
+                            )}
+                        </div>
 
-                    <p className='mw-manual__latest'>
-                        {localize('Latest tick')} <b>{latest === null ? '--' : latest.toFixed(decimals)}</b>
-                    </p>
+                        <p className='mw-manual__latest'>
+                            {localize('Latest tick')} <b>{latest === null ? '--' : latest.toFixed(decimals)}</b>
+                        </p>
+                    </div>
                 </section>
 
                 <aside className='mw-manual__panel'>
