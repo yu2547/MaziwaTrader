@@ -7,7 +7,17 @@ import { TActiveSymbol, TTick } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
 import { evaluateWindow, MIN_ENTROPY, MIN_SAMPLE, MIN_SEPARATION_Z, TSide, TStrategy } from './signal-quality';
 
-const DEFAULT_SYMBOL = 'R_10';
+/**
+ * Volatility indices only - R_10..R_100 and their 1s variants. The synthetic
+ * list also carries Boom, Crash, Jump, Step and Range Break, and those are not
+ * what this scanner is for: several of them quote to a precision that makes the
+ * last digit barely move, which the entropy guard then has to throw out one by
+ * one.
+ */
+const VOLATILITY_SYMBOL = /^(R_\d+|1HZ\d+V)$/;
+
+/** Nothing is selected until the trader picks a market, so nothing is analysed. */
+const NO_SYMBOL = '';
 const SAMPLE_SIZE = 1000;
 const HISTORY_LIMIT = 20;
 
@@ -106,7 +116,7 @@ const Signals = observer(() => {
     const now = useUtcClock();
 
     const [symbols, setSymbols] = useState<TActiveSymbol[]>([]);
-    const [symbol, setSymbol] = useState(DEFAULT_SYMBOL);
+    const [symbol, setSymbol] = useState(NO_SYMBOL);
     const [strategy, setStrategy] = useState<TStrategy>('matches_differs');
     // The window and the market it was read from, in one piece of state. Held
     // apart they can disagree for a render: changing market updates `symbol`
@@ -146,8 +156,7 @@ const Signals = observer(() => {
         if (!isConnected) return;
         feed.getActiveSymbols()
             .then(list => {
-                const synthetics = list.filter(item => item.market === 'synthetic_index');
-                setSymbols(synthetics.length ? synthetics : list);
+                setSymbols(list.filter(item => VOLATILITY_SYMBOL.test(item.underlying_symbol)));
             })
             .catch(() => {
                 // Non-fatal: the selector stays on the default market.
@@ -158,7 +167,7 @@ const Signals = observer(() => {
     // shape the digit circles use, on the same feed. No second socket.
     const request_id = useRef(0);
     useEffect(() => {
-        if (!isConnected) return undefined;
+        if (!isConnected || !symbol) return undefined;
         const id = ++request_id.current;
         setSample({ digits: [], symbol });
         setLastTick(null);
@@ -565,7 +574,7 @@ const Signals = observer(() => {
                     <label className='mw-signals__field'>
                         <span>{localize('Select Market')}</span>
                         <select value={symbol} onChange={event => setSymbol(event.target.value)}>
-                            {symbols.length === 0 && <option value={symbol}>{symbol}</option>}
+                            <option value={NO_SYMBOL}>{localize('-- Select Market --')}</option>
                             {symbols.map(item => (
                                 <option key={item.underlying_symbol} value={item.underlying_symbol}>
                                     {item.underlying_symbol_name}
@@ -599,21 +608,32 @@ const Signals = observer(() => {
                     {scan_phase === 'scanning' ? localize('Analysing...') : localize('Analyse')}
                 </button>
 
-                <div className={`mw-signals__status mw-signals__status--${status}`} role='status' aria-live='polite'>
-                    <span className='mw-signals__status-label'>{localize(STATUS_LABEL[status])}</span>
-                    {(status === 'scanning' || status === 'no_signal') && (
-                        <span className='mw-signals__dots' aria-hidden='true'>
-                            <i />
-                            <i />
-                            <i />
-                        </span>
-                    )}
-                    {status === 'good_market' && detected_at && (
-                        <span className='mw-signals__status-time'>
-                            {localize('Detected {{time}} GMT', { time: detected_at })}
-                        </span>
-                    )}
-                </div>
+                {/* Nothing below appears until a market is chosen. With no
+                    selection there is no window, so a status would be a verdict
+                    on nothing - and NO SIGNAL sitting under an empty readout
+                    reads as a finding rather than as "you have not picked a
+                    market yet". */}
+                {!!symbol && (
+                    <div
+                        className={`mw-signals__status mw-signals__status--${status}`}
+                        role='status'
+                        aria-live='polite'
+                    >
+                        <span className='mw-signals__status-label'>{localize(STATUS_LABEL[status])}</span>
+                        {(status === 'scanning' || status === 'no_signal') && (
+                            <span className='mw-signals__dots' aria-hidden='true'>
+                                <i />
+                                <i />
+                                <i />
+                            </span>
+                        )}
+                        {status === 'good_market' && detected_at && (
+                            <span className='mw-signals__status-time'>
+                                {localize('Detected {{time}} GMT', { time: detected_at })}
+                            </span>
+                        )}
+                    </div>
+                )}
 
                 {status === 'error' && (
                     <div className='mw-signals__error'>
@@ -630,23 +650,27 @@ const Signals = observer(() => {
 
                 {/* The tick and the digit moved up into the headline readout, so
                     this row carries only what the scanner works out from them. */}
-                <div className='mw-signals__grid'>
-                    <div className='mw-signals__cell'>
-                        {/* Deliberately not "confidence": this is how many
+                {!!symbol && (
+                    <div className='mw-signals__grid'>
+                        <div className='mw-signals__cell'>
+                            {/* Deliberately not "confidence": this is how many
                             standard errors the window sits from uniform, which
                             is a description of the sample, not a probability of
                             anything happening next. The points figure it is
                             derived from stays visible on the rows below. */}
-                        <span>{localize('Signal deviation')}</span>
-                        <b>{leader && status !== 'error' ? localize('{{z}} SE', { z: leader.z.toFixed(2) }) : '--'}</b>
+                            <span>{localize('Signal deviation')}</span>
+                            <b>
+                                {leader && status !== 'error' ? localize('{{z}} SE', { z: leader.z.toFixed(2) }) : '--'}
+                            </b>
+                        </div>
+                        <div className='mw-signals__cell'>
+                            <span>{localize('Sample')}</span>
+                            <b>
+                                {digits.length}/{SAMPLE_SIZE}
+                            </b>
+                        </div>
                     </div>
-                    <div className='mw-signals__cell'>
-                        <span>{localize('Sample')}</span>
-                        <b>
-                            {digits.length}/{SAMPLE_SIZE}
-                        </b>
-                    </div>
-                </div>
+                )}
 
                 {/* Nothing from the last good window survives on screen while the
                     feed is down: a reading that is no longer being updated is not
@@ -671,20 +695,22 @@ const Signals = observer(() => {
                     </ul>
                 )}
 
-                <div className='mw-signals__conditions'>
-                    <h3>{localize('Conditions')}</h3>
-                    <ul>
-                        {conditions.map(condition => (
-                            <li
-                                key={condition.label}
-                                className={condition.pass ? 'mw-signals__cond--pass' : 'mw-signals__cond--fail'}
-                            >
-                                <span aria-hidden='true'>{condition.pass ? '✓' : '×'}</span>
-                                {condition.label}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+                {!!symbol && (
+                    <div className='mw-signals__conditions'>
+                        <h3>{localize('Conditions')}</h3>
+                        <ul>
+                            {conditions.map(condition => (
+                                <li
+                                    key={condition.label}
+                                    className={condition.pass ? 'mw-signals__cond--pass' : 'mw-signals__cond--fail'}
+                                >
+                                    <span aria-hidden='true'>{condition.pass ? '✓' : '×'}</span>
+                                    {condition.label}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
 
                 <div className='mw-signals__foot'>
                     <span>{localize('Last scan {{time}} GMT', { time: gmt(now) })}</span>
