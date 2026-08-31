@@ -26,7 +26,15 @@ const ALERT_SOUND = 'assets/media/announcement.mp3';
 const SOUND_KEY = 'mw_signals_sound';
 const COUNTDOWN_FROM = 5;
 
+/** Gap between sweeps while the dashboard waits for a market to qualify. */
+const RESCAN_SECONDS = 5;
+
+/** Sweep summaries kept on screen; older ones fall off so the log stays readable. */
+const LOG_LIMIT = 24;
+
 type TStatus = 'error' | 'waiting' | 'scanning' | 'no_signal' | 'good_market';
+
+type TLine = { text: string; tone: 'ok' | 'warn' | 'head' | 'dim' };
 
 /** One market's reading during an all-market scan. */
 type TScanEntry = {
@@ -382,18 +390,22 @@ const Signals = observer(() => {
     // to answer, which is why the log has an error tone at all.
     // ---------------------------------------------------------------------
     const [scan_phase, setScanPhase] = useState<'idle' | 'scanning' | 'done'>('idle');
-    const [scan_log, setScanLog] = useState<{ text: string; tone: 'ok' | 'warn' | 'head' | 'dim' }[]>([]);
+    const [scan_log, setScanLog] = useState<TLine[]>([]);
     const [scan_result, setScanResult] = useState<TScanResult | null>(null);
     const [countdown, setCountdown] = useState<number | null>(null);
     const scan_token = useRef(0);
+    const log_ref = useRef<TLine[]>([]);
 
-    const pushScan = (text: string, tone: 'ok' | 'warn' | 'head' | 'dim' = 'ok') =>
-        setScanLog(prev => [...prev, { text, tone }]);
+    const setLog = (lines: TLine[]) => {
+        log_ref.current = lines;
+        setScanLog(lines);
+    };
+    const addLine = (line: TLine) => setLog([...log_ref.current, line]);
 
     const closeScan = () => {
         scan_token.current += 1;
         setScanPhase('idle');
-        setScanLog([]);
+        setLog([]);
         setScanResult(null);
         setCountdown(null);
     };
@@ -403,138 +415,173 @@ const Signals = observer(() => {
         setScanPhase('scanning');
         setScanResult(null);
         setCountdown(null);
-        setScanLog([
+        setLog([
             {
-                text: localize('Analysis Dashboard - {{strategy}} on {{symbol}}', {
-                    strategy: strategy_label,
-                    symbol,
-                }),
+                text: localize('Analysis Dashboard - {{strategy}}', { strategy: strategy_label }),
                 tone: 'head',
             },
         ]);
         playAlert();
 
-        const list = symbols.length ? symbols : [];
-        if (!list.length) {
-            pushScan(localize('No market list available. Check the connection and try again.'), 'warn');
-            setScanPhase('done');
-            return;
-        }
+        let sweep = 0;
 
-        pushScan(
-            localize('Analysing {{strategy}} across {{count}} markets...', {
-                count: list.length,
-                strategy: strategy_label,
-            })
-        );
-        pushScan(localize('Retrieving market data...'));
-
-        const scored: TScanEntry[] = [];
-        // Small parallel batches: one at a time is slow enough to feel broken,
-        // and all at once is what makes the API start refusing.
-        const BATCH = 4;
-        for (let i = 0; i < list.length; i += BATCH) {
+        // Sweeps until something genuinely qualifies. The bar is untouched -
+        // this waits for a real signal to occur rather than lowering what counts
+        // as one, which is the difference between a monitor and a scanner that
+        // tells you what you want to hear. It stops when the trader closes the
+        // dashboard or starts another scan; scan_token is what ends the loop.
+        for (;;) {
             if (token !== scan_token.current) return;
-            const batch = list.slice(i, i + BATCH);
-            // eslint-disable-next-line no-await-in-loop
-            const settled = await Promise.all(
-                batch.map(async item => {
-                    try {
-                        const { pip_size, prices } = await feed.getTickHistory(item.underlying_symbol, SAMPLE_SIZE);
-                        const places = toDecimalPlaces(pip_size) ?? 2;
-                        const window_digits = prices.map(price => getLastDigit(price, places)).reverse();
-                        const evaluation_for = evaluateWindow({
-                            digits: window_digits,
-                            has_feed: true,
-                            sides: makeSides(window_digits, strategy),
-                            strategy,
-                        });
-                        return { digits: window_digits, evaluation: evaluation_for, item, ok: true as const };
-                    } catch {
-                        return { item, ok: false as const };
-                    }
-                })
-            );
-            if (token !== scan_token.current) return;
+            sweep += 1;
 
-            settled.forEach(entry => {
-                if (!entry.ok) {
-                    pushScan(
-                        localize('Error: no data from {{market}}...', { market: entry.item.underlying_symbol_name }),
-                        'warn'
-                    );
-                    return;
-                }
-                const { evaluation: market_evaluation, item } = entry;
-                const lead = market_evaluation.leader;
-                scored.push({
-                    digits: entry.digits,
-                    evaluation: market_evaluation,
-                    name: item.underlying_symbol_name,
-                    symbol: item.underlying_symbol,
+            const list = symbols;
+            if (!list.length) {
+                addLine({
+                    text: localize('No market list available. Check the connection and try again.'),
+                    tone: 'warn',
                 });
-                pushScan(
-                    localize('{{market}}: {{side}} {{z}} SE', {
-                        market: item.underlying_symbol_name,
-                        side: lead ? lead.label : localize('no reading'),
-                        z: lead ? lead.z.toFixed(2) : '--',
-                    }),
-                    'dim'
-                );
+                setScanPhase('done');
+                return;
+            }
+
+            // Where this sweep's per-market lines begin. They are collapsed to a
+            // single summary once the sweep ends, so an hour of sweeping does
+            // not leave a log nobody can read.
+            const sweep_start = log_ref.current.length;
+            addLine({
+                text: localize('Sweep {{sweep}} - reading {{count}} markets...', { count: list.length, sweep }),
+                tone: 'ok',
             });
-            // eslint-disable-next-line no-await-in-loop
-            await new Promise(resolve => setTimeout(resolve, 120));
-        }
 
-        if (token !== scan_token.current) return;
+            const scored: TScanEntry[] = [];
+            const BATCH = 4;
+            for (let i = 0; i < list.length; i += BATCH) {
+                if (token !== scan_token.current) return;
+                const batch = list.slice(i, i + BATCH);
+                // eslint-disable-next-line no-await-in-loop
+                const settled = await Promise.all(
+                    batch.map(async item => {
+                        try {
+                            const { pip_size, prices } = await feed.getTickHistory(item.underlying_symbol, SAMPLE_SIZE);
+                            const places = toDecimalPlaces(pip_size) ?? 2;
+                            const window_digits = prices.map(price => getLastDigit(price, places)).reverse();
+                            return {
+                                digits: window_digits,
+                                evaluation: evaluateWindow({
+                                    digits: window_digits,
+                                    has_feed: true,
+                                    sides: makeSides(window_digits, strategy),
+                                    strategy,
+                                }),
+                                item,
+                                ok: true as const,
+                            };
+                        } catch {
+                            return { item, ok: false as const };
+                        }
+                    })
+                );
+                if (token !== scan_token.current) return;
 
-        // Only markets that clear every gate are eligible; among those, the
-        // strongest evidence wins. If none qualify the scan says so rather than
-        // promoting the least bad one.
-        const eligible = scored.filter(entry => entry.evaluation.qualifies);
-        const ranked = [...eligible].sort((a, b) => (b.evaluation.leader?.z ?? 0) - (a.evaluation.leader?.z ?? 0));
-        const best = ranked[0] ?? null;
+                settled.forEach(entry => {
+                    if (!entry.ok) {
+                        addLine({
+                            text: localize('Error: no data from {{market}}...', {
+                                market: entry.item.underlying_symbol_name,
+                            }),
+                            tone: 'warn',
+                        });
+                        return;
+                    }
+                    const lead = entry.evaluation.leader;
+                    scored.push({
+                        digits: entry.digits,
+                        evaluation: entry.evaluation,
+                        name: entry.item.underlying_symbol_name,
+                        symbol: entry.item.underlying_symbol,
+                    });
+                    addLine({
+                        text: localize('{{market}}: {{side}} {{z}} SE', {
+                            market: entry.item.underlying_symbol_name,
+                            side: lead ? lead.label : localize('no reading'),
+                            z: lead ? lead.z.toFixed(2) : '--',
+                        }),
+                        tone: 'dim',
+                    });
+                });
+                // eslint-disable-next-line no-await-in-loop
+                await new Promise(resolve => setTimeout(resolve, 120));
+            }
 
-        pushScan(localize('Analysis complete.'), 'head');
-        pushScan(
-            localize('{{scanned}} markets read, {{eligible}} met every condition.', {
-                eligible: eligible.length,
-                scanned: scored.length,
-            })
-        );
+            if (token !== scan_token.current) return;
 
-        if (!best || !best.evaluation.leader) {
+            const eligible = scored.filter(entry => entry.evaluation.qualifies);
+            const best = [...eligible].sort((a, b) => (b.evaluation.leader?.z ?? 0) - (a.evaluation.leader?.z ?? 0))[0];
+
+            if (best?.evaluation.leader) {
+                const lead = best.evaluation.leader;
+                setLog([
+                    ...log_ref.current.slice(0, sweep_start),
+                    {
+                        text: localize('Sweep {{sweep}} - {{count}} markets, {{eligible}} qualified.', {
+                            count: scored.length,
+                            eligible: eligible.length,
+                            sweep,
+                        }),
+                        tone: 'ok',
+                    },
+                    { text: localize('Analysis complete.'), tone: 'head' },
+                ]);
+                setScanResult({
+                    digits: best.digits.slice(0, 8),
+                    name: best.name,
+                    pct: lead.pct,
+                    sample: best.digits.length,
+                    side: lead.label,
+                    symbol: best.symbol,
+                    z: lead.z,
+                });
+                playAlert();
+                setScanPhase('done');
+                setCountdown(COUNTDOWN_FROM);
+                return;
+            }
+
+            // Nothing qualified. Collapse the sweep to one line, say how close
+            // the nearest came, and go round again.
             const closest = [...scored].sort(
                 (a, b) => (b.evaluation.leader?.z ?? 0) - (a.evaluation.leader?.z ?? 0)
             )[0];
-            pushScan(localize('No market currently meets the entry conditions.'), 'warn');
+            const summary: TLine[] = [
+                {
+                    text: localize('Sweep {{sweep}} - {{count}} markets, 0 qualified.', {
+                        count: scored.length,
+                        sweep,
+                    }),
+                    tone: 'ok',
+                },
+            ];
             if (closest?.evaluation.leader) {
-                pushScan(
-                    localize('Closest was {{market}} at {{z}} SE, against the {{required}} SE required.', {
+                summary.push({
+                    text: localize('Closest: {{market}} at {{z}} SE against {{required}} SE required.', {
                         market: closest.name,
                         required: closest.evaluation.required_z.toFixed(2),
                         z: closest.evaluation.leader.z.toFixed(2),
                     }),
-                    'dim'
-                );
+                    tone: 'dim',
+                });
             }
-            setScanPhase('done');
-            return;
-        }
+            summary.push({
+                text: localize('Rescanning in {{seconds}}s...', { seconds: RESCAN_SECONDS }),
+                tone: 'dim',
+            });
+            // Only the last few sweeps are worth keeping on screen.
+            const kept = [...log_ref.current.slice(0, sweep_start), ...summary];
+            setLog(kept.length > LOG_LIMIT ? [kept[0], ...kept.slice(kept.length - LOG_LIMIT + 1)] : kept);
 
-        const lead = best.evaluation.leader;
-        setScanResult({
-            digits: best.digits.slice(0, 8),
-            name: best.name,
-            pct: lead.pct,
-            sample: best.digits.length,
-            side: lead.label,
-            symbol: best.symbol,
-            z: lead.z,
-        });
-        playAlert();
-        setScanPhase('done');
-        setCountdown(COUNTDOWN_FROM);
+            // eslint-disable-next-line no-await-in-loop
+            await new Promise(resolve => setTimeout(resolve, RESCAN_SECONDS * 1000));
+        }
     };
 
     useEffect(() => {
