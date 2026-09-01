@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api_base, LogTypes, observer as globalObserver } from '@/external/bot-skeleton';
 import { useStore } from '@/hooks/useStore';
+import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
 
 /**
  * Places real contracts on whatever connection api_base currently holds, for
@@ -48,7 +49,7 @@ const readError = (thrown: unknown): string | null => {
 const SETTLEMENT_GRACE_MS = 15000;
 
 const useManualTrade = () => {
-    const { run_panel } = useStore() ?? {};
+    const { run_panel, oauth_session } = useStore() ?? {};
     const [is_placing, setIsPlacing] = useState(false);
     const [pending_count, setPendingCount] = useState(0);
     const [error_message, setErrorMessage] = useState<string | null>(null);
@@ -148,6 +149,44 @@ const useManualTrade = () => {
             pending.clear();
         };
     }, [settle, broadcast]);
+
+    /**
+     * Brings the trading connection up before a click is refused, and returns
+     * the reason it still cannot trade - or null when it can.
+     *
+     * An OAuth session can be fully logged in - balance on screen, account in
+     * the header - while api_base is still holding the anonymous socket,
+     * because the OTP transport is opened lazily. The bot's Run button already
+     * recovers from exactly that (run-panel-store.ts onRunButtonClick); without
+     * the same recovery here a click died on `is_authorized === false` and told
+     * somebody who was already logged in to log in.
+     *
+     * It also re-points the socket when that socket is bound to a different
+     * account than the header is showing. The OTP is issued for one account at
+     * socket-open, so "switch account" genuinely means reconnecting, and it
+     * must not happen in the same breath as a buy - the proposal would price
+     * against the account on its way out. Same call the Run button makes:
+     * switch, say so, and let the next click trade.
+     */
+    const prepareConnection = useCallback(async (): Promise<string | null> => {
+        if (!api_base.api || !api_base.is_authorized) {
+            if (!getStoredAccessToken()) return 'Log in to place trades.';
+            const connected = await api_base.initOtpConnection();
+            if (!connected) {
+                return `Could not open a trading connection for your account. ${api_base.otp_error ?? ''}`.trim();
+            }
+        }
+
+        const selected_account_id = oauth_session?.selected_account_id;
+        if (api_base.is_otp_transport && selected_account_id && api_base.account_id !== selected_account_id) {
+            const switched = await api_base.switchOtpAccount(selected_account_id);
+            return switched
+                ? 'Reconnected to the account in the header. Press again to trade on it.'
+                : 'The connection is on a different account than the header shows.';
+        }
+
+        return null;
+    }, [oauth_session]);
 
     // Places one contract. Deliberately does not touch `is_placing` - a batch
     // fires several of these at once, and each one clearing the flag as it
@@ -249,13 +288,22 @@ const useManualTrade = () => {
             const attempts = Math.max(1, count);
             setIsPlacing(true);
             try {
+                // Once per click, not once per contract: a batch of 20 against
+                // a sleeping socket would otherwise open 20 connections.
+                const blocked = await prepareConnection();
+                if (blocked) {
+                    if (is_mounted.current) setErrorMessage(blocked);
+                    globalObserver.emit('ui.log.error', blocked);
+                    return 0;
+                }
+                setErrorMessage(null);
                 const results = await Promise.all(Array.from({ length: attempts }, () => placeTrade(params)));
                 return results.filter(Boolean).length;
             } finally {
                 if (is_mounted.current) setIsPlacing(false);
             }
         },
-        [placeTrade]
+        [placeTrade, prepareConnection]
     );
 
     return { placeTrade, placeTrades, is_placing, pending_count, error_message };

@@ -13,6 +13,11 @@ const MAX_TICK_HISTORY = 1000;
 const DEFAULT_SAMPLE = 100;
 const MIN_SAMPLE = 10;
 
+// Deriv prices tick contracts over 1 to 10 ticks; asking for more comes back
+// as a rejected proposal, so the stepper stops where the API does.
+const MIN_TICKS = 1;
+const MAX_TICKS = 10;
+
 /**
  * Percentage points of lead at which the edge pill lights up. A display
  * threshold and nothing more - it makes a wide gap easy to spot, and says
@@ -68,6 +73,10 @@ const ManualTrader = observer(() => {
     const [stake, setStake] = useState(1);
     const [prediction, setPrediction] = useState(5);
     const [allow_equals, setAllowEquals] = useState(false);
+    // What the last click actually did. The contract itself is recorded in the
+    // app's Transactions and Journal panel like any other; this is only so the
+    // button the trader just pressed answers for itself.
+    const [placed, setPlaced] = useState<string | null>(null);
 
     const is_logged_in = Boolean(oauth_session?.is_authenticated || client?.is_logged_in);
     const currency = oauth_session?.currency || (is_logged_in && (client?.currency as string)) || 'USD';
@@ -183,18 +192,34 @@ const ManualTrader = observer(() => {
     const latest = window_prices[window_prices.length - 1] ?? null;
     const sample_label = trade_type === 'Rise/Fall' ? Math.max(0, window_prices.length - 1) : window_prices.length;
 
-    const run = () => {
+    /**
+     * Buys one contract on the side that is selected. Nothing on this page
+     * fires it - it runs on this click and no other.
+     *
+     * Goes through placeTrades() rather than placeTrade() for a batch of one:
+     * that is the path that brings the trading connection up first and owns
+     * the placing flag, so the button disables itself while the buy is in
+     * flight instead of accepting a second click on top of the first.
+     */
+    const run = async () => {
         // Allow equals is Deriv's rise-or-equal pair: a tick landing exactly on
         // the entry spot wins instead of losing. Only Rise/Fall has them.
         const equals_type = side === 'left' ? 'CALLE' : 'PUTE';
         const contract_type = trade_type === 'Rise/Fall' && allow_equals ? equals_type : config[side];
-        trade.placeTrade({
-            barrier: config.barrier ? prediction : undefined,
-            contract_type,
-            duration,
-            stake,
-            symbol,
-        });
+        setPlaced(null);
+        const opened = await trade.placeTrades(
+            {
+                barrier: config.barrier ? prediction : undefined,
+                contract_type,
+                duration,
+                stake,
+                symbol,
+            },
+            1
+        );
+        // A refusal already reports itself through trade.error_message, so
+        // silence here means the reason is on screen already.
+        if (opened) setPlaced(localize('Contract bought. It is in your Transactions panel.'));
     };
 
     return (
@@ -302,17 +327,46 @@ const ManualTrader = observer(() => {
                         </button>
                     </div>
 
-                    <label className='mw-manual__field'>
+                    {/* A div rather than a label: the minus and plus are real
+                        buttons, and a label would forward their clicks to the
+                        input as well. */}
+                    <div className='mw-manual__field'>
                         <span>{localize('Duration')}</span>
-                        <input
-                            type='number'
-                            min={1}
-                            max={10}
-                            value={duration}
-                            onChange={event => setDuration(Math.max(1, Math.min(10, Number(event.target.value) || 1)))}
-                        />
+                        <div className='mw-manual__stepper'>
+                            <button
+                                type='button'
+                                onClick={() => setDuration(current => Math.max(MIN_TICKS, current - 1))}
+                                disabled={duration <= MIN_TICKS}
+                                aria-label={localize('One tick fewer')}
+                            >
+                                &minus;
+                            </button>
+                            <input
+                                type='number'
+                                min={MIN_TICKS}
+                                max={MAX_TICKS}
+                                value={duration}
+                                aria-label={localize('Duration in ticks')}
+                                onChange={event =>
+                                    setDuration(
+                                        Math.max(
+                                            MIN_TICKS,
+                                            Math.min(MAX_TICKS, Number(event.target.value) || MIN_TICKS)
+                                        )
+                                    )
+                                }
+                            />
+                            <button
+                                type='button'
+                                onClick={() => setDuration(current => Math.min(MAX_TICKS, current + 1))}
+                                disabled={duration >= MAX_TICKS}
+                                aria-label={localize('One tick more')}
+                            >
+                                +
+                            </button>
+                        </div>
                         <i>{localize('ticks')}</i>
-                    </label>
+                    </div>
 
                     <label className='mw-manual__field'>
                         <span>{localize('Stake')}</span>
@@ -369,6 +423,12 @@ const ManualTrader = observer(() => {
                     </p>
 
                     {trade.error_message && <p className='mw-manual__error'>{trade.error_message}</p>}
+                    {placed && !trade.error_message && <p className='mw-manual__ok'>{placed}</p>}
+                    {trade.pending_count > 0 && (
+                        <p className='mw-manual__note'>
+                            {localize('{{count}} contract still running.', { count: trade.pending_count })}
+                        </p>
+                    )}
 
                     <button
                         type='button'
@@ -376,7 +436,7 @@ const ManualTrader = observer(() => {
                         onClick={run}
                         disabled={!is_logged_in || trade.is_placing}
                     >
-                        {trade.is_placing ? localize('Placing...') : localize('Run')}
+                        {trade.is_placing ? localize('Buying...') : localize('Run')}
                     </button>
 
                     {!is_logged_in && (
