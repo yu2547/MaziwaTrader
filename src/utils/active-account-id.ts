@@ -23,8 +23,20 @@ import { api_base } from '@/external/bot-skeleton/services/api/api-base';
  * already keying on. Classic sessions keep returning client.loginid exactly
  * as before - the fallback is only reached when that is empty.
  */
+/**
+ * The account the live connection actually authorised against. Both transports
+ * populate it - classic authorize() and initOtpConnection() both write it - so
+ * it is the one field that describes the session rather than a store that may
+ * or may not have been filled in.
+ */
+const authorisedAccount = () =>
+    (api_base?.account_info ?? undefined) as { currency?: string; loginid?: string } | undefined;
+
 export const getActiveAccountId = (client?: { loginid?: string | null } | null): string =>
-    (api_base?.is_otp_transport ? api_base?.otp_account?.account_id : '') || client?.loginid || '';
+    (api_base?.is_otp_transport ? api_base?.otp_account?.account_id : '') ||
+    authorisedAccount()?.loginid ||
+    client?.loginid ||
+    '';
 
 /**
  * Currency of that same account.
@@ -36,8 +48,19 @@ export const getActiveAccountId = (client?: { loginid?: string | null } | null):
  * numbers labelled with an account this session has nothing to do with.
  * Classic sessions never reach the fallback, so they are unaffected.
  */
-export const getActiveCurrency = (client?: { currency?: string | null } | null): string =>
-    (api_base?.is_otp_transport ? api_base?.otp_account?.currency : '') || client?.currency || '';
+export const getActiveCurrency = (client?: { currency?: string | null; loginid?: string | null } | null): string => {
+    if (api_base?.is_otp_transport && api_base?.otp_account?.currency) return api_base.otp_account.currency;
+
+    const account = authorisedAccount();
+    if (account?.currency) return account.currency;
+
+    // ClientStore last, and only when it is describing the account that is
+    // actually connected. An unguarded fallback is how a currency belonging to
+    // one account ends up labelling another one's money.
+    const active_id = getActiveAccountId(client);
+    if (active_id && client?.loginid && active_id !== client.loginid) return '';
+    return client?.currency ?? '';
+};
 
 /**
  * How that account should be named in a message - "Demo" for a virtual
@@ -56,6 +79,10 @@ export const getActiveAccountLabel = (
 
     const account_list = (client?.account_list ?? []) as Array<{ loginid?: string; is_virtual?: boolean }>;
     const current = account_list.find(account => account?.loginid === client?.loginid);
-    if (current) return current.is_virtual ? 'Demo' : (client?.currency ?? '');
-    return client?.currency ?? '';
+    if (current) return current.is_virtual ? 'Demo' : getActiveCurrency(client);
+    // Through getActiveCurrency, so a label can never name a currency this
+    // session has nothing to do with. Empty means "not known yet", and the
+    // journal deliberately drops a welcome line rather than print a guess -
+    // its account reaction writes one again once the account lands.
+    return getActiveCurrency(client);
 };

@@ -20,7 +20,18 @@ export default class ClientStore {
     loginid = '';
     account_list: TAuthData['account_list'] = [];
     balance = '0';
-    currency = 'AUD';
+    /**
+     * Empty until an account says otherwise. It used to be initialised to
+     * 'AUD', which is not a neutral placeholder: this store is only ever
+     * populated by the classic AuthWrapper flow, so on an OAuth/OTP session it
+     * kept that value for the whole session, and every consumer written as
+     * `something || client.currency` got 'AUD' instead of falling through.
+     * That is what labelled a USD account's transactions "10.00 AUD" and wrote
+     * "You are using your AUD account." into the journal under a USD balance.
+     * An unknown currency has to read as unknown, or callers cannot tell the
+     * difference between an answer and a guess.
+     */
+    currency = '';
     is_logged_in = false;
     account_status: GetAccountStatus | undefined;
     account_settings: GetSettings | undefined;
@@ -342,7 +353,9 @@ export default class ClientStore {
         this.is_logged_in = false;
         this.loginid = '';
         this.balance = '0';
-        this.currency = 'USD';
+        // Logged out is not "logged in with USD" any more than it was "logged
+        // in with AUD" - same reason as the field's initial value above.
+        this.currency = '';
 
         this.is_landing_company_loaded = false;
 

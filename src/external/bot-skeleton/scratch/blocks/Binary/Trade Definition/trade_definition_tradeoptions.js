@@ -652,20 +652,16 @@ window.Blockly.JavaScript.javascriptGenerator.forBlock.trade_definition_tradeopt
             window.Blockly.JavaScript.javascriptGenerator.ORDER_ATOMIC
         ) || '0';
     // The currency of the account that is actually connected wins.
-    //
-    // DBotStore.instance.client is the legacy ClientStore, which an OAuth/OTP
-    // session never populates - but it is not empty either: it holds a default
-    // of AUD. Reading it first therefore did not fall through, it returned
-    // 'AUD' for a USD account, and this value goes straight into the proposal
-    // and the buy. Deriv priced the contract in AUD, the account held none,
-    // and the purchase came back InsufficientBalance on an account with five
-    // figures in it - confirmed from a live run: `buy by proposal id
-    // price=100` followed by `BUY REJECTED InsufficientBalance`, with
-    // logged_in=false otp=true.
-    //
     // api_base.account_info is set from the authorised connection on both
     // transports, so it is the right source for either kind of session;
-    // ClientStore stays as the fallback.
+    // ClientStore stays as the fallback and is empty until an account fills it.
+    //
+    // Whatever this resolves to is only a starting value. Code is generated
+    // when the workspace loads a strategy, which happens routinely before the
+    // trading connection is up - so nothing readable here is guaranteed to
+    // describe the account the bot will eventually trade. TradeEngine.start()
+    // rebinds the currency to the connected account at run time, which is the
+    // one moment the answer is known.
     const currency = api_base.account_info?.currency || DBotStore.instance.client?.currency || 'USD';
     const duration_type = block.getFieldValue('DURATIONTYPE_LIST') || '0';
     const duration_value =

@@ -120,7 +120,20 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
 
         const validated_trade_options = this.validateTradeOptions(tradeOptions);
 
-        this.tradeOptions = { ...validated_trade_options, symbol: this.options.symbol };
+        // The currency arrives baked into the generated code, fixed at the
+        // moment the workspace generated it - which is routinely before the
+        // trading connection is up, since loading a strategy does not wait for
+        // one. Whatever it was resolved to then, the run has to price in the
+        // account it is actually connected to now, so it is rebound here
+        // rather than trusted. Nothing else about the trade options is touched:
+        // stake, duration, barriers and contract types are the strategy's.
+        const account_currency = api_base.account_info?.currency;
+
+        this.tradeOptions = {
+            ...validated_trade_options,
+            ...(account_currency ? { currency: account_currency } : {}),
+            symbol: this.options.symbol,
+        };
         this.store.dispatch(start());
         this.checkLimits(validated_trade_options);
 

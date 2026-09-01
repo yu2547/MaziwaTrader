@@ -15,6 +15,7 @@ import {
     unrecoverable_errors,
 } from '@/external/bot-skeleton';
 import { getSelectedTradeType } from '@/external/bot-skeleton/scratch/utils';
+import { getActiveCurrency } from '@/utils/active-account-id';
 import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
 // import { journalError, switch_account_notification } from '@/utils/bot-notifications';
 import GTM from '@/utils/gtm';
@@ -754,7 +755,12 @@ export default class RunPanelStore {
             transaction_ids: { buy: buy.transaction_id },
             buy_price: buy.buy_price,
             payout: buy.payout,
-            currency: this.core?.client?.currency,
+            // The account that is actually connected, not ClientStore on its
+            // own: this row is the first thing a trader sees after a purchase,
+            // and reading the store directly labelled a USD buy "10.00 AUD"
+            // while the summary above it - which already resolved the account
+            // properly - totalled the same money in USD.
+            currency: getActiveCurrency(this.core?.client),
             underlying,
             // Upper-cased because the trade-type icon and getContractTypeName
             // both key off the API's own casing (DIGITOVER, CALL), while the

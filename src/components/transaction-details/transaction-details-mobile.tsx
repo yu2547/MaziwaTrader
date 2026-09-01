@@ -2,6 +2,7 @@ import { observer } from 'mobx-react-lite';
 import { StatisticsSummary } from '@/components/run-panel/run-panel';
 import { transaction_elements } from '@/constants/transactions';
 import { useStore } from '@/hooks/useStore';
+import { getActiveCurrency } from '@/utils/active-account-id';
 import { localize } from '@deriv-com/translations';
 import MobileFullPageModal from '../shared_ui/mobile-full-page-modal';
 import MobileTransactionCards from './mobile-transaction-card';
@@ -47,7 +48,7 @@ const TransactionDetailsMobile = observer(() => {
             <div className='transaction-details-modal-mobile__card__footer'>
                 <StatisticsSummary
                     is_mobile
-                    currency={client?.currency}
+                    currency={getActiveCurrency(client)}
                     lost_contracts={statistics?.lost_contracts ?? 0}
                     number_of_runs={statistics?.number_of_runs ?? 0}
                     total_payout={statistics?.total_payout ?? 0}
