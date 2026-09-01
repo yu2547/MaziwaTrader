@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
+import { useStore } from '@/hooks/useStore';
 import { getLastDigit, toDecimalPlaces } from '@/utils/market-data/last-digit';
 import { TActiveSymbol } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
+import useManualTrade from '../bulk-trader/use-manual-trade';
 import './pro-ai.scss';
 
 /**
@@ -86,6 +88,13 @@ const STAGGER_MS = 200;
 /** How long a market waits before asking for its history a second time. */
 const RETRY_MS = 2000;
 
+/**
+ * Every entry is one tick. These strategies read a run that has just printed
+ * and enter on the tick after it, so a longer contract would be settling on
+ * ticks the pattern never described.
+ */
+const DURATION_TICKS = 1;
+
 type TRow = {
     decimals: number;
     digits: number[];
@@ -154,7 +163,9 @@ const entryLabel = (strategy: TStrategy, count: number) =>
  */
 const ProAiBot = observer(({ onBack, strategy }: { onBack: () => void; strategy: TStrategy }) => {
     const { feed, isConnected } = usePublicMarketFeed();
+    const { client, oauth_session } = useStore() ?? {};
     const { localize } = useTranslations();
+    const trade = useManualTrade();
 
     const [symbols, setSymbols] = useState<TActiveSymbol[]>([]);
     const [stake, setStake] = useState(1);
@@ -167,11 +178,82 @@ const ProAiBot = observer(({ onBack, strategy }: { onBack: () => void; strategy:
     const [matches, setMatches] = useState(0);
     const [errors, setErrors] = useState(0);
 
+    // Off every time this screen opens. Arming is a decision about real money,
+    // so it is never carried in from a previous visit or a previous strategy.
+    const [armed, setArmed] = useState(false);
+    const [sent, setSent] = useState(0);
+    const [last_entry, setLastEntry] = useState<string | null>(null);
+
     // The tick handlers are registered once per scan and have to see the digits
     // as they are now, not as they were when the subscription was taken.
     const rows_ref = useRef<Record<string, TRow>>({});
 
+    // Markets with an entry in flight. Without this, several ticks arriving in
+    // the same instant on one market could each fire their own batch.
+    const firing_ref = useRef<Set<string>>(new Set());
+
+    // Read by the tick handlers, which are registered once per scan and would
+    // otherwise hold whichever version of this function existed at that moment.
+    const fire_ref = useRef<(symbol: string, name: string) => void>(() => {});
+
+    // Same reason, and it is the one that matters: disarming has to take effect
+    // on the very next tick, not when the scan happens to be rebuilt.
+    const armed_ref = useRef(false);
+    armed_ref.current = armed;
+
+    const is_logged_in = Boolean(oauth_session?.is_authenticated || client?.is_logged_in);
+    const currency = oauth_session?.currency || (is_logged_in && (client?.currency as string)) || 'USD';
+    const risk = stake * trades;
+
     const group = MARKET_GROUPS.find(item => item.id === group_id) ?? MARKET_GROUPS[0];
+
+    /**
+     * Buys the strategy's contract on the market whose pattern just completed.
+     *
+     * Goes through the same placeTrades() the Manual and Bulk Trader pages use,
+     * so an entry from here opens the trading connection the same way, lands in
+     * the app's own Transactions and Journal, and is subject to the same account
+     * checks. There is no second trading engine behind this page.
+     *
+     * A market that is already buying is skipped rather than queued: the point
+     * of the batch is that every contract in it prices off the same moment, and
+     * a second batch on the same market is a different moment.
+     */
+    const fire = useCallback(
+        async (symbol: string, name: string) => {
+            if (firing_ref.current.has(symbol)) return;
+            firing_ref.current.add(symbol);
+            try {
+                const opened = await trade.placeTrades(
+                    {
+                        barrier: strategy.barrier,
+                        contract_type: strategy.contract_type,
+                        duration: DURATION_TICKS,
+                        stake,
+                        symbol,
+                    },
+                    trades
+                );
+                if (opened > 0) {
+                    setSent(count => count + opened);
+                    setLastEntry(`${name} - ${opened} x ${strategy.contract_type} ${strategy.barrier}`);
+                }
+            } finally {
+                firing_ref.current.delete(symbol);
+            }
+        },
+        [stake, strategy, trade, trades]
+    );
+
+    useEffect(() => {
+        fire_ref.current = fire;
+    });
+
+    // Disarmed the moment the scan stops, so a stopped scanner can never be
+    // left holding permission to trade.
+    useEffect(() => {
+        if (!scanning) setArmed(false);
+    }, [scanning]);
 
     useEffect(() => {
         if (!isConnected) return;
@@ -260,6 +342,10 @@ const ProAiBot = observer(({ onBack, strategy }: { onBack: () => void; strategy:
                             const was_matching = previous ? isMatch(previous.digits, digit_count, strategy) : false;
                             if (!was_matching && isMatch(digits, digit_count, strategy)) {
                                 setMatches(count => count + 1);
+                                // A run has to break and re-form before this
+                                // fires again, because the count is on the
+                                // transition - so one pattern is one entry.
+                                if (armed_ref.current) fire_ref.current(symbol, name);
                             }
 
                             write(symbol, { decimals, digits, latest: tick.quote, name, symbol });
@@ -281,6 +367,8 @@ const ProAiBot = observer(({ onBack, strategy }: { onBack: () => void; strategy:
         setRows({});
         setMatches(0);
         setErrors(0);
+        setSent(0);
+        setLastEntry(null);
         setScanning(true);
     };
 
@@ -396,7 +484,7 @@ const ProAiBot = observer(({ onBack, strategy }: { onBack: () => void; strategy:
                         </div>
                         <div>
                             <span>{localize('Trades sent')}</span>
-                            <b>0</b>
+                            <b>{sent}</b>
                         </div>
                         <div>
                             <span>{localize('Errors')}</span>
@@ -404,14 +492,45 @@ const ProAiBot = observer(({ onBack, strategy }: { onBack: () => void; strategy:
                         </div>
                     </div>
 
-                    {/* Said plainly rather than left to be discovered: the
-                        scanner reads markets and reports patterns. Sending is
-                        not wired to it, so Trades sent stays at zero. */}
+                    {/* Arming is the one control that stays live while the scan
+                        runs. Every other setting locks, but a trader has to be
+                        able to take permission away on the tick they decide to,
+                        not at the next restart. */}
+                    <label className={`mw-proai__arm${armed ? ' mw-proai__arm--on' : ''}`}>
+                        <span>
+                            <b>{localize('Send trades on match')}</b>
+                            <i>
+                                {is_logged_in
+                                    ? localize('{{count}} x {{stake}} {{currency}} per entry, one tick each.', {
+                                          count: trades,
+                                          currency,
+                                          stake: stake.toFixed(2),
+                                      })
+                                    : localize('Log in to a Deriv account to arm this.')}
+                            </i>
+                        </span>
+                        <input
+                            type='checkbox'
+                            checked={armed}
+                            disabled={!is_logged_in || !scanning}
+                            onChange={event => setArmed(event.target.checked)}
+                        />
+                    </label>
+
+                    {/* Said plainly rather than left to be discovered. */}
                     <p className='mw-proai__note'>
-                        {localize(
-                            'This scanner reports patterns only. It does not send trades, so stake and number of trades describe the entry it found - nothing is bought.'
-                        )}
+                        {armed
+                            ? localize(
+                                  'Armed. Every completed pattern buys {{risk}} {{currency}} on the market that matched, without asking again. Nothing here predicts the next digit.',
+                                  { currency, risk: risk.toFixed(2) }
+                              )
+                            : localize(
+                                  'Not armed: the scanner reports patterns and buys nothing. Start the scan, then arm it to send entries.'
+                              )}
                     </p>
+
+                    {last_entry && <p className='mw-proai__entry-log'>{last_entry}</p>}
+                    {trade.error_message && <p className='mw-proai__error'>{trade.error_message}</p>}
 
                     <button
                         type='button'

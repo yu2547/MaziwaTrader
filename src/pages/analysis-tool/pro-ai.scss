@@ -350,11 +350,80 @@ $proai-green: #22d18b;
     }
 }
 
+// Deliberately the loudest control in the panel once it is on: it is the only
+// one that spends money.
+.mw-proai__arm {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.2rem;
+    padding: 1.2rem 1.4rem;
+    border: 1px solid $proai-line;
+    border-radius: 10px;
+    background: rgb(6 9 28 / 55%);
+    cursor: pointer;
+
+    span {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        min-width: 0;
+    }
+
+    b {
+        font-size: 1.4rem;
+        font-weight: 700;
+    }
+
+    i {
+        font-style: normal;
+        font-size: 1.2rem;
+        color: $proai-dim;
+    }
+
+    input {
+        flex-shrink: 0;
+        width: 4rem;
+        height: 2.2rem;
+        accent-color: #e04b6b;
+        cursor: pointer;
+    }
+
+    &:has(input:disabled) {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    &--on {
+        border-color: rgb(224 75 107 / 60%);
+        background: rgb(224 75 107 / 12%);
+        box-shadow: inset 0 0 0 1px rgb(224 75 107 / 22%);
+    }
+}
+
 .mw-proai__note {
     margin: 0;
     font-size: 1.2rem;
     line-height: 1.5;
     color: $proai-dim;
+}
+
+.mw-proai__entry-log {
+    margin: 0;
+    padding: 0.8rem 1.2rem;
+    border-radius: 8px;
+    background: rgb(34 209 139 / 12%);
+    font-size: 1.2rem;
+    color: $proai-green;
+}
+
+.mw-proai__error {
+    margin: 0;
+    padding: 0.8rem 1.2rem;
+    border-radius: 8px;
+    background: rgb(224 75 107 / 14%);
+    font-size: 1.2rem;
+    color: #ff90a8;
 }
 
 .mw-proai__run {
