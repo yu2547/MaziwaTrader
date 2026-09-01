@@ -28,19 +28,24 @@
     padding: 1.6rem;
 }
 
+// Fixed light, whatever the app's theme: a legal disclosure is read once and
+// has to be legible without depending on which theme it is opened from.
 .risk-disclaimer-modal {
     width: 100%;
-    max-width: 480px;
+    max-width: 600px;
+    max-height: calc(100vh - 3.2rem);
+    overflow-y: auto;
     background: #fff;
     border-radius: 12px;
-    padding: 2.4rem;
+    padding: 2.8rem;
     box-shadow: 0 20px 60px rgb(0 0 0 / 40%);
 
     &__header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 1.6rem;
+        gap: 1.6rem;
+        margin-bottom: 2rem;
 
         h2 {
             margin: 0;
@@ -65,25 +70,29 @@
     }
 
     &__body {
-        margin: 0 0 2.4rem;
-        font-size: 1.4rem;
-        line-height: 1.6;
+        margin: 0 0 2.8rem;
+        font-size: 1.5rem;
+        line-height: 1.65;
         color: #333;
 
         strong {
-            color: #2fb6e0;
+            color: #2196f3;
+            font-weight: 700;
         }
     }
 
+    // Centred and sized to its label rather than stretched across the card -
+    // one deliberate action to take, not a bar to dismiss by reflex.
     &__confirm {
         display: block;
-        width: 100%;
-        padding: 1.2rem;
+        margin: 0 auto;
+        min-width: 18rem;
+        padding: 1.2rem 3.2rem;
         border: none;
         border-radius: 8px;
-        background: #ffd700;
+        background: #ffd400;
         color: #1a1a2e;
-        font-size: 1.4rem;
+        font-size: 1.5rem;
         font-weight: 700;
         cursor: pointer;
         transition: filter 0.2s ease;
