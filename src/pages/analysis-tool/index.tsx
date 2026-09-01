@@ -2,24 +2,25 @@ import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useTranslations } from '@deriv-com/translations';
 import Dcircles from './dcircles';
+import ProAi from './pro-ai';
 import Signals from './signals';
 import './analysis-tool.scss';
 
-type TAnalysisView = 'dcircles' | 'signals' | 'analysis_tool' | 'sl_tools' | 'all_analysis' | 'tick_analyser';
+type TAnalysisView = 'dcircles' | 'signals' | 'analysis_tool' | 'sl_tools' | 'pro_ai' | 'tick_analyser';
 
 const VIEWS: { id: TAnalysisView; label: string }[] = [
     { id: 'dcircles', label: 'Dcircles' },
     { id: 'signals', label: 'Signals' },
     { id: 'analysis_tool', label: 'Analysis Tool' },
     { id: 'sl_tools', label: 'SL Tools' },
-    { id: 'all_analysis', label: 'All Analysis' },
+    { id: 'pro_ai', label: 'Pro AI' },
     { id: 'tick_analyser', label: 'Tick Analyser' },
 ];
 
 /**
- * Dcircles, Signals and Analysis Tool have something behind them: the first two
- * read the app's live tick feed, Analysis Tool is the hosted tool this page has
- * always embedded. SL Tools, All Analysis and Tick Analyser have no data source
+ * Dcircles, Signals, Pro AI and Analysis Tool have something behind them: the
+ * first three read the app's live tick feed, Analysis Tool is the hosted tool
+ * this page has always embedded. SL Tools and Tick Analyser have no data source
  * in this build, so they say so instead of rendering numbers nobody measured.
  */
 const NotConnected = ({ title }: { title: string }) => {
@@ -73,7 +74,7 @@ const AnalysisTool = observer(() => {
                 )}
                 {view === 'signals' && <Signals />}
                 {view === 'sl_tools' && <NotConnected title={localize('SL Tools')} />}
-                {view === 'all_analysis' && <NotConnected title={localize('All Analysis')} />}
+                {view === 'pro_ai' && <ProAi />}
                 {view === 'tick_analyser' && <NotConnected title={localize('Tick Analyser')} />}
             </div>
         </div>
