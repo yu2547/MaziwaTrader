@@ -20,3 +20,60 @@
         border: 0;
     }
 }
+
+// One row, scrolling sideways rather than wrapping, so it costs the chart the
+// same height at every width. Theme tokens rather than a colour of its own -
+// it sits directly above the chart's white ground and should read as part of
+// the app around it, not as a third surface.
+.mw-tv-strip {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0.8rem 1.6rem;
+    border-bottom: 1px solid var(--general-section-1);
+    background: var(--general-main-1);
+    white-space: nowrap;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.mw-tv-strip__waiting {
+    font-size: 1.25rem;
+    color: var(--text-less-prominent);
+}
+
+.mw-tv-strip__item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.8rem;
+    flex-shrink: 0;
+
+    b {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-less-prominent);
+    }
+
+    // Tabular figures: without them the price jitters sideways on every tick,
+    // because the digits are not the same width.
+    i {
+        font-style: normal;
+        font-size: 1.35rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-prominent);
+    }
+
+    &--up i {
+        color: #16c784;
+    }
+
+    &--down i {
+        color: #e04b6b;
+    }
+}
