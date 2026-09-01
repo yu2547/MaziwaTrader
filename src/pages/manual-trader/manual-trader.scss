@@ -1,14 +1,18 @@
-// The signal green is the one fixed colour here - it means "leading side" in
-// both themes and reads on either ground. Everything else is a theme token, so
-// the page is white by default and dark only when the app is.
+@use 'styles/mw-shiny-purple' as *;
+
+// Built on the shiny deep purple, the same ground as Pro AI - so this page is
+// deliberately dark in both app themes and states its own colours rather than
+// taking theme tokens.
+// The signal green stays what it was: it means "leading side", and it reads on
+// this ground as well as it did on white.
 $mw-accent: #16c784;
 
 .mw-manual {
     display: flex;
     flex-direction: column;
     min-height: 100%;
-    background: var(--general-main-1);
-    color: var(--text-prominent);
+
+    @include mw-shiny-purple;
 }
 
 // Market and trade type, as two cards across the top.
@@ -17,7 +21,7 @@ $mw-accent: #16c784;
     gap: 1.2rem;
     flex-wrap: wrap;
     padding: 1.6rem;
-    border-bottom: 1px solid var(--general-section-1);
+    border-bottom: 1px solid $mw-purple-line;
 }
 
 .mw-manual__card {
@@ -27,27 +31,27 @@ $mw-accent: #16c784;
     flex: 1 1 24rem;
     min-width: 0;
     padding: 1rem 1.4rem;
-    border: 1px solid var(--general-section-1);
+    border: 1px solid $mw-purple-line;
     border-radius: 8px;
-    background: var(--general-section-1);
+    background: $mw-purple-panel;
 
     > span {
         font-size: 1.2rem;
-        color: var(--text-less-prominent);
+        color: $mw-purple-dim;
     }
 
     select {
         border: none;
         background: transparent;
-        color: var(--text-prominent);
+        color: $mw-purple-ink;
         font-size: 1.6rem;
         font-weight: 600;
         outline: none;
         cursor: pointer;
 
         option {
-            background: var(--general-main-1);
-            color: var(--text-prominent);
+            background: #10163c;
+            color: $mw-purple-ink;
         }
     }
 }
@@ -91,7 +95,7 @@ $mw-accent: #16c784;
 
     span {
         font-size: 1.2rem;
-        color: var(--text-less-prominent);
+        color: $mw-purple-dim;
     }
 
     b {
@@ -105,15 +109,15 @@ $mw-accent: #16c784;
     align-items: center;
     gap: 0.8rem;
     font-size: 1.2rem;
-    color: var(--text-less-prominent);
+    color: $mw-purple-dim;
 
     input {
         width: 6.4rem;
         padding: 0.6rem;
-        border: 1px solid var(--general-section-1);
+        border: 1px solid $mw-purple-line;
         border-radius: 6px;
-        background: var(--general-section-1);
-        color: var(--text-prominent);
+        background: $mw-purple-sunk;
+        color: $mw-purple-ink;
         font-size: 1.3rem;
         text-align: center;
         outline: none;
@@ -142,7 +146,7 @@ $mw-accent: #16c784;
     > span {
         flex: 1 1 100%;
         font-size: 1.3rem;
-        color: var(--text-less-prominent);
+        color: $mw-purple-dim;
     }
 
     strong {
@@ -153,10 +157,10 @@ $mw-accent: #16c784;
     em {
         padding: 0.6rem 1.4rem;
         border-radius: 999px;
-        background: var(--general-section-1);
+        background: rgb(255 255 255 / 8%);
         font-style: normal;
         font-size: 1.3rem;
-        color: var(--text-general);
+        color: $mw-purple-dim;
     }
 
     &--strong em {
@@ -181,7 +185,7 @@ $mw-accent: #16c784;
     gap: 0.2rem;
     width: 14rem;
     height: 14rem;
-    border: 3px solid var(--general-section-1);
+    border: 3px solid rgb(150 170 255 / 22%);
     border-radius: 50%;
 
     b {
@@ -197,7 +201,7 @@ $mw-accent: #16c784;
     i {
         font-style: normal;
         font-size: 1.2rem;
-        color: var(--text-less-prominent);
+        color: $mw-purple-dim;
     }
 
     &--lead {
@@ -225,10 +229,10 @@ $mw-accent: #16c784;
     margin: 0;
     text-align: center;
     font-size: 1.3rem;
-    color: var(--text-less-prominent);
+    color: $mw-purple-dim;
 
     b {
-        color: var(--text-prominent);
+        color: $mw-purple-ink;
         font-variant-numeric: tabular-nums;
     }
 }
@@ -239,9 +243,9 @@ $mw-accent: #16c784;
     gap: 1.2rem;
     min-height: 0;
     padding: 1.6rem;
-    border: 1px solid var(--general-section-1);
+    border: 1px solid $mw-purple-line;
     border-radius: 10px;
-    background: var(--general-main-1);
+    background: $mw-purple-panel;
 
     // Its own scrollbar, so a tall ticket never pushes the reading off screen.
     @media (width >= 900px) {
@@ -255,7 +259,7 @@ $mw-accent: #16c784;
     justify-content: space-between;
     gap: 1.2rem;
     padding-bottom: 1.2rem;
-    border-bottom: 1px solid var(--general-section-1);
+    border-bottom: 1px solid $mw-purple-line;
 
     h2 {
         margin: 0;
@@ -265,7 +269,7 @@ $mw-accent: #16c784;
 
     span {
         font-size: 1.2rem;
-        color: var(--text-less-prominent);
+        color: $mw-purple-dim;
     }
 }
 
@@ -275,7 +279,7 @@ $mw-accent: #16c784;
     gap: 0.4rem;
     padding: 0.4rem;
     border-radius: 999px;
-    background: var(--general-section-1);
+    background: $mw-purple-sunk;
 }
 
 .mw-manual__side {
@@ -284,13 +288,13 @@ $mw-accent: #16c784;
     border: none;
     border-radius: 999px;
     background: transparent;
-    color: var(--text-general);
+    color: $mw-purple-dim;
     font-size: 1.4rem;
     font-weight: 700;
     cursor: pointer;
 
     &--on {
-        background: var(--general-main-1);
+        background: rgb(255 255 255 / 10%);
         color: $mw-accent;
     }
 }
@@ -300,14 +304,14 @@ $mw-accent: #16c784;
     align-items: center;
     gap: 0.8rem;
     padding: 1rem 1.4rem;
-    border: 1px solid var(--general-section-1);
+    border: 1px solid $mw-purple-line;
     border-radius: 8px;
-    background: var(--general-section-1);
+    background: $mw-purple-sunk;
 
     > span {
         flex: 1;
         font-size: 1.2rem;
-        color: var(--text-less-prominent);
+        color: $mw-purple-dim;
     }
 
     input,
@@ -315,22 +319,22 @@ $mw-accent: #16c784;
         width: 8rem;
         border: none;
         background: transparent;
-        color: var(--text-prominent);
+        color: $mw-purple-ink;
         font-size: 1.5rem;
         font-weight: 600;
         text-align: right;
         outline: none;
 
         option {
-            background: var(--general-main-1);
-            color: var(--text-prominent);
+            background: #10163c;
+            color: $mw-purple-ink;
         }
     }
 
     i {
         font-style: normal;
         font-size: 1.2rem;
-        color: var(--text-less-prominent);
+        color: $mw-purple-dim;
     }
 }
 
@@ -349,10 +353,10 @@ $mw-accent: #16c784;
         width: 2.8rem;
         height: 2.8rem;
         padding: 0;
-        border: 1px solid var(--general-main-1);
+        border: 1px solid $mw-purple-line;
         border-radius: 6px;
-        background: var(--general-main-1);
-        color: var(--text-prominent);
+        background: rgb(255 255 255 / 6%);
+        color: $mw-purple-ink;
         font-size: 1.6rem;
         font-weight: 700;
         line-height: 1;
@@ -379,7 +383,7 @@ $mw-accent: #16c784;
     margin: 0;
     padding: 0.8rem 1.2rem;
     border-radius: 6px;
-    background: rgb(22 199 132 / 12%);
+    background: rgb(22 199 132 / 14%);
     font-size: 1.25rem;
     color: $mw-accent;
 }
@@ -391,11 +395,11 @@ $mw-accent: #16c784;
     gap: 1.2rem;
     min-height: 4.4rem;
     padding: 0.6rem 1.4rem;
-    border: 1px solid var(--general-section-1);
+    border: 1px solid $mw-purple-line;
     border-radius: 8px;
-    background: var(--general-section-1);
+    background: $mw-purple-sunk;
     font-size: 1.3rem;
-    color: var(--text-general);
+    color: $mw-purple-dim;
 
     input {
         width: 4rem;
@@ -412,7 +416,7 @@ $mw-accent: #16c784;
     span {
         display: block;
         font-size: 1.2rem;
-        color: var(--text-less-prominent);
+        color: $mw-purple-dim;
     }
 
     b {
@@ -424,16 +428,16 @@ $mw-accent: #16c784;
     margin: 0;
     font-size: 1.15rem;
     line-height: 1.5;
-    color: var(--text-less-prominent);
+    color: $mw-purple-dim;
 }
 
 .mw-manual__error {
     margin: 0;
     padding: 0.8rem 1.2rem;
     border-radius: 6px;
-    background: rgb(224 75 75 / 12%);
+    background: rgb(224 75 107 / 16%);
     font-size: 1.25rem;
-    color: #e04b4b;
+    color: #ff90a8;
 }
 
 .mw-manual__run {

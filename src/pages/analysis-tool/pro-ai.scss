@@ -1,40 +1,23 @@
-// Pro AI is deliberately dark in both app themes: the whole section is built
-// on the shiny deep purple - dark blue through purple into dark maroon - so
-// its colours are fixed rather than theme tokens. Everything that sits on that
-// ground therefore states its own light text colour.
-$proai-ink: #f2f4ff;
-$proai-dim: #9aa6d8;
-$proai-line: rgb(150 170 255 / 16%);
-$proai-panel: rgb(10 14 40 / 62%);
-$proai-blue: #5b8cff;
-$proai-pink: #ff7ab8;
-$proai-green: #22d18b;
+@use 'styles/mw-shiny-purple' as *;
+
+// Pro AI is deliberately dark in both app themes: the whole section is built on
+// the shiny deep purple, so its colours are fixed rather than theme tokens.
+// Everything that sits on that ground states its own light text colour.
+$proai-ink: $mw-purple-ink;
+$proai-dim: $mw-purple-dim;
+$proai-line: $mw-purple-line;
+$proai-panel: $mw-purple-panel;
+$proai-blue: $mw-purple-blue;
+$proai-pink: $mw-purple-pink;
+$proai-green: $mw-purple-green;
 
 .mw-proai {
     position: relative;
     min-height: 100%;
     padding: 2.8rem 2.4rem 4rem;
-    color: $proai-ink;
     overflow: hidden;
 
-    // Four layers, same recipe as the premium bot button and scaled up to a
-    // whole surface. Underneath, the blue-through-purple-into-maroon body. Over
-    // it two soft diagonal streaks - blue across the left, pink across the
-    // right - which is what separates a deep purple from a flat one. Then two
-    // wide glows in the top corners so the shine has somewhere to come from.
-    background:
-        radial-gradient(120% 78% at 10% -10%, rgb(91 140 255 / 22%) 0%, rgb(0 0 0 / 0%) 58%),
-        radial-gradient(110% 80% at 94% 6%, rgb(214 74 148 / 18%) 0%, rgb(0 0 0 / 0%) 60%),
-        linear-gradient(
-            115deg,
-            rgb(255 255 255 / 0%) 14%,
-            rgb(140 170 255 / 11%) 24%,
-            rgb(255 255 255 / 0%) 34%,
-            rgb(255 255 255 / 0%) 60%,
-            rgb(255 150 205 / 10%) 71%,
-            rgb(255 255 255 / 0%) 82%
-        ),
-        linear-gradient(135deg, #080c26 0%, #141a4e 34%, #3a1f6e 62%, #5b2350 84%, #2c0e26 100%);
+    @include mw-shiny-purple;
 }
 
 .mw-proai__head {
