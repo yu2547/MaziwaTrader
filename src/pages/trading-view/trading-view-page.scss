@@ -1,6 +1,6 @@
 // Edge to edge. The chart carries its own toolbars and its own ground, so
-// anything this page added around it - padding, a border, a heading - would
-// only take width away from the candles.
+// anything this page added around it - padding, a border, a heading, a strip -
+// would only take width and height away from the candles.
 .mw-tradingview {
     display: flex;
     flex-direction: column;
@@ -11,15 +11,6 @@
     // reports a large intrinsic height - without this the chart pushes the
     // shell taller than the viewport instead of fitting inside it.
     min-height: 0;
-}
-
-// Whichever chart is showing takes everything the strip and the switch leave.
-.mw-tradingview__chart {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
 
     iframe {
         display: block;
@@ -27,132 +18,5 @@
         width: 100%;
         min-height: 0;
         border: 0;
-    }
-
-    // SmartCharts measures its own container, so it needs one with a height
-    // rather than one that grows to fit it. Both the flex basis and an explicit
-    // 100% are set: the chart's own root is not always a flex child of this
-    // box, and either way it has to end up the height of the area it was given.
-    > div {
-        position: relative;
-        z-index: 1;
-        flex: 1;
-        width: 100%;
-        height: 100%;
-        min-height: 0;
-    }
-}
-
-// Sits behind the chart and is covered by it. Absolute rather than in flow, so
-// it takes no height of its own and the chart is not pushed down by a message
-// about the chart.
-.mw-tradingview__loading {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0;
-    font-size: 1.35rem;
-    color: var(--text-less-prominent);
-}
-
-.mw-tradingview__switch {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-    padding: 0.6rem 1.6rem;
-    border-bottom: 1px solid var(--general-section-1);
-    background: var(--general-main-1);
-}
-
-.mw-tradingview__hint {
-    font-size: 1.15rem;
-    color: var(--text-less-prominent);
-}
-
-.mw-tradingview__tab {
-    padding: 0.6rem 1.4rem;
-    border: 1px solid var(--general-section-1);
-    border-radius: 6px;
-    background: var(--general-main-1);
-    color: var(--text-general);
-    font-size: 1.25rem;
-    font-weight: 600;
-    cursor: pointer;
-
-    &:hover:not(:disabled) {
-        color: var(--text-prominent);
-    }
-
-    &:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-    }
-
-    &--on {
-        border-color: #1a5cff;
-        background: #1a5cff;
-        color: #fff;
-    }
-}
-
-// One row, scrolling sideways rather than wrapping, so it costs the chart the
-// same height at every width. Theme tokens rather than a colour of its own -
-// it sits directly above the chart's white ground and should read as part of
-// the app around it, not as a third surface.
-.mw-tv-strip {
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    flex-shrink: 0;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding: 0.8rem 1.6rem;
-    border-bottom: 1px solid var(--general-section-1);
-    background: var(--general-main-1);
-    white-space: nowrap;
-
-    &::-webkit-scrollbar {
-        display: none;
-    }
-}
-
-.mw-tv-strip__waiting {
-    font-size: 1.25rem;
-    color: var(--text-less-prominent);
-}
-
-.mw-tv-strip__item {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.8rem;
-    flex-shrink: 0;
-
-    b {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: var(--text-less-prominent);
-    }
-
-    // Tabular figures: without them the price jitters sideways on every tick,
-    // because the digits are not the same width.
-    i {
-        font-style: normal;
-        font-size: 1.35rem;
-        font-weight: 700;
-        font-variant-numeric: tabular-nums;
-        color: var(--text-prominent);
-    }
-
-    &--up i {
-        color: #16c784;
-    }
-
-    &--down i {
-        color: #e04b6b;
     }
 }
