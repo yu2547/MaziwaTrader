@@ -1,8 +1,12 @@
-// Theme tokens throughout, so the page is white when the app is and dark when
-// the app is - the reference was captured in dark mode, which is where the
-// navy panels below come from.
+@use 'styles/mw-shiny-purple' as *;
+
+// Built on the shiny deep purple, the same ground as Pro AI and the Manual
+// trader - so this page is deliberately dark in both app themes and states its
+// own colours rather than taking theme tokens.
+// Green and blue stay what the reference had them as: green starts something,
+// blue adds something, and both read on this ground.
 $copy-green: #21bf73;
-$copy-blue: #2f6fed;
+$copy-blue: #4c86ff;
 
 .mw-copy {
     display: flex;
@@ -11,8 +15,8 @@ $copy-blue: #2f6fed;
     width: 100%;
     min-height: 100%;
     padding: 2rem;
-    background: var(--general-main-1);
-    color: var(--text-prominent);
+
+    @include mw-shiny-purple;
 }
 
 .mw-copy__panel {
@@ -20,9 +24,9 @@ $copy-blue: #2f6fed;
     flex-direction: column;
     gap: 1.6rem;
     padding: 1.8rem;
-    border: 1px solid var(--general-section-1);
+    border: 1px solid $mw-purple-line;
     border-radius: 10px;
-    background: var(--general-section-1);
+    background: $mw-purple-panel;
 }
 
 // The token summary reads across rather than down: a label on the left and the
@@ -55,13 +59,13 @@ $copy-blue: #2f6fed;
     border: none;
     border-radius: 6px;
     background: $copy-green;
-    color: #fff;
+    color: #04150d;
     font-size: 1.35rem;
     font-weight: 700;
     cursor: pointer;
 
     &:hover {
-        filter: brightness(1.06);
+        filter: brightness(1.08);
     }
 }
 
@@ -79,15 +83,15 @@ $copy-blue: #2f6fed;
     min-width: 0;
     min-height: 4.4rem;
     padding: 0 1.4rem;
-    border: 1px solid var(--general-section-1);
+    border: 1px solid $mw-purple-line;
     border-radius: 6px;
-    background: var(--general-main-1);
-    color: var(--text-prominent);
+    background: $mw-purple-sunk;
+    color: $mw-purple-ink;
     font-size: 1.35rem;
     outline: none;
 
     &::placeholder {
-        color: var(--text-less-prominent);
+        color: $mw-purple-dim;
     }
 
     &:focus {
@@ -99,13 +103,18 @@ $copy-blue: #2f6fed;
     min-width: 11rem;
     min-height: 4.4rem;
     padding: 0 1.2rem;
-    border: 1px solid var(--general-section-1);
+    border: 1px solid $mw-purple-line;
     border-radius: 6px;
-    background: var(--general-main-1);
-    color: var(--text-prominent);
+    background: $mw-purple-sunk;
+    color: $mw-purple-ink;
     font-size: 1.35rem;
     cursor: pointer;
     outline: none;
+
+    option {
+        background: #10163c;
+        color: $mw-purple-ink;
+    }
 }
 
 .mw-copy__add-btn {
@@ -136,10 +145,10 @@ $copy-blue: #2f6fed;
     gap: 0.6rem;
     min-height: 4.4rem;
     padding: 0 1.6rem;
-    border: 1px solid var(--general-section-1);
+    border: 1px solid $mw-purple-line;
     border-radius: 6px;
-    background: var(--general-main-1);
-    color: var(--text-prominent);
+    background: $mw-purple-sunk;
+    color: $mw-purple-ink;
     font-size: 1.35rem;
     font-weight: 600;
     cursor: pointer;
@@ -163,9 +172,9 @@ $copy-blue: #2f6fed;
     align-items: center;
     gap: 1.2rem;
     padding: 1rem 1.2rem;
-    border: 1px solid var(--general-main-1);
+    border: 1px solid $mw-purple-line;
     border-radius: 6px;
-    background: var(--general-main-1);
+    background: $mw-purple-sunk;
 }
 
 .mw-copy__badge {
@@ -175,12 +184,12 @@ $copy-blue: #2f6fed;
     font-weight: 700;
 
     &--real {
-        background: rgb(47 111 237 / 16%);
+        background: rgb(76 134 255 / 18%);
         color: $copy-blue;
     }
 
     &--demo {
-        background: rgb(33 191 115 / 16%);
+        background: rgb(33 191 115 / 18%);
         color: $copy-green;
     }
 }
@@ -195,13 +204,13 @@ $copy-blue: #2f6fed;
 .mw-copy__remove {
     border: none;
     background: transparent;
-    color: var(--text-less-prominent);
+    color: $mw-purple-dim;
     font-size: 1.4rem;
     line-height: 1;
     cursor: pointer;
 
     &:hover {
-        color: var(--text-prominent);
+        color: $mw-purple-ink;
     }
 }
 
@@ -213,10 +222,10 @@ $copy-blue: #2f6fed;
 .mw-copy__status {
     margin: 0;
     padding: 1.2rem 1.4rem;
-    border: 1px solid var(--general-section-1);
+    border: 1px solid $mw-purple-line;
     border-radius: 8px;
-    background: var(--general-section-1);
+    background: $mw-purple-panel;
     font-size: 1.25rem;
     line-height: 1.5;
-    color: var(--text-general);
+    color: $mw-purple-dim;
 }
