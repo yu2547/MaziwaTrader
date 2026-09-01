@@ -101,6 +101,16 @@ const ROUTE_DESTINATIONS: TRouteDestination[] = [
         label: <Localize i18n_default_text='Copy Trading' />,
         path: '/copy-trading',
     },
+    // A route rather than the draggable modal it used to open. That modal is
+    // 526x595 and floats over the Bot Builder, which is fine beside a workspace
+    // and no way to read a candlestick series - so from here the chart gets the
+    // whole content area. The Bot Builder's own button still opens the
+    // draggable one, in place, where it belongs.
+    {
+        icon: <LabelPairedChartTradingviewCaptionRegularIcon {...ICON_PROPS} />,
+        label: <Localize i18n_default_text='TradingView' />,
+        path: '/tradingview',
+    },
 ];
 
 const ShellNav = observer(() => {
@@ -172,22 +182,6 @@ const ShellNav = observer(() => {
                 })}
 
                 <span className='shell-nav__divider' aria-hidden='true' />
-
-                {/* TradingView is a modal, and it is only mounted by the index
-                    route - so from elsewhere, return there before opening it. */}
-                <button
-                    type='button'
-                    className='shell-nav__item'
-                    onClick={() => {
-                        if (!is_index_route) navigate('/');
-                        dashboard?.setTradingViewModalVisibility();
-                    }}
-                >
-                    <LabelPairedChartTradingviewCaptionRegularIcon {...ICON_PROPS} />
-                    <span className='shell-nav__label'>
-                        <Localize i18n_default_text='TradingView' />
-                    </span>
-                </button>
 
                 <a
                     className='shell-nav__item'
