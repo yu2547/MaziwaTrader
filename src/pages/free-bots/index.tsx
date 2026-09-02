@@ -107,7 +107,9 @@ const BOTS: Bot[] = [
             'Signal Sniper AutoBot - Automated signal detection and execution. Captures trading opportunities instantly with intelligent pattern recognition.',
         fileName: 'SignalSniper_AutoBot.xml',
         category: 'Even/Odd',
-        icon: '🎯',
+        // The same robot every other premium card carries. A dart set this one
+        // apart in a grid whose whole point is that the cards read as one set.
+        icon: '🤖',
         is_premium: true,
         rating: 5,
     },
