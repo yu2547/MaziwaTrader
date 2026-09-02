@@ -4,6 +4,7 @@ import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
 import { getDigitDistribution, getLastDigit, toDecimalPlaces } from '@/utils/market-data/last-digit';
 import { TActiveSymbol, TTick } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
+import AiScan from './ai-scan';
 import TradingConfiguration from './trading-configuration';
 
 const DEFAULT_SYMBOL = '1HZ100V';
@@ -236,10 +237,11 @@ const Dcircles = observer(() => {
                 </button>
                 <button
                     type='button'
-                    className='mw-dcircles__action mw-dcircles__action--ai'
+                    className={`mw-dcircles__action mw-dcircles__action--ai${is_ai_open ? ' mw-dcircles__action--on' : ''}`}
+                    aria-pressed={is_ai_open}
                     onClick={() => setIsAiOpen(prev => !prev)}
                 >
-                    {localize('Launch AI')}
+                    {is_ai_open ? localize('AI Active') : localize('Launch AI')}
                 </button>
                 <button
                     type='button'
@@ -260,13 +262,9 @@ const Dcircles = observer(() => {
                 </p>
             )}
 
-            {is_ai_open && (
-                <p className='mw-dcircles__note mw-dcircles__note--warn'>
-                    {localize(
-                        'No analysis backend is connected to this build, so there is nothing for Launch AI to run yet. The control is wired up; the service behind it is what is missing. It says so rather than inventing a reading.'
-                    )}
-                </p>
-            )}
+            {/* Pressing it again turns the panel off, which stops the speech
+                with it - AiScan cancels any utterance as it unmounts. */}
+            {is_ai_open && <AiScan onNormalView={() => setIsAiOpen(false)} />}
 
             {/* Trading Configuration. Every control below already existed and
                 already rendered in this order - market, price and current

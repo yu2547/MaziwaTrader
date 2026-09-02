@@ -124,12 +124,21 @@ $mw-grey: #7d8fa3;
         white-space: nowrap;
         cursor: pointer;
 
+        // Gradients rather than flat fills: coral into teal for Wide Eye,
+        // blue into a lighter blue for the AI control, which is what tells the
+        // two apart at a glance when they sit side by side.
         &--eye {
-            background: #d9736b;
+            background: linear-gradient(100deg, #e2726a 0%, #d98a7e 45%, #4fc3ad 100%);
         }
 
         &--ai {
-            background: #3d9df5;
+            background: linear-gradient(100deg, #2f7ce8 0%, #3d9df5 55%, #5cc0ff 100%);
+        }
+
+        // Same blue, held brighter while it is running.
+        &--on {
+            background: linear-gradient(100deg, #1f6fe0 0%, #3d9df5 100%);
+            box-shadow: 0 0 0 3px rgb(61 157 245 / 25%);
         }
 
         &:hover {
