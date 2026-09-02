@@ -173,7 +173,7 @@ export default class ContractsFor {
     }
 
     async getContractsByTradeType(symbol, trade_type) {
-        const contracts = await this.getContractsFor(symbol);
+        const contracts = (await this.getContractsFor(symbol)) ?? [];
         const contract_category = this.getContractCategoryByTradeType(trade_type);
         const barrier_category = this.getBarrierCategoryByTradeType(trade_type);
 
@@ -205,7 +205,10 @@ export default class ContractsFor {
         const getContractsForFromApi = async () => {
             if (this.retrieving_contracts_for[symbol]) {
                 await this.retrieving_contracts_for[symbol];
-                return this.contracts_for[symbol].contracts;
+                // The in-flight request can finish without caching anything -
+                // an API error returns early above and never writes the entry -
+                // so a second caller waiting on it must not assume one is there.
+                return this.contracts_for[symbol]?.contracts ?? [];
             }
 
             this.retrieving_contracts_for[symbol] = new PendingPromise();
@@ -215,9 +218,22 @@ export default class ContractsFor {
                 return [];
             }
 
-            const {
-                contracts_for: { available: contracts },
-            } = response;
+            // The classic API answers contracts_for with an `available` array.
+            // The Options (OTP) transport does not always carry that field, and
+            // destructuring it blind gave undefined - so the filter below threw
+            // "Cannot read properties of undefined (reading 'filter')", which
+            // the route boundary showed as "This page ran into a problem" to
+            // anyone signed in. Only reachable with a session, which is why it
+            // never appeared logged out.
+            //
+            // An unfamiliar shape now yields no contracts, the same as the
+            // error branch above, rather than taking the page down with it.
+            const contracts_for = response?.contracts_for ?? {};
+            const contracts = Array.isArray(contracts_for.available)
+                ? contracts_for.available
+                : Array.isArray(contracts_for.contracts)
+                  ? contracts_for.contracts
+                  : [];
 
             // We don't offer forward-starting contracts in bot.
             const filtered_contracts = contracts.filter(c => c.start_type !== 'forward');
