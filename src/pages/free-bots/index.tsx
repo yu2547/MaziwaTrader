@@ -101,6 +101,17 @@ const BOTS: Bot[] = [
         rating: 5,
     },
     {
+        id: 'signalsniper-autobot',
+        name: 'SignalSniper AutoBot (1)',
+        description:
+            'Signal Sniper AutoBot - Automated signal detection and execution. Captures trading opportunities instantly with intelligent pattern recognition.',
+        fileName: 'SignalSniper_AutoBot.xml',
+        category: 'Even/Odd',
+        icon: '🎯',
+        is_premium: true,
+        rating: 5,
+    },
+    {
         id: '11',
         name: 'Even Odd Thunder AI Pro',
         description:

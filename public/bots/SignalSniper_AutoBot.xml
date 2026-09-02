@@ -1,0 +1,330 @@
+<xml xmlns="http://www.w3.org/1999/xhtml" is_dbot="true" collection="false">
+  <variables>
+    <variable type="" id="ss_lossValue" islocal="false" iscloud="false">Loss value</variable>
+    <variable type="" id="ss_incomeTarget" islocal="false" iscloud="false">Income Target</variable>
+    <variable type="" id="ss_tradeAmount" islocal="false" iscloud="false">Trade amount</variable>
+    <variable type="" id="ss_tradeAmount2" islocal="false" iscloud="false">Trade amount 2</variable>
+    <variable type="" id="ss_text" islocal="false" iscloud="false">text</variable>
+    <variable type="" id="ss_text1" islocal="false" iscloud="false">text1</variable>
+    <variable type="" id="ss_text2" islocal="false" iscloud="false">text2</variable>
+    <variable type="" id="ss_text3" islocal="false" iscloud="false">text3</variable>
+  </variables>
+
+  <block type="trade_definition" id="ss_trade_root" x="40" y="40">
+    <statement name="TRADE_OPTIONS">
+      <block type="trade_definition_market" id="ss_market" deletable="false" movable="false">
+        <field name="MARKET_LIST">synthetic_index</field>
+        <field name="SUBMARKET_LIST">random_index</field>
+        <field name="SYMBOL_LIST">1HZ100V</field>
+        <next>
+          <block type="trade_definition_tradetype" id="ss_tradetype" deletable="false" movable="false">
+            <field name="TRADETYPECAT_LIST">digits</field>
+            <field name="TRADETYPE_LIST">evenodd</field>
+            <next>
+              <block type="trade_definition_contracttype" id="ss_contracttype" deletable="false" movable="false">
+                <field name="TYPE_LIST">both</field>
+                <next>
+                  <block type="trade_definition_candleinterval" id="ss_candle" deletable="false" movable="false">
+                    <field name="CANDLEINTERVAL_LIST">60</field>
+                    <next>
+                      <block type="trade_definition_restartbuysell" id="ss_restart_buy_sell" deletable="false" movable="false">
+                        <field name="TIME_MACHINE_ENABLED">FALSE</field>
+                        <next>
+                          <block type="trade_definition_restartonerror" id="ss_restart_error" deletable="false" movable="false">
+                            <field name="RESTARTONERROR">TRUE</field>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+
+    <!-- Run once at start. -->
+    <statement name="INITIALIZATION">
+      <block type="text_print" id="ss_print_intro">
+        <value name="TEXT">
+          <shadow type="text" id="ss_print_intro_shadow"><field name="TEXT">Dollar mode activated 💵 stay ready</field></shadow>
+        </value>
+        <next>
+          <block type="variables_set" id="ss_set_loss_value">
+            <field name="VAR" id="ss_lossValue">Loss value</field>
+            <value name="VALUE">
+              <block type="math_number" id="ss_num_loss_value"><field name="NUM">500</field></block>
+            </value>
+            <next>
+              <block type="variables_set" id="ss_set_income_target">
+                <field name="VAR" id="ss_incomeTarget">Income Target</field>
+                <value name="VALUE">
+                  <block type="math_number" id="ss_num_income_target"><field name="NUM">2</field></block>
+                </value>
+                <next>
+                  <block type="variables_set" id="ss_set_trade_amount">
+                    <field name="VAR" id="ss_tradeAmount">Trade amount</field>
+                    <value name="VALUE">
+                      <block type="math_number" id="ss_num_trade_amount"><field name="NUM">2</field></block>
+                    </value>
+                    <next>
+                      <block type="variables_set" id="ss_set_trade_amount_2">
+                        <field name="VAR" id="ss_tradeAmount2">Trade amount 2</field>
+                        <value name="VALUE">
+                          <block type="math_number" id="ss_num_trade_amount_2"><field name="NUM">2</field></block>
+                        </value>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+
+    <!-- Trade options: one tick, staked with the Trade amount variable. -->
+    <statement name="SUBMARKET">
+      <block type="trade_definition_tradeoptions" id="ss_trade_options">
+        <mutation xmlns="http://www.w3.org/1999/xhtml" has_first_barrier="false" has_second_barrier="false" has_prediction="false"></mutation>
+        <field name="DURATIONTYPE_LIST">t</field>
+        <value name="DURATION">
+          <shadow type="math_number" id="ss_duration_shadow"><field name="NUM">1</field></shadow>
+          <block type="math_number" id="ss_duration"><field name="NUM">1</field></block>
+        </value>
+        <value name="AMOUNT">
+          <shadow type="math_number" id="ss_amount_shadow"><field name="NUM">1</field></shadow>
+          <block type="variables_get" id="ss_get_amount"><field name="VAR" id="ss_tradeAmount">Trade amount</field></block>
+        </value>
+      </block>
+    </statement>
+  </block>
+
+  <block type="before_purchase" id="ss_before" x="40" y="620">
+    <statement name="BEFOREPURCHASE_STACK">
+      <block type="purchase" id="ss_purchase">
+        <field name="PURCHASE_LIST">DIGITEVEN</field>
+      </block>
+    </statement>
+  </block>
+
+  <block type="after_purchase" id="ss_after" x="40" y="760">
+    <statement name="AFTERPURCHASE_STACK">
+      <block type="controls_if" id="ss_if_result">
+        <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
+        <value name="IF0">
+          <block type="contract_check_result" id="ss_check_win"><field name="CHECK_RESULT">win</field></block>
+        </value>
+
+        <!-- Won: report the profit and reset the stake to Trade amount 2. -->
+        <statement name="DO0">
+          <block type="text_join" id="ss_join_win">
+            <field name="VARIABLE" id="ss_text">text</field>
+            <statement name="STACK">
+              <block type="text_statement" id="ss_win_label">
+                <value name="TEXT">
+                  <shadow type="text" id="ss_win_label_text"><field name="TEXT">Analysing: </field></shadow>
+                </value>
+                <next>
+                  <block type="text_statement" id="ss_win_value">
+                    <value name="TEXT">
+                      <block type="read_details" id="ss_win_profit"><field name="DETAIL_INDEX">4</field></block>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="notify" id="ss_notify_win">
+                <field name="NOTIFICATION_TYPE">success</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <block type="variables_get" id="ss_get_text_win"><field name="VAR" id="ss_text">text</field></block>
+                </value>
+                <next>
+                  <block type="variables_set" id="ss_reset_amount_win">
+                    <field name="VAR" id="ss_tradeAmount">Trade amount</field>
+                    <value name="VALUE">
+                      <block type="variables_get" id="ss_get_amount2_win"><field name="VAR" id="ss_tradeAmount2">Trade amount 2</field></block>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+
+        <!-- Lost: report the loss, grow the stake by it, and reset once the
+             square root of the profit reaches Loss value. -->
+        <statement name="ELSE">
+          <block type="text_join" id="ss_join_loss">
+            <field name="VARIABLE" id="ss_text1">text1</field>
+            <statement name="STACK">
+              <block type="text_statement" id="ss_loss_label">
+                <value name="TEXT">
+                  <shadow type="text" id="ss_loss_label_text"><field name="TEXT">Analysing</field></shadow>
+                </value>
+                <next>
+                  <block type="text_statement" id="ss_loss_value">
+                    <value name="TEXT">
+                      <block type="math_single" id="ss_loss_abs">
+                        <field name="OP">ABS</field>
+                        <value name="NUM">
+                          <shadow type="math_number" id="ss_loss_abs_shadow"><field name="NUM">0</field></shadow>
+                          <block type="read_details" id="ss_loss_profit"><field name="DETAIL_INDEX">4</field></block>
+                        </value>
+                      </block>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="notify" id="ss_notify_loss">
+                <field name="NOTIFICATION_TYPE">warn</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <block type="variables_get" id="ss_get_text1"><field name="VAR" id="ss_text1">text1</field></block>
+                </value>
+                <next>
+                  <block type="math_change" id="ss_change_amount">
+                    <field name="VAR" id="ss_tradeAmount">Trade amount</field>
+                    <value name="DELTA">
+                      <shadow type="math_number" id="ss_change_shadow"><field name="NUM">1</field></shadow>
+                      <block type="math_arithmetic" id="ss_change_math">
+                        <field name="OP">MULTIPLY</field>
+                        <value name="A">
+                          <shadow type="math_number" id="ss_change_a_shadow"><field name="NUM">1</field></shadow>
+                          <block type="math_single" id="ss_change_abs">
+                            <field name="OP">ABS</field>
+                            <value name="NUM">
+                              <shadow type="math_number" id="ss_change_abs_shadow"><field name="NUM">0</field></shadow>
+                              <block type="read_details" id="ss_change_profit"><field name="DETAIL_INDEX">4</field></block>
+                            </value>
+                          </block>
+                        </value>
+                        <value name="B">
+                          <shadow type="math_number" id="ss_change_b_shadow"><field name="NUM">1</field></shadow>
+                          <block type="math_number" id="ss_change_b"><field name="NUM">1</field></block>
+                        </value>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="controls_if" id="ss_if_loss_cap">
+                        <value name="IF0">
+                          <block type="logic_compare" id="ss_cmp_loss_cap">
+                            <field name="OP">GTE</field>
+                            <value name="A">
+                              <block type="math_single" id="ss_root_profit">
+                                <field name="OP">ROOT</field>
+                                <value name="NUM">
+                                  <shadow type="math_number" id="ss_root_shadow"><field name="NUM">0</field></shadow>
+                                  <block type="read_details" id="ss_root_profit_detail"><field name="DETAIL_INDEX">4</field></block>
+                                </value>
+                              </block>
+                            </value>
+                            <value name="B">
+                              <block type="variables_get" id="ss_get_loss_value"><field name="VAR" id="ss_lossValue">Loss value</field></block>
+                            </value>
+                          </block>
+                        </value>
+                        <statement name="DO0">
+                          <block type="variables_set" id="ss_reset_amount_cap">
+                            <field name="VAR" id="ss_tradeAmount">Trade amount</field>
+                            <value name="VALUE">
+                              <block type="variables_get" id="ss_get_amount2_cap"><field name="VAR" id="ss_tradeAmount2">Trade amount 2</field></block>
+                            </value>
+                          </block>
+                        </statement>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+
+        <!-- Either way: report the running total, then either trade again or
+             stop once the income target is reached. -->
+        <next>
+          <block type="text_join" id="ss_join_total">
+            <field name="VARIABLE" id="ss_text2">text2</field>
+            <statement name="STACK">
+              <block type="text_statement" id="ss_total_label">
+                <value name="TEXT">
+                  <shadow type="text" id="ss_total_label_text"><field name="TEXT">Total Profit: </field></shadow>
+                </value>
+                <next>
+                  <block type="text_statement" id="ss_total_value">
+                    <value name="TEXT">
+                      <block type="total_profit" id="ss_total_profit"></block>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="notify" id="ss_notify_total">
+                <field name="NOTIFICATION_TYPE">info</field>
+                <field name="NOTIFICATION_SOUND">silent</field>
+                <value name="MESSAGE">
+                  <block type="variables_get" id="ss_get_text2"><field name="VAR" id="ss_text2">text2</field></block>
+                </value>
+                <next>
+                  <block type="controls_if" id="ss_if_target">
+                    <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
+                    <value name="IF0">
+                      <block type="logic_compare" id="ss_cmp_target">
+                        <field name="OP">LT</field>
+                        <value name="A">
+                          <block type="total_profit" id="ss_total_profit_cmp"></block>
+                        </value>
+                        <value name="B">
+                          <block type="variables_get" id="ss_get_income_target"><field name="VAR" id="ss_incomeTarget">Income Target</field></block>
+                        </value>
+                      </block>
+                    </value>
+                    <statement name="DO0">
+                      <block type="trade_again" id="ss_trade_again"></block>
+                    </statement>
+                    <statement name="ELSE">
+                      <block type="text_join" id="ss_join_done">
+                        <field name="VARIABLE" id="ss_text3">text3</field>
+                        <statement name="STACK">
+                          <block type="text_statement" id="ss_done_label">
+                            <value name="TEXT">
+                              <shadow type="text" id="ss_done_label_text"><field name="TEXT">Another win in the books 📈💰</field></shadow>
+                            </value>
+                            <next>
+                              <block type="text_statement" id="ss_done_value">
+                                <value name="TEXT">
+                                  <block type="total_profit" id="ss_total_profit_done"></block>
+                                </value>
+                              </block>
+                            </next>
+                          </block>
+                        </statement>
+                        <next>
+                          <block type="text_print" id="ss_print_done">
+                            <value name="TEXT">
+                              <shadow type="text" id="ss_print_done_shadow"><field name="TEXT"></field></shadow>
+                              <block type="variables_get" id="ss_get_text3"><field name="VAR" id="ss_text3">text3</field></block>
+                            </value>
+                          </block>
+                        </next>
+                      </block>
+                    </statement>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>
