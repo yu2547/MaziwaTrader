@@ -97,6 +97,7 @@ $mw-grey: #7d8fa3;
 }
 
 .mw-dcircles {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 1.4rem;
@@ -112,6 +113,58 @@ $mw-grey: #7d8fa3;
         justify-content: center;
         gap: 1rem;
         flex-wrap: wrap;
+    }
+
+    // Over everything while the window is still empty. Deliberately transparent
+    // to the pointer: a feed that never answers would otherwise lock the panel
+    // for good, market selector included, with no way to switch away from a
+    // market that is not responding.
+    // No backdrop-filter here on purpose - it makes an element the containing
+    // block for every position:fixed descendant, and Trading Configuration
+    // opens as a fixed dialog from inside this panel.
+    &__loading {
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        border-radius: 8px;
+        background: rgb(9 13 28 / 74%);
+        pointer-events: none;
+    }
+
+    &__loading-inner {
+        position: sticky;
+        top: 34vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.6rem;
+    }
+
+    // A diamond rather than a spinner: a spinner says "working", this says
+    // "watching", which is what it is actually doing.
+    &__loading-mark {
+        width: 5.6rem;
+        height: 5.6rem;
+        border: 3px solid #3d9df5;
+        border-radius: 6px;
+        box-shadow:
+            0 0 2.4rem rgb(61 157 245 / 55%),
+            inset 0 0 1.8rem rgb(61 157 245 / 35%);
+        animation: mw-dcircles-pump 1.25s ease-in-out infinite;
+
+        @media (width <= 480px) {
+            width: 4.4rem;
+            height: 4.4rem;
+        }
+    }
+
+    &__loading-label {
+        font-size: 1.25rem;
+        letter-spacing: 0.04em;
+        color: rgb(214 226 245 / 85%);
     }
 
     &__action {
@@ -1407,4 +1460,18 @@ $mw-grey: #7d8fa3;
     height: 1rem;
     border-radius: 50%;
     background: #ef4444;
+}
+
+// The diamond on the Dcircles loading overlay - see &__loading-mark above.
+@keyframes mw-dcircles-pump {
+    0%,
+    100% {
+        opacity: 0.7;
+        transform: rotate(45deg) scale(0.88);
+    }
+
+    50% {
+        opacity: 1;
+        transform: rotate(45deg) scale(1.1);
+    }
 }

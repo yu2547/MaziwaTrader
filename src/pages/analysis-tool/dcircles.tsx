@@ -228,8 +228,34 @@ const Dcircles = observer(() => {
         tone: (digit === barrier ? 'good' : 'bad') as 'good' | 'bad',
     }));
 
+    /**
+     * Up until the window has ticks in it. The panel is honest about this
+     * rather than showing ten circles reading 0.0% as though it had measured a
+     * market where nothing ever happens - which is what an empty sample looks
+     * like when it is drawn as if it were full.
+     *
+     * It clears on the first ticks, whether they come from the history seed or
+     * the live stream, so a market that has one but not the other still gets
+     * out of it. The AI panel is exempt: it fetches its own markets and shows
+     * its own waiting line.
+     */
+    const is_loading = !is_ai_open && (!isConnected || digits.length === 0);
+
     return (
         <div className='mw-dcircles'>
+            {is_loading && (
+                <div className='mw-dcircles__loading' role='status' aria-live='polite'>
+                    {/* Sticky, not centred in the overlay: the panel is taller
+                        than a phone screen, so centring it in the panel put the
+                        mark below the fold on exactly the device that needs it
+                        most. This follows the scroll instead. */}
+                    <div className='mw-dcircles__loading-inner'>
+                        <span className='mw-dcircles__loading-mark' aria-hidden='true' />
+                        <span className='mw-dcircles__loading-label'>{localize('Fetching live ticks...')}</span>
+                    </div>
+                </div>
+            )}
+
             {/* Top right, under the Run button - the trade settings sit at the
                 corner of the analysis, not in the middle of it. */}
             <div className='mw-dcircles__bar'>
