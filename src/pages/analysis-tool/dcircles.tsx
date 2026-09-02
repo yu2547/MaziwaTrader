@@ -8,6 +8,9 @@ import AiScan from './ai-scan';
 import TradingConfiguration from './trading-configuration';
 
 const DEFAULT_SYMBOL = '1HZ100V';
+
+/** Volatility indices - R_10..R_100 and their 1s variants. */
+const VOLATILITY_SYMBOL = /^(R_\d+|1HZ\d+V)$/;
 const DEFAULT_TICK_WINDOW = 1000;
 const MIN_TICK_WINDOW = 50;
 const MAX_TICK_WINDOW = 5000;
@@ -126,6 +129,24 @@ const Dcircles = observer(() => {
                 // Non-fatal: the selector stays on the default symbol.
             });
     }, [isConnected, feed]);
+
+    /**
+     * What Select Market offers: the volatility indices and nothing else.
+     *
+     * The synthetic list also carries Boom, Crash, Jump, Step and Range Break.
+     * Several of those quote to a precision that leaves the last digit barely
+     * moving - Range Break 100 prints to one decimal, so its last digit is
+     * always 0 - and a digit distribution on them is a reading of the tick
+     * format rather than the market. They are the markets this page cannot say
+     * anything true about, so it does not offer them.
+     *
+     * `symbols` itself is left whole: Trading Configuration takes it as its
+     * fallback market list, and that panel trades contracts this one does not.
+     */
+    const market_options = useMemo(
+        () => symbols.filter(item => VOLATILITY_SYMBOL.test(item.underlying_symbol)),
+        [symbols]
+    );
 
     const selected_symbol_info = symbols.find(item => item.underlying_symbol === selected_symbol);
     const decimals =
@@ -284,8 +305,8 @@ const Dcircles = observer(() => {
                 <label className='mw-dcircles__market'>
                     <span>{localize('Select Market:')}</span>
                     <select value={selected_symbol} onChange={event => setSelectedSymbol(event.target.value)}>
-                        {symbols.length === 0 && <option value={selected_symbol}>{selected_symbol}</option>}
-                        {symbols.map(item => (
+                        {market_options.length === 0 && <option value={selected_symbol}>{selected_symbol}</option>}
+                        {market_options.map(item => (
                             <option key={item.underlying_symbol} value={item.underlying_symbol}>
                                 {item.underlying_symbol_name}
                             </option>
