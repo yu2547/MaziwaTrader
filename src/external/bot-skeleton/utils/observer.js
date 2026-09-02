@@ -81,9 +81,22 @@ export default class Observer {
     }
 
     unregister(event, f) {
+        // unregisterAll() deletes the key outright, so an event can have no
+        // list at all - and then this filtered undefined and threw "Cannot
+        // read properties of undefined (reading 'filter')". Any component
+        // holding a handler for an event somebody else cleared took its whole
+        // route down on cleanup: the run panel calls unregisterAll('bot.contract')
+        // whenever a page using it unmounts, and cleanups run in the order the
+        // effects were declared, so a listener registered after it was always
+        // unregistering into a key that had just been removed.
+        //
+        // Removing a handler that is already gone is a no-op, which is what it
+        // should have been from the start.
+        const actionList = this.eam.get(event);
+        if (!actionList) return;
         this.eam = this.eam.set(
             event,
-            this.eam.get(event).filter(r => r.searchBy !== f)
+            actionList.filter(r => r.searchBy !== f)
         );
     }
 

@@ -173,9 +173,16 @@ const DualEdge = observer(({ initial_mode = 'recovery' }: { initial_mode?: TMode
     // rule set they judge against has to be the one selected now.
     const mode_ref = useRef<TMode>(initial_mode);
 
+    // The contract listener is registered once and read from here, rather than
+    // re-registered whenever a setting changes - localize alone is a new
+    // function on most renders, and every re-registration is a window in which
+    // the handler is not attached at all.
+    const settings_ref = useRef({ localize, martingale, martingale_on, stake, stop_loss, take_profit });
+
     running_ref.current = running;
     stake_ref.current = current_stake;
     mode_ref.current = mode;
+    settings_ref.current = { localize, martingale, martingale_on, stake, stop_loss, take_profit };
 
     useEffect(() => {
         if (!isConnected) return;
@@ -317,7 +324,9 @@ const DualEdge = observer(({ initial_mode = 'recovery' }: { initial_mode?: TMode
             // configured stake after a win. Off by default, and it only ever
             // changes the size of the next trade.
             setCurrentStake(previous =>
-                is_win || !martingale_on ? stake : Number((previous * martingale).toFixed(2))
+                is_win || !settings_ref.current.martingale_on
+                    ? settings_ref.current.stake
+                    : Number((previous * settings_ref.current.martingale).toFixed(2))
             );
 
             setHistory(previous =>
@@ -336,12 +345,13 @@ const DualEdge = observer(({ initial_mode = 'recovery' }: { initial_mode?: TMode
 
             setSessionPl(previous => {
                 const total = Number((previous + profit).toFixed(2));
-                if (total >= take_profit) {
+                const { localize: say, stop_loss: sl, take_profit: tp } = settings_ref.current;
+                if (total >= tp) {
                     setRunning(false);
-                    setNotice(localize('Take profit reached at {{total}}. The bot stopped.', { total }));
-                } else if (total <= -Math.abs(stop_loss)) {
+                    setNotice(say('Take profit reached at {{total}}. The bot stopped.', { total }));
+                } else if (total <= -Math.abs(sl)) {
                     setRunning(false);
-                    setNotice(localize('Stop loss reached at {{total}}. The bot stopped.', { total }));
+                    setNotice(say('Stop loss reached at {{total}}. The bot stopped.', { total }));
                 }
                 return total;
             });
@@ -349,7 +359,10 @@ const DualEdge = observer(({ initial_mode = 'recovery' }: { initial_mode?: TMode
 
         globalObserver.register('bot.contract', onContract);
         return () => globalObserver.unregister('bot.contract', onContract);
-    }, [localize, martingale, martingale_on, stake, stop_loss, take_profit]);
+        // Registered once for the life of the panel; everything that can change
+        // is read from settings_ref at the moment a contract settles.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const start = () => {
         if (!is_logged_in) {
