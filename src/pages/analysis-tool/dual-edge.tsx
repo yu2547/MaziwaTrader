@@ -85,13 +85,60 @@ const recoveryEntry = (digits: number[]): TEntry | null => {
     return null;
 };
 
-const DualEdge = observer(() => {
+/**
+ * Nexus AI: four run-length rules and no recovery leg. Each one waits for a
+ * run of digits on one side of a barrier and enters that side - a longer run
+ * for a barrier closer to the middle, which is the whole shape of the set.
+ *
+ * The hints are the labels the page prints, kept beside the rule they describe
+ * so the two cannot drift apart.
+ */
+const NEXUS_RULES: {
+    barrier: number;
+    contract_type: 'DIGITOVER' | 'DIGITUNDER';
+    count: number;
+    hint: string;
+    label: string;
+    test: (digit: number) => boolean;
+}[] = [
+    { barrier: 1, contract_type: 'DIGITOVER', count: 3, hint: '3≤1', label: 'O1', test: digit => digit <= 1 },
+    { barrier: 2, contract_type: 'DIGITOVER', count: 4, hint: '4≤2', label: 'O2', test: digit => digit <= 2 },
+    { barrier: 7, contract_type: 'DIGITUNDER', count: 4, hint: '4>7', label: 'U7', test: digit => digit > 7 },
+    { barrier: 8, contract_type: 'DIGITUNDER', count: 3, hint: '3>8', label: 'U8', test: digit => digit > 8 },
+];
+
+const NEXUS_SUMMARY = NEXUS_RULES.map(rule => `${rule.label} (${rule.hint})`).join(' · ');
+
+/** The first rule whose run has completed, in the order they are listed. */
+const nexusEntry = (digits: number[]): TEntry | null => {
+    for (const rule of NEXUS_RULES) {
+        if (digits.length < rule.count) continue;
+        if (digits.slice(-rule.count).every(rule.test))
+            return { barrier: rule.barrier, contract_type: rule.contract_type, kind: 'initial' };
+    }
+    return null;
+};
+
+/** OVER / UNDER / EVEN / ODD - the side a completed rule would enter. */
+const sideLabel = (entry: TEntry) => entry.contract_type.replace('DIGIT', '');
+
+type TMode = 'recovery' | 'nexus';
+
+/**
+ * Which rules a mode trades. Recovery Type falls back to the even/odd leg when
+ * the initial one has not fired; Nexus AI has no recovery leg at all, which is
+ * what "(no recovery)" in its own label means.
+ */
+const entryFor = (mode: TMode, digits: number[]): TEntry | null =>
+    mode === 'nexus' ? nexusEntry(digits) : (initialEntry(digits) ?? recoveryEntry(digits));
+
+const DualEdge = observer(({ initial_mode = 'recovery' }: { initial_mode?: TMode }) => {
     const { feed, isConnected } = usePublicMarketFeed();
     const { client, oauth_session } = useStore() ?? {};
     const { localize } = useTranslations();
     const trade = useManualTrade();
 
-    const [mode, setMode] = useState<'recovery' | 'nexus'>('recovery');
+    const [mode, setMode] = useState<TMode>(initial_mode);
     const [symbols, setSymbols] = useState<TActiveSymbol[]>([]);
     const [rows, setRows] = useState<Record<string, TRow>>({});
     const [filter, setFilter] = useState('');
@@ -122,8 +169,13 @@ const DualEdge = observer(() => {
     /** Contract ids this page opened, so it counts its own trades and no others. */
     const mine_ref = useRef<Map<number, { market: string; stake: number }>>(new Map());
 
+    // Same reason as the others: the tick handlers are registered once, and the
+    // rule set they judge against has to be the one selected now.
+    const mode_ref = useRef<TMode>(initial_mode);
+
     running_ref.current = running;
     stake_ref.current = current_stake;
+    mode_ref.current = mode;
 
     useEffect(() => {
         if (!isConnected) return;
@@ -188,7 +240,7 @@ const DualEdge = observer(() => {
                             // The entry is decided on the tick that completes the
                             // rule, which is the only moment the rule describes.
                             if (!running_ref.current) return;
-                            const entry = initialEntry(digits) ?? recoveryEntry(digits);
+                            const entry = entryFor(mode_ref.current, digits);
                             if (entry) fire_ref.current(symbol, entry);
                         })
                     );
@@ -321,24 +373,9 @@ const DualEdge = observer(() => {
         return all.filter(row => row.name.toLowerCase().includes(needle) || row.symbol.toLowerCase().includes(needle));
     }, [rows, filter]);
 
-    const ready_count = list.filter(row => initialEntry(row.digits)).length;
-    const recovery_count = list.filter(row => recoveryEntry(row.digits)).length;
-
-    if (mode === 'nexus') {
-        return (
-            <div className='mw-dual'>
-                <ModePills mode={mode} setMode={setMode} localize={localize} />
-                <div className='mw-dual__card mw-dual__empty'>
-                    <h2>{localize('Nexus AI')}</h2>
-                    <p>
-                        {localize(
-                            'No rule set is configured for this mode in this build. It is deliberately empty rather than trading on a strategy nobody specified.'
-                        )}
-                    </p>
-                </div>
-            </div>
-        );
-    }
+    const is_nexus = mode === 'nexus';
+    const ready_count = list.filter(row => (is_nexus ? nexusEntry(row.digits) : initialEntry(row.digits))).length;
+    const recovery_count = is_nexus ? 0 : list.filter(row => recoveryEntry(row.digits)).length;
 
     return (
         <div className='mw-dual'>
@@ -347,7 +384,13 @@ const DualEdge = observer(() => {
             <div className='mw-dual__card mw-dual__head'>
                 <div>
                     <h2>{localize('Dual Edge')}</h2>
-                    <p>{localize('Initial: Over 1 / Under 8 (last 2 digits) · Recovery: Even/Odd pattern (last 7)')}</p>
+                    <p>
+                        {is_nexus
+                            ? `${localize('Strategy')}: ${localize('Nexus AI')} · O1, O2, U7, U8 ${localize('(no recovery)')}`
+                            : localize(
+                                  'Initial: Over 1 / Under 8 (last 2 digits) · Recovery: Even/Odd pattern (last 7)'
+                              )}
+                    </p>
                 </div>
                 <div className='mw-dual__chips'>
                     <span className={`mw-dual__chip${running ? ' mw-dual__chip--on' : ''}`}>
@@ -389,8 +432,8 @@ const DualEdge = observer(() => {
                     <input readOnly value={localize('Over 1 / Under 8 (last 2 digits)')} />
                 </label>
                 <label>
-                    <span>{localize('Recovery Type')}</span>
-                    <input readOnly value={localize('Even/Odd pattern (last 7)')} />
+                    <span>{is_nexus ? localize('Nexus AI') : localize('Recovery Type')}</span>
+                    <input readOnly value={is_nexus ? NEXUS_SUMMARY : localize('Even/Odd pattern (last 7)')} />
                 </label>
                 <label>
                     <span>{localize('Stake')}</span>
@@ -502,10 +545,12 @@ const DualEdge = observer(() => {
                             {localize('Active Markets')} ({list.length}/{symbols.length})
                         </h3>
                         <p>
-                            {localize('Ready: {{ready}} · Recovery pattern: {{recovery}}', {
-                                ready: ready_count,
-                                recovery: recovery_count,
-                            })}
+                            {is_nexus
+                                ? localize('Ready: {{ready}}', { ready: ready_count })
+                                : localize('Ready: {{ready}} · Recovery pattern: {{recovery}}', {
+                                      ready: ready_count,
+                                      recovery: recovery_count,
+                                  })}
                         </p>
                     </div>
                     <input
@@ -522,7 +567,7 @@ const DualEdge = observer(() => {
                 ) : (
                     <ul className='mw-dual__rows'>
                         {list.map(row => {
-                            const entry = initialEntry(row.digits) ?? recoveryEntry(row.digits);
+                            const entry = entryFor(mode, row.digits);
                             return (
                                 <li key={row.symbol} className={entry ? 'mw-dual__row--hit' : undefined}>
                                     <span className='mw-dual__row-name'>{row.name}</span>
@@ -532,7 +577,9 @@ const DualEdge = observer(() => {
                                     <span className='mw-dual__row-digits'>
                                         {row.digits.slice(-INITIAL_DIGITS).join('') || '--'}
                                     </span>
-                                    <span className='mw-dual__row-state'>{entry ? entry.kind : '—'}</span>
+                                    <span className={`mw-dual__row-state${entry ? ' mw-dual__win' : ''}`}>
+                                        {entry ? sideLabel(entry) : '—'}
+                                    </span>
                                 </li>
                             );
                         })}
@@ -549,8 +596,8 @@ const ModePills = ({
     setMode,
 }: {
     localize: (text: string) => string;
-    mode: 'recovery' | 'nexus';
-    setMode: (mode: 'recovery' | 'nexus') => void;
+    mode: TMode;
+    setMode: (mode: TMode) => void;
 }) => (
     <div className='mw-dual__pills'>
         <button

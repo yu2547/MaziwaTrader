@@ -7,7 +7,8 @@ import ProAi from './pro-ai';
 import Signals from './signals';
 import './analysis-tool.scss';
 
-type TAnalysisView = 'dcircles' | 'signals' | 'analysis_tool' | 'sl_tools' | 'pro_ai' | 'tick_analyser' | 'dual_edge';
+type TAnalysisView =
+    'dcircles' | 'signals' | 'analysis_tool' | 'sl_tools' | 'pro_ai' | 'tick_analyser' | 'dual_edge' | 'nexus_ai';
 
 const VIEWS: { id: TAnalysisView; label: string }[] = [
     { id: 'dcircles', label: 'Dcircles' },
@@ -17,6 +18,7 @@ const VIEWS: { id: TAnalysisView; label: string }[] = [
     { id: 'pro_ai', label: 'Pro AI' },
     { id: 'tick_analyser', label: 'Tick Analyser' },
     { id: 'dual_edge', label: 'Dual Edge' },
+    { id: 'nexus_ai', label: 'Nexus AI' },
 ];
 
 /**
@@ -78,7 +80,10 @@ const AnalysisTool = observer(() => {
                 {view === 'sl_tools' && <NotConnected title={localize('SL Tools')} />}
                 {view === 'pro_ai' && <ProAi />}
                 {view === 'tick_analyser' && <NotConnected title={localize('Tick Analyser')} />}
-                {view === 'dual_edge' && <DualEdge />}
+                {/* One page, two rule sets. Each tab opens it on its own set,
+                    and the pills at the top switch between them from either. */}
+                {view === 'dual_edge' && <DualEdge key='dual_edge' initial_mode='recovery' />}
+                {view === 'nexus_ai' && <DualEdge key='nexus_ai' initial_mode='nexus' />}
             </div>
         </div>
     );
