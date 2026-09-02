@@ -161,10 +161,18 @@ $mw-grey: #7d8fa3;
         }
     }
 
+    // Read out, never shown. Clipped rather than display:none, which screen
+    // readers skip entirely - the overlay would then announce nothing at all.
     &__loading-label {
-        font-size: 1.25rem;
-        letter-spacing: 0.04em;
-        color: rgb(214 226 245 / 85%);
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        border: 0;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
     }
 
     &__action {

@@ -249,9 +249,13 @@ const Dcircles = observer(() => {
                         than a phone screen, so centring it in the panel put the
                         mark below the fold on exactly the device that needs it
                         most. This follows the scroll instead. */}
+                    {/* The mark alone. The words were on screen for barely a
+                        second, which is long enough to notice and not long
+                        enough to read - the diamond already says "wait". The
+                        label is kept for screen readers, which have no diamond. */}
                     <div className='mw-dcircles__loading-inner'>
                         <span className='mw-dcircles__loading-mark' aria-hidden='true' />
-                        <span className='mw-dcircles__loading-label'>{localize('Fetching live ticks...')}</span>
+                        <span className='mw-dcircles__loading-label'>{localize('Loading market data')}</span>
                     </div>
                 </div>
             )}
