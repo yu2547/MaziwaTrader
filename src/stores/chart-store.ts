@@ -8,7 +8,18 @@ type TSubscription = {
     subscriber: null | { unsubscribe: () => void };
 };
 
+/** The fields of an active_symbols entry this store actually reads. */
+type TChartSymbol = {
+    exchange_is_open?: number;
+    is_trading_suspended?: number;
+    submarket?: string;
+    symbol?: string;
+};
+
 export default class ChartStore {
+    /** The market the chart falls back to - the same one every other page defaults to. */
+    static DEFAULT_SYMBOL = 'R_100';
+
     root_store: RootStore;
     constructor(root_store: RootStore) {
         makeObservable(this, {
@@ -65,14 +76,38 @@ export default class ChartStore {
         // main_content.setActiveTab(tabs_title.WORKSPACE);
     };
 
+    /**
+     * Picks the market the chart opens on.
+     *
+     * The workspace's own market wins when there is one, so the chart follows
+     * the bot being built. Otherwise it is a volatility index - a live,
+     * always-open market, and the same default the rest of the app uses -
+     * rather than whichever symbol Deriv happened to return first, which can
+     * be a closed exchange or a suspended instrument and charts as a flat line.
+     *
+     * It deliberately does not assign nothing. Chart renders null without a
+     * symbol, and active_symbols arrives on the connection - which comes up
+     * after this store does. Overwriting a good symbol with undefined, or
+     * writing undefined on the one early attempt, is what left the Charts tab
+     * blank with no way back.
+     */
     updateSymbol = () => {
         const workspace = window.Blockly.derivWorkspace;
         const market_block = workspace?.getAllBlocks().find((block: window.Blockly.Block) => {
             return block.type === 'trade_definition_market';
         });
 
-        const symbol = market_block?.getFieldValue('SYMBOL_LIST') ?? api_base?.active_symbols[0]?.symbol;
-        this.symbol = symbol;
+        const from_workspace = market_block?.getFieldValue('SYMBOL_LIST');
+        // api_base declares active_symbols as an untyped empty array, so the
+        // shape it actually carries is named here rather than inferred as never.
+        const all = (api_base?.active_symbols ?? []) as TChartSymbol[];
+        const tradable = all.filter(item => !item.is_trading_suspended && item.exchange_is_open !== 0);
+        const preferred =
+            tradable.find(item => item.symbol === ChartStore.DEFAULT_SYMBOL) ??
+            tradable.find(item => item.submarket === 'random_index');
+
+        const symbol = from_workspace || preferred?.symbol || tradable[0]?.symbol;
+        if (symbol) this.symbol = symbol;
     };
 
     onSymbolChange = (symbol: string) => {

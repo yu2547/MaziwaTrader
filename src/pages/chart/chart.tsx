@@ -107,8 +107,17 @@ const Chart = observer(({ show_digits_stats }: { show_digits_stats: boolean }) =
         chartSubscriptionIdRef.current = chart_subscription_id;
     }, [chart_subscription_id]);
 
+    // Keeps asking until there is a symbol. active_symbols arrives on the
+    // trading connection, which routinely comes up after this mounts - so the
+    // single attempt this used to make could land before there was anything to
+    // choose from, and the tab then stayed blank for the rest of the session.
+    // Once a symbol exists the effect re-runs, returns early, and the interval
+    // is cleared.
     useEffect(() => {
-        if (!symbol) updateSymbol();
+        if (symbol) return undefined;
+        updateSymbol();
+        const timer = setInterval(updateSymbol, 1000);
+        return () => clearInterval(timer);
     }, [symbol, updateSymbol]);
 
     // requestAPI/requestForgetStream/requestSubscribe are all passed as props to
