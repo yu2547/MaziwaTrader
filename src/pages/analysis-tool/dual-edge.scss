@@ -1,0 +1,342 @@
+// Theme tokens throughout: this view sits inside the Analysis Tool's own
+// chrome, so it follows the app rather than painting a ground of its own.
+$dual-blue: #1a5cff;
+$dual-green: #16c784;
+$dual-red: #e04b6b;
+
+.mw-dual {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    padding: 1.6rem;
+    background: var(--general-main-1);
+    color: var(--text-prominent);
+}
+
+.mw-dual__pills {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.mw-dual__pill {
+    padding: 0.7rem 1.6rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 999px;
+    background: var(--general-main-1);
+    color: var(--text-general);
+    font-size: 1.25rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &--on {
+        border-color: $dual-blue;
+        background: $dual-blue;
+        color: #fff;
+    }
+}
+
+.mw-dual__card {
+    padding: 1.6rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 10px;
+    background: var(--general-main-1);
+}
+
+.mw-dual__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.6rem;
+    flex-wrap: wrap;
+
+    h2 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    p {
+        margin: 0.4rem 0 0;
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+.mw-dual__chips {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.mw-dual__chip {
+    padding: 0.6rem 1.4rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 999px;
+    font-size: 1.2rem;
+    color: var(--text-less-prominent);
+
+    &--on {
+        border-color: $dual-green;
+        color: $dual-green;
+    }
+
+    &--ok {
+        color: $dual-green;
+    }
+}
+
+.mw-dual__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1.6rem;
+
+    span {
+        display: block;
+        font-size: 1.3rem;
+        color: var(--text-less-prominent);
+    }
+
+    b {
+        display: block;
+        margin-top: 0.4rem;
+        font-size: 2.2rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.mw-dual__win {
+    color: $dual-green;
+}
+
+.mw-dual__loss {
+    color: $dual-red;
+}
+
+.mw-dual__settings {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1.2rem;
+
+    label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-width: 0;
+    }
+
+    span {
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+
+    input[type='number'],
+    input[type='text'],
+    input[readonly] {
+        width: 100%;
+        min-height: 3.8rem;
+        padding: 0 1.2rem;
+        border: 1px solid var(--general-section-1);
+        border-radius: 6px;
+        background: var(--general-main-1);
+        color: var(--text-prominent);
+        font-size: 1.3rem;
+        outline: none;
+
+        &:focus {
+            border-color: $dual-blue;
+        }
+
+        &:disabled,
+        &[readonly] {
+            opacity: 0.7;
+            cursor: default;
+        }
+    }
+}
+
+.mw-dual__check {
+    justify-content: flex-start;
+
+    input {
+        width: 4rem;
+        height: 2.2rem;
+    }
+}
+
+.mw-dual__run {
+    align-self: flex-start;
+    min-height: 4rem;
+    padding: 0 2rem;
+    border: none;
+    border-radius: 6px;
+    background: $dual-blue;
+    color: #fff;
+    font-size: 1.35rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.08);
+    }
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+
+    // Red while it runs, because the only thing that stops it is this button.
+    &--stop {
+        background: $dual-red;
+    }
+}
+
+.mw-dual__notice {
+    margin: 0;
+    padding: 1rem 1.2rem;
+    border-radius: 6px;
+    background: var(--general-section-1);
+    font-size: 1.25rem;
+    color: var(--text-general);
+
+    &--bad {
+        color: $dual-red;
+    }
+}
+
+.mw-dual__how {
+    h3 {
+        margin: 0 0 0.6rem;
+        font-size: 1.4rem;
+        font-weight: 600;
+    }
+
+    ul {
+        margin: 0;
+        padding-left: 1.8rem;
+        font-size: 1.2rem;
+        line-height: 1.7;
+        color: $dual-blue;
+    }
+}
+
+.mw-dual__history {
+    h3 {
+        margin: 0 0 1rem;
+        font-size: 1.4rem;
+        font-weight: 600;
+    }
+
+    ul {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    li {
+        display: grid;
+        grid-template-columns: 9rem minmax(0, 1fr) 10rem 6rem 7rem;
+        gap: 1rem;
+        padding: 0.7rem 0;
+        border-bottom: 1px solid var(--general-section-1);
+        font-size: 1.2rem;
+        font-variant-numeric: tabular-nums;
+
+        @media (width <= 700px) {
+            grid-template-columns: minmax(0, 1fr) auto;
+        }
+    }
+}
+
+.mw-dual__markets {
+    header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1.2rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.2rem;
+
+        h3 {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        p {
+            margin: 0.3rem 0 0;
+            font-size: 1.2rem;
+            color: $dual-red;
+        }
+
+        input {
+            min-width: 20rem;
+            min-height: 3.6rem;
+            padding: 0 1.2rem;
+            border: 1px solid var(--general-section-1);
+            border-radius: 6px;
+            background: var(--general-main-1);
+            color: var(--text-prominent);
+            font-size: 1.25rem;
+            outline: none;
+        }
+    }
+}
+
+.mw-dual__waiting {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-less-prominent);
+}
+
+.mw-dual__rows {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 12rem 6rem 8rem;
+        gap: 1rem;
+        align-items: center;
+        padding: 0.9rem 0.6rem;
+        border-bottom: 1px solid var(--general-section-1);
+        font-size: 1.25rem;
+    }
+
+    // A market whose rule has just completed - the one the bot would act on.
+    li.mw-dual__row--hit {
+        background: rgb(22 199 132 / 10%);
+    }
+}
+
+.mw-dual__row-price,
+.mw-dual__row-digits {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.mw-dual__row-state {
+    text-align: right;
+    color: var(--text-less-prominent);
+}
+
+.mw-dual__empty {
+    h2 {
+        margin: 0 0 0.8rem;
+        font-size: 1.8rem;
+    }
+
+    p {
+        margin: 0;
+        max-width: 62rem;
+        font-size: 1.3rem;
+        line-height: 1.6;
+        color: var(--text-less-prominent);
+    }
+}

@@ -193,7 +193,10 @@ const useManualTrade = () => {
     // finished would re-enable the buttons while the rest were still in
     // flight. The batch below owns that flag.
     const placeTrade = useCallback(
-        async ({ contract_type, symbol, stake, duration, barrier }: TPlaceTradeParams) => {
+        async (
+            { contract_type, symbol, stake, duration, barrier }: TPlaceTradeParams,
+            on_contract?: (contract_id: number) => void
+        ) => {
             const api = api_base.api;
             if (!api) {
                 setErrorMessage('Not connected to Deriv yet.');
@@ -253,6 +256,12 @@ const useManualTrade = () => {
                 open_contracts.current.set(contract_id, timeout);
                 if (is_mounted.current) setPendingCount(open_contracts.current.size);
 
+                // Handed back so a caller that needs to follow this particular
+                // contract can tell it apart on the bot.contract stream, which
+                // carries every contract the app has open - a strategy page
+                // counting its own wins must not count a bot run's as well.
+                on_contract?.(contract_id);
+
                 globalObserver.emit('ui.log.success', {
                     log_type: LogTypes.PURCHASE,
                     extra: { longcode: buy.longcode, transaction_id: buy.transaction_id },
@@ -284,7 +293,7 @@ const useManualTrade = () => {
      * opened is reported back.
      */
     const placeTrades = useCallback(
-        async (params: TPlaceTradeParams, count: number) => {
+        async (params: TPlaceTradeParams, count: number, on_contract?: (contract_id: number) => void) => {
             const attempts = Math.max(1, count);
             setIsPlacing(true);
             try {
@@ -297,7 +306,9 @@ const useManualTrade = () => {
                     return 0;
                 }
                 setErrorMessage(null);
-                const results = await Promise.all(Array.from({ length: attempts }, () => placeTrade(params)));
+                const results = await Promise.all(
+                    Array.from({ length: attempts }, () => placeTrade(params, on_contract))
+                );
                 return results.filter(Boolean).length;
             } finally {
                 if (is_mounted.current) setIsPlacing(false);

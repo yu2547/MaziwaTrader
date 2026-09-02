@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useTranslations } from '@deriv-com/translations';
 import Dcircles from './dcircles';
+import DualEdge from './dual-edge';
 import ProAi from './pro-ai';
 import Signals from './signals';
 import './analysis-tool.scss';
 
-type TAnalysisView = 'dcircles' | 'signals' | 'analysis_tool' | 'sl_tools' | 'pro_ai' | 'tick_analyser';
+type TAnalysisView = 'dcircles' | 'signals' | 'analysis_tool' | 'sl_tools' | 'pro_ai' | 'tick_analyser' | 'dual_edge';
 
 const VIEWS: { id: TAnalysisView; label: string }[] = [
     { id: 'dcircles', label: 'Dcircles' },
@@ -15,6 +16,7 @@ const VIEWS: { id: TAnalysisView; label: string }[] = [
     { id: 'sl_tools', label: 'SL Tools' },
     { id: 'pro_ai', label: 'Pro AI' },
     { id: 'tick_analyser', label: 'Tick Analyser' },
+    { id: 'dual_edge', label: 'Dual Edge' },
 ];
 
 /**
@@ -76,6 +78,7 @@ const AnalysisTool = observer(() => {
                 {view === 'sl_tools' && <NotConnected title={localize('SL Tools')} />}
                 {view === 'pro_ai' && <ProAi />}
                 {view === 'tick_analyser' && <NotConnected title={localize('Tick Analyser')} />}
+                {view === 'dual_edge' && <DualEdge />}
             </div>
         </div>
     );
