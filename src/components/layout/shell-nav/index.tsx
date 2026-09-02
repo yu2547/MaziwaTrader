@@ -111,6 +111,15 @@ const ROUTE_DESTINATIONS: TRouteDestination[] = [
         label: <Localize i18n_default_text='TradingView' />,
         path: '/tradingview',
     },
+    // A page in this app rather than a link out to app.deriv.com. Deriv's own
+    // DTrader cannot be embedded - measured: an iframe pointed at it lands on
+    // deriv.com's homepage, because the page needs a session and an iframe is a
+    // third-party context - so this is our own, on our own execution path.
+    {
+        icon: <LabelPairedChartCandlestickCaptionRegularIcon {...ICON_PROPS} />,
+        label: <Localize i18n_default_text='DTrader' />,
+        path: '/dtrader',
+    },
 ];
 
 const ShellNav = observer(() => {
@@ -192,13 +201,6 @@ const ShellNav = observer(() => {
                     <LegacyReportsIcon {...ICON_PROPS} />
                     <span className='shell-nav__label'>
                         <Localize i18n_default_text='Reports' />
-                    </span>
-                </a>
-
-                <a className='shell-nav__item' href={standalone_routes.trade} target='_blank' rel='noopener noreferrer'>
-                    <LabelPairedChartCandlestickCaptionRegularIcon {...ICON_PROPS} />
-                    <span className='shell-nav__label'>
-                        <Localize i18n_default_text='DTrader' />
                     </span>
                 </a>
             </div>

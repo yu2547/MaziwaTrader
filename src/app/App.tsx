@@ -22,6 +22,7 @@ const RiskCalculator = lazy(() => import('../pages/risk-calculator'));
 const BulkTrader = lazy(() => import('../pages/bulk-trader'));
 const ManualTrader = lazy(() => import('../pages/manual-trader'));
 const TradingViewPage = lazy(() => import('../pages/trading-view'));
+const DTrader = lazy(() => import('../pages/dtrader'));
 const CopyTrading = lazy(() => import('../pages/copy-trading'));
 
 const { TRANSLATIONS_CDN_URL, R2_PROJECT_NAME, CROWDIN_BRANCH_NAME } = process.env;
@@ -79,6 +80,7 @@ const router = createBrowserRouter(
             <Route path='bulk-trader' element={<BulkTrader />} errorElement={<RouteErrorBoundary />} />
             <Route path='manual' element={<ManualTrader />} errorElement={<RouteErrorBoundary />} />
             <Route path='tradingview' element={<TradingViewPage />} errorElement={<RouteErrorBoundary />} />
+            <Route path='dtrader' element={<DTrader />} errorElement={<RouteErrorBoundary />} />
             <Route path='copy-trading' element={<CopyTrading />} errorElement={<RouteErrorBoundary />} />
         </Route>
     )

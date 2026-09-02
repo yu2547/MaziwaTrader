@@ -30,7 +30,13 @@ export type TPlaceTradeParams = {
     symbol: string;
     stake: number;
     duration: number;
-    barrier?: number;
+    /**
+     * Deriv's own unit codes - 't' ticks, 's' seconds, 'm' minutes, 'h' hours,
+     * 'd' days. Ticks by default, which is what every caller wanted until a
+     * page needed to offer minutes as well.
+     */
+    duration_unit?: string;
+    barrier?: number | string;
 };
 
 type TApiError = { error?: { message?: string; code?: string } };
@@ -194,7 +200,7 @@ const useManualTrade = () => {
     // flight. The batch below owns that flag.
     const placeTrade = useCallback(
         async (
-            { contract_type, symbol, stake, duration, barrier }: TPlaceTradeParams,
+            { contract_type, symbol, stake, duration, duration_unit = 't', barrier }: TPlaceTradeParams,
             on_contract?: (contract_id: number) => void
         ) => {
             const api = api_base.api;
@@ -218,7 +224,7 @@ const useManualTrade = () => {
                     contract_type,
                     currency,
                     duration,
-                    duration_unit: 't',
+                    duration_unit,
                     ...(api_base.is_otp_transport ? { underlying_symbol: symbol } : { symbol }),
                 };
                 if (barrier !== undefined) proposal_request.barrier = barrier;
