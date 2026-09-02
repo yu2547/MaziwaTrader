@@ -144,26 +144,24 @@ const FreeBots = observer(({ allowed_categories, subtitle, title }: TFreeBotsPro
     // has no ErrorBoundary to recover from and unmounts the whole tree.
     const { dashboard } = useStore() ?? {};
     const [loadingBotId, setLoadingBotId] = useState<string | null>(null);
-    const [selectedCategory, setSelectedCategory] = useState<string>('All');
     const [search_term, setSearchTerm] = useState<string>('');
 
+    // allowed_categories still scopes the catalogue - that is how Trading Bots
+    // shows only its own section. What is gone is the row of category pills the
+    // reader could click; search covers the same ground, category included.
     const bots_in_scope = allowed_categories?.length
         ? BOTS.filter(bot => allowed_categories.includes(bot.category))
         : BOTS;
 
-    const categories = ['All', ...Array.from(new Set(bots_in_scope.map(bot => bot.category)))];
-
     const normalized_search = search_term.trim().toLowerCase();
 
-    const filteredBots = bots_in_scope.filter(bot => {
-        const matches_category = selectedCategory === 'All' || bot.category === selectedCategory;
-        const matches_search =
+    const filteredBots = bots_in_scope.filter(
+        bot =>
             !normalized_search ||
             bot.name.toLowerCase().includes(normalized_search) ||
             bot.description.toLowerCase().includes(normalized_search) ||
-            bot.category.toLowerCase().includes(normalized_search);
-        return matches_category && matches_search;
-    });
+            bot.category.toLowerCase().includes(normalized_search)
+    );
 
     const loadBot = async (bot: Bot) => {
         try {
@@ -264,24 +262,10 @@ const FreeBots = observer(({ allowed_categories, subtitle, title }: TFreeBotsPro
                 )}
             </div>
 
-            <div className='free-bots__categories'>
-                {categories.map(category => (
-                    <button
-                        key={category}
-                        className={`free-bots__category-btn ${selectedCategory === category ? 'free-bots__category-btn--active' : ''}`}
-                        onClick={() => setSelectedCategory(category)}
-                    >
-                        {category}
-                    </button>
-                ))}
-            </div>
-
             {filteredBots.length === 0 && (
                 <div className='free-bots__empty'>
                     <span className='free-bots__empty-icon'>🔍</span>
-                    <p>
-                        No bots match “{search_term}”{selectedCategory !== 'All' ? ` in ${selectedCategory}` : ''}.
-                    </p>
+                    <p>No bots match “{search_term}”.</p>
                 </div>
             )}
 

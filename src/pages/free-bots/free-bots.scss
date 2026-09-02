@@ -95,40 +95,6 @@
         }
     }
 
-    &__categories {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        justify-content: center;
-        margin-bottom: 32px;
-    }
-
-    &__category-btn {
-        padding: 8px 16px;
-        border: 1px solid var(--border-normal);
-        border-radius: 20px;
-        background: var(--general-main-1);
-        color: var(--text-general);
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-
-        &:hover {
-            border-color: var(--brand-red-coral);
-            color: var(--brand-red-coral);
-        }
-
-        &--active {
-            background: var(--brand-red-coral);
-            border-color: var(--brand-red-coral);
-            color: #fff;
-
-            &:hover {
-                color: #fff;
-            }
-        }
-    }
-
     &__grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -369,15 +335,6 @@
 
         &__card {
             padding: 20px;
-        }
-
-        &__categories {
-            gap: 6px;
-        }
-
-        &__category-btn {
-            padding: 6px 12px;
-            font-size: 13px;
         }
     }
 }
