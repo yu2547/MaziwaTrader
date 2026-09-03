@@ -7,7 +7,7 @@
  * window of ticks that has already happened.
  */
 
-export type TStrategy = 'matches_differs' | 'even_odd' | 'over_under';
+export type TStrategy = 'matches_differs' | 'even_odd' | 'over_under' | 'rise_fall';
 
 export type TSide = {
     /** The rate this side runs at when digits are uniform: 50 for EVEN, 10 for a single digit. */
@@ -76,6 +76,9 @@ export const CANDIDATES: Record<TStrategy, number> = {
     even_odd: 2,
     matches_differs: 20,
     over_under: 2,
+    // Rise and Fall are fixed in advance like Even/Odd - two sides, the larger
+    // taken - so the same correction applies.
+    rise_fall: 2,
 };
 
 /**

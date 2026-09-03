@@ -122,6 +122,16 @@ const ExecutionBar = observer(() => {
     // render - which, during a scan, is once per market.
     const closeAi = useCallback(() => setIsAiOpen(false), []);
 
+    // The Signals panel's "Launch AI" opens this scanner rather than starting
+    // one of its own. A window event rather than a store field because the orb
+    // owns this state and nothing else needs to read it - the panel only needs
+    // to ask, and this is the whole of the asking.
+    useEffect(() => {
+        const open = () => setIsAiOpen(true);
+        window.addEventListener('mw:open-entry-scanner', open);
+        return () => window.removeEventListener('mw:open-entry-scanner', open);
+    }, []);
+
     // The orb opens from pointerup, so that a press which moved counts as a
     // drag rather than a click. Keyboard activation fires no pointer events at
     // all - Enter and Space on a <button> raise only `click` - so that path
