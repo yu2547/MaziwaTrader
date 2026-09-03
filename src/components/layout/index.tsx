@@ -8,6 +8,7 @@ import RunPanel from '@/components/run-panel';
 import VirtualHookModal from '@/components/virtual-hook-modal';
 import { api_base } from '@/external/bot-skeleton';
 import { V2GetActiveToken } from '@/external/bot-skeleton/services/api/appId';
+import useAppBootstrap from '@/hooks/useAppBootstrap';
 import { useOfflineDetection } from '@/hooks/useOfflineDetection';
 import { useStore } from '@/hooks/useStore';
 import useTMB from '@/hooks/useTMB';
@@ -50,6 +51,21 @@ const Layout = observer(() => {
 
     const isLoggedInCookie = Cookies.get('logged_state') === 'true';
     const isEndpointPage = pathname.includes('endpoint');
+
+    // Restores the stored OAuth session and opens the trading connection, for
+    // every route rather than only the index one. Both used to run inside
+    // app-root.tsx, which React Router mounts on '/' alone - so loading or
+    // refreshing /manual, /dtrader or any other page came up with no session
+    // and no connection, and the trade panels there reported "Account
+    // required" over a Run button that could not be pressed. The work itself
+    // is a singleton (app/session-bootstrap.ts), so this and app-root asking
+    // for it does it once.
+    //
+    // Not on /callback: that page is in the middle of exchanging the
+    // authorization code and stores the session itself, then sends the browser
+    // to '/'. Not on /endpoint, which exists to change the server this would
+    // connect to.
+    useAppBootstrap({ enabled: !isCallbackPage && !isEndpointPage });
     const checkClientAccount = JSON.parse(localStorage.getItem('clientAccounts') ?? '{}');
     const getQueryParams = new URLSearchParams(window.location.search);
     const currency = getQueryParams.get('account') ?? '';

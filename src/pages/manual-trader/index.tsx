@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
+import { redirectToLogin } from '@/components/shared';
+import { V2GetActiveToken } from '@/external/bot-skeleton/services/api/appId';
 import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
 import { useStore } from '@/hooks/useStore';
+import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
 import { getLastDigit, toDecimalPlaces } from '@/utils/market-data/last-digit';
 import { TActiveSymbol } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
@@ -79,6 +82,16 @@ const ManualTrader = observer(() => {
     const [placed, setPlaced] = useState<string | null>(null);
 
     const is_logged_in = Boolean(oauth_session?.is_authenticated || client?.is_logged_in);
+    /**
+     * Whether there is a session to trade on at all - the stores, plus the
+     * persisted token behind them.
+     *
+     * The stores are filled by the app's bootstrap on load, and a press can
+     * land in the moment before that finishes; the token is the same session,
+     * so reading both means the button is never dead while its own account is
+     * still arriving.
+     */
+    const has_session = is_logged_in || Boolean(getStoredAccessToken() || V2GetActiveToken());
     const currency = oauth_session?.currency || (is_logged_in && (client?.currency as string)) || 'USD';
     const config = TRADE_TYPES[trade_type];
 
@@ -202,6 +215,16 @@ const ManualTrader = observer(() => {
      * flight instead of accepting a second click on top of the first.
      */
     const run = async () => {
+        // No account, no contract - so the press does the one thing that leads
+        // to a trade rather than nothing at all: it starts the same Deriv
+        // sign-in the header's Log in button starts, and the trade is a second
+        // press away. A disabled button explained none of this.
+        if (!has_session) {
+            setPlaced(null);
+            redirectToLogin(false);
+            return;
+        }
+
         // Allow equals is Deriv's rise-or-equal pair: a tick landing exactly on
         // the entry spot wins instead of losing. Only Rise/Fall has them.
         const equals_type = side === 'left' ? 'CALLE' : 'PUTE';
@@ -307,7 +330,7 @@ const ManualTrader = observer(() => {
                 <aside className='mw-manual__panel'>
                     <header className='mw-manual__panel-head'>
                         <h2>{trade_type}</h2>
-                        {!is_logged_in && <span>{localize('Account required')}</span>}
+                        {!has_session && <span>{localize('Account required')}</span>}
                     </header>
 
                     <div className='mw-manual__sides'>
@@ -430,16 +453,11 @@ const ManualTrader = observer(() => {
                         </p>
                     )}
 
-                    <button
-                        type='button'
-                        className='mw-manual__run'
-                        onClick={run}
-                        disabled={!is_logged_in || trade.is_placing}
-                    >
-                        {trade.is_placing ? localize('Buying...') : localize('Run')}
+                    <button type='button' className='mw-manual__run' onClick={run} disabled={trade.is_placing}>
+                        {trade.is_placing ? localize('Buying...') : has_session ? localize('Run') : localize('Log in')}
                     </button>
 
-                    {!is_logged_in && (
+                    {!has_session && (
                         <p className='mw-manual__note'>
                             {localize('Log in to a Deriv account to place a trade from here.')}
                         </p>

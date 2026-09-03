@@ -1,17 +1,15 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import ErrorBoundary from '@/components/error-component/error-boundary';
 import ErrorComponent from '@/components/error-component/error-component';
 import ChunkLoader from '@/components/loader/chunk-loader';
 import LoadingScreen from '@/components/loading-screen/loading-screen';
-import { api_base } from '@/external/bot-skeleton';
 import { V2GetActiveToken } from '@/external/bot-skeleton/services/api/appId';
+import useAppBootstrap from '@/hooks/useAppBootstrap';
 import { useStore } from '@/hooks/useStore';
 import useTMB from '@/hooks/useTMB';
 import LandingPage from '@/pages/landing/landing-page';
-import { restoreStoredSession } from '@/utils/auth/deriv-oauth';
 import { public_market_feed } from '@/utils/market-data/public-market-feed';
-import { listOptionsAccounts } from '@/utils/options-trading/options-trading-api';
 import { localize } from '@deriv-com/translations';
 import './app-root.scss';
 
@@ -38,8 +36,12 @@ const ErrorComponentWrapper = observer(() => {
 
 const AppRoot = () => {
     const store = useStore();
-    const api_base_initialized = useRef(false);
-    const [is_api_initialized, setIsApiInitialized] = useState(false);
+    // Restoring the OAuth session and opening the trading connection are the
+    // shell's job now (hooks/useAppBootstrap.ts), not this route's - they have
+    // to happen on /manual and every other route too, and this page only needs
+    // to know when they are done. The work runs once wherever it is asked for
+    // first.
+    const { is_api_initialized, is_oauth_restore_complete } = useAppBootstrap();
     // Write-only now: nothing gates on the TMB check finishing since API init
     // no longer waits for it, and is_ready never included it. Kept as state so
     // the effect below still records completion in one place if something needs
@@ -47,40 +49,10 @@ const AppRoot = () => {
     const [, setIsTmbCheckComplete] = useState(false);
     const [, setIsTmbEnabled] = useState(false);
     const [show_loading_screen, setShowLoadingScreen] = useState(true);
-    const [is_oauth_restore_complete, setIsOauthRestoreComplete] = useState(false);
-    const oauth_restore_started = useRef(false);
     const { isTmbEnabled } = useTMB();
 
-    // oauth_session (src/stores/oauth-session-store.ts) is in-memory only and
-    // is rebuilt empty on every load, but completeDerivLogin() already
-    // persists the access token to sessionStorage - without reading it back
-    // here, a page refresh silently logged an OAuth-only session out (no
-    // legacy token to fall back on, so is_landing_page would go true).
-    useEffect(() => {
-        if (oauth_restore_started.current || !store) return;
-        oauth_restore_started.current = true;
-
-        const restore = async () => {
-            const restored = restoreStoredSession();
-            if (restored && !store.oauth_session.is_authenticated) {
-                store.oauth_session.setSession(restored.access_token, restored.expires_in);
-                try {
-                    const accounts = await listOptionsAccounts(restored.access_token);
-                    store.oauth_session.setAccounts(accounts);
-                } catch (error) {
-                    // Non-fatal: the session itself is still valid even if the
-                    // accounts list couldn't be refreshed right now.
-                    console.error('[MW-AUTH] failed to refresh Options accounts on restore:', error);
-                }
-            }
-            setIsOauthRestoreComplete(true);
-        };
-
-        restore();
-    }, [store]);
-
     // Public market data (public-market-feed.ts) needs no auth and is
-    // independent of the classic socket api_base owns below - pre-warm the
+    // independent of the classic socket the bootstrap opens - pre-warm the
     // connection here so it's already open by the time the dashboard's own
     // widgets mount. acquire()/release() are reference-counted (see
     // usePublicMarketFeed), so this doesn't tear down the connection out
@@ -107,45 +79,6 @@ const AppRoot = () => {
         };
 
         checkTmbStatus();
-    }, []);
-
-    // Starts immediately rather than waiting for the TMB check above, which is
-    // a separate network round-trip that the effect above already describes as
-    // "independent of API initialization" - yet this used to block on it, so
-    // the connection (and for an OAuth session, the REST + OTP handshake)
-    // could not even begin until it returned. Both now run in parallel, which
-    // is the single biggest startup saving available here.
-    //
-    // The one thing that reads TMB state is authorizeAndSubscribe's
-    // InvalidToken branch (window.is_tmb_enabled), and only on that error - so
-    // this does not race anything on the success path.
-    useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            if (!is_api_initialized) {
-                setIsApiInitialized(true);
-            }
-        }, 2000);
-
-        const initializeApi = async () => {
-            if (!api_base_initialized.current) {
-                try {
-                    await api_base.init();
-                    api_base_initialized.current = true;
-                } catch (error) {
-                    console.error('API initialization failed:', error);
-                    api_base_initialized.current = false;
-                } finally {
-                    setIsApiInitialized(true);
-                    clearTimeout(timeoutId); // Clear timeout if API init completes
-                }
-            }
-        };
-
-        initializeApi();
-        return () => clearTimeout(timeoutId);
-        // Runs once on mount - api_base_initialized guards against a second
-        // init, so there is nothing to re-run when other state changes.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // The destination (landing page or dashboard) mounts underneath as soon as
