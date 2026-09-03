@@ -651,6 +651,165 @@ $dt-red: #de0040;
     }
 }
 
+// Reads like the fields beside it, but it is a button: pressing anywhere on
+// the row opens the pad.
+.mw-dt__picker {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.8rem 1.2rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 8px;
+    background: var(--general-section-1);
+    text-align: left;
+    cursor: pointer;
+
+    span {
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+    }
+
+    b {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: var(--text-prominent);
+    }
+
+    &--open {
+        border-color: var(--text-prominent);
+    }
+}
+
+.mw-dt__pad {
+    position: fixed;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 28rem;
+    padding: 1.2rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 12px;
+    background: var(--general-main-1);
+    box-shadow: 0 12px 32px rgb(0 0 0 / 24%);
+}
+
+.mw-dt__pad-modes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+    padding: 0.3rem;
+    border-radius: 8px;
+    background: var(--general-section-1);
+}
+
+.mw-dt__pad-mode {
+    min-height: 3.2rem;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-general);
+    font-size: 1.4rem;
+    cursor: pointer;
+
+    &--on {
+        background: var(--general-main-1);
+        color: var(--text-prominent);
+    }
+}
+
+.mw-dt__pad-units {
+    display: flex;
+    gap: 0.6rem;
+}
+
+.mw-dt__pad-unit {
+    flex: 1;
+    min-height: 3.2rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-general);
+    font-size: 1.2rem;
+    cursor: pointer;
+
+    &--on {
+        border-color: var(--text-prominent);
+        color: var(--text-prominent);
+        font-weight: 700;
+    }
+}
+
+.mw-dt__pad-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+}
+
+.mw-dt__pad-chip {
+    min-height: 4.4rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 8px;
+    background: var(--general-section-1);
+    color: var(--text-general);
+    font-size: 1.35rem;
+    cursor: pointer;
+
+    &:hover {
+        color: var(--text-prominent);
+    }
+
+    &--on {
+        background: var(--text-prominent);
+        border-color: var(--text-prominent);
+        color: var(--general-main-1);
+        font-weight: 700;
+    }
+}
+
+.mw-dt__pad-empty {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--text-less-prominent);
+}
+
+.mw-dt__pad-type {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+
+    input {
+        flex: 1;
+        min-width: 0;
+        padding: 1rem 1.2rem;
+        border: 1px solid var(--general-section-1);
+        border-radius: 8px;
+        background: var(--general-section-1);
+        color: var(--text-prominent);
+        font-size: 1.5rem;
+        outline: none;
+    }
+
+    button {
+        padding: 0 1.6rem;
+        border: none;
+        border-radius: 8px;
+        background: $dt-green;
+        color: #fff;
+        font-size: 1.3rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    p {
+        width: 100%;
+        margin: 0;
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+    }
+}
+
 .mw-dt__toggle {
     display: flex;
     align-items: center;

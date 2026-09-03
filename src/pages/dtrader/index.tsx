@@ -24,10 +24,17 @@ import {
     TTradeParams,
 } from './trade-types';
 import useTradeProposal from './use-trade-proposal';
+import ValuePicker from './value-picker';
 import './dtrader.scss';
 
 const DEFAULT_SYMBOL = '1HZ100V';
 const DIGIT_WINDOW = 1000;
+
+// The values Deriv puts on its own pads. Anything outside what the contract
+// allows is dropped from the pad rather than offered and then refused.
+const TICK_PRESETS = [1, 2, 3, 5, 7, 10];
+const MINUTE_PRESETS = [1, 2, 3, 5, 10, 15, 30, 60];
+const STAKE_PRESETS = [1, 2, 3, 5, 10, 25];
 
 const DTrader = observer(() => {
     const { feed, isConnected } = usePublicMarketFeed();
@@ -199,6 +206,19 @@ const DTrader = observer(() => {
     const payout = proposal?.payout ?? 0;
     const details = proposal?.contract_details;
     const limits = proposal?.validation_params;
+
+    // Deriv's own stake limits for the contract as it currently stands, which
+    // differ by family - 0.35 on a digit, 1.00 on an accumulator, and a
+    // ceiling that moves with the market.
+    const stake_limits = {
+        max: limits?.stake?.max ? Number(limits.stake.max) : undefined,
+        min: limits?.stake?.min ? Number(limits.stake.min) : 0.35,
+    };
+
+    const durationLabel = (amount: number, unit: string) => {
+        if (unit === 'm') return amount === 1 ? localize('1 minute') : localize('{{count}} minutes', { count: amount });
+        return amount === 1 ? localize('1 tick') : localize('{{count}} ticks', { count: amount });
+    };
 
     /** Buys exactly what was quoted - the priced request, sent to be bought. */
     const buy = async () => {
@@ -384,46 +404,26 @@ const DTrader = observer(() => {
                     )}
 
                     {type.fields.includes('duration') && (
-                        <div className='mw-dt__field'>
-                            <span>{localize('Duration')}</span>
-                            <input
-                                type='number'
-                                min={duration_bounds.min}
-                                max={duration_bounds.max}
-                                value={params.duration}
-                                aria-label={localize('Duration')}
-                                onChange={event =>
-                                    update({
-                                        duration: Math.min(
-                                            duration_bounds.max,
-                                            Math.max(
-                                                duration_bounds.min,
-                                                Number(event.target.value) || duration_bounds.min
-                                            )
-                                        ),
-                                    })
-                                }
-                            />
-                            {bounds.units.length > 1 ? (
-                                <select
-                                    value={params.duration_unit}
-                                    aria-label={localize('Duration unit')}
-                                    onChange={event => {
-                                        const unit = event.target.value as 't' | 'm';
-                                        const limit = unit === 'm' ? bounds.minutes : bounds.ticks;
-                                        update({ duration: limit?.min ?? 1, duration_unit: unit });
-                                    }}
-                                >
-                                    {bounds.units.map(unit => (
-                                        <option key={unit} value={unit}>
-                                            {unit === 'm' ? localize('minutes') : localize('ticks')}
-                                        </option>
-                                    ))}
-                                </select>
-                            ) : (
-                                <i>{params.duration_unit === 'm' ? localize('minutes') : localize('ticks')}</i>
-                            )}
-                        </div>
+                        <ValuePicker
+                            display={durationLabel(params.duration, params.duration_unit)}
+                            label={localize('Duration')}
+                            max={duration_bounds.max}
+                            min={duration_bounds.min}
+                            onChange={duration => update({ duration })}
+                            onUnitChange={next => {
+                                const unit = next as 't' | 'm';
+                                const limit = unit === 'm' ? bounds.minutes : bounds.ticks;
+                                update({ duration: limit?.min ?? 1, duration_unit: unit });
+                            }}
+                            presetLabel={preset => durationLabel(preset, params.duration_unit)}
+                            presets={params.duration_unit === 'm' ? MINUTE_PRESETS : TICK_PRESETS}
+                            unit={params.duration_unit}
+                            units={bounds.units.map(unit => ({
+                                label: unit === 'm' ? localize('Minutes') : localize('Ticks'),
+                                value: unit,
+                            }))}
+                            value={params.duration}
+                        />
                     )}
 
                     {type.fields.includes('barrier') && (
@@ -473,17 +473,21 @@ const DTrader = observer(() => {
                         </label>
                     )}
 
-                    <label className='mw-dt__field'>
-                        <span>{localize('Stake')}</span>
-                        <input
-                            type='number'
-                            min={0.35}
-                            step={0.01}
-                            value={params.stake}
-                            onChange={event => update({ stake: Math.max(0.35, Number(event.target.value) || 0.35) })}
-                        />
-                        <i>{currency}</i>
-                    </label>
+                    {/* Deriv states the stake it will accept for this exact
+                        contract - a minute-long accumulator will not go below
+                        1.00 - so the pad and the keyboard both hold to its
+                        limits rather than to a rule of our own. */}
+                    <ValuePicker
+                        display={`${params.stake} ${currency}`}
+                        label={localize('Stake')}
+                        max={stake_limits.max}
+                        min={stake_limits.min}
+                        onChange={stake => update({ stake })}
+                        presetLabel={preset => `${preset} ${currency}`}
+                        presets={STAKE_PRESETS}
+                        step={0.01}
+                        value={params.stake}
+                    />
 
                     {type.fields.includes('take_profit') && (
                         <label className='mw-dt__field'>
