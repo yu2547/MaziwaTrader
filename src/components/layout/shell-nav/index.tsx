@@ -120,6 +120,11 @@ const ROUTE_DESTINATIONS: TRouteDestination[] = [
         label: <Localize i18n_default_text='DTrader' />,
         path: '/dtrader',
     },
+    {
+        icon: <LabelPairedChartLineCaptionRegularIcon {...ICON_PROPS} />,
+        label: <Localize i18n_default_text='Signal Analyzer' />,
+        path: '/signal-analyzer',
+    },
 ];
 
 const ShellNav = observer(() => {

@@ -1,0 +1,280 @@
+// A terminal green that reads on black without vibrating, and the red the
+// title bar and errors share.
+$sa-green: #00ff41;
+$sa-dim: #0f0;
+$sa-red: #ff3b3b;
+$sa-ground: #04120a;
+
+.mw-sa {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 2.4rem 1.6rem;
+    overflow-y: auto;
+    background: radial-gradient(circle at 50% 0%, #0a2417 0%, #010704 60%);
+    font-family: 'Courier New', monospace;
+}
+
+.mw-sa__card {
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+    width: min(52rem, 100%);
+    padding: 2.4rem;
+    border: 1px solid $sa-green;
+    border-radius: 10px;
+    background: rgb(0 0 0 / 62%);
+    box-shadow:
+        0 0 12px rgb(0 255 65 / 35%),
+        inset 0 0 24px rgb(0 255 65 / 12%);
+}
+
+.mw-sa__title {
+    margin: 0;
+    font-size: 3.2rem;
+    font-weight: 700;
+    letter-spacing: 0.2rem;
+    text-align: center;
+    text-transform: uppercase;
+    color: $sa-green;
+    text-shadow:
+        0 0 8px rgb(0 255 65 / 90%),
+        0 0 22px rgb(255 0 60 / 45%);
+}
+
+.mw-sa__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+
+    span {
+        font-size: 1.2rem;
+        letter-spacing: 0.1rem;
+        text-transform: uppercase;
+        color: $sa-green;
+    }
+
+    select {
+        padding: 1.1rem 1.2rem;
+        border: 1px solid rgb(0 255 65 / 55%);
+        border-radius: 6px;
+        background: #000;
+        color: $sa-green;
+        font-family: inherit;
+        font-size: 1.5rem;
+        outline: none;
+        cursor: pointer;
+
+        &:focus {
+            border-color: $sa-green;
+            box-shadow: 0 0 10px rgb(0 255 65 / 45%);
+        }
+
+        option {
+            background: #000;
+            color: $sa-green;
+        }
+    }
+}
+
+.mw-sa__live {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    padding: 1.2rem;
+    border: 1px dashed rgb(0 255 65 / 45%);
+    border-radius: 6px;
+
+    p {
+        margin: 0;
+        font-size: 1.3rem;
+        color: rgb(0 255 65 / 75%);
+    }
+
+    b {
+        display: block;
+        margin-top: 0.3rem;
+        font-size: 2rem;
+        font-variant-numeric: tabular-nums;
+        color: $sa-green;
+        text-shadow: 0 0 8px rgb(0 255 65 / 70%);
+    }
+}
+
+.mw-sa__go {
+    min-height: 5rem;
+    border: none;
+    border-radius: 6px;
+    background: $sa-green;
+    color: #012;
+    font-family: inherit;
+    font-size: 1.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2rem;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 0 18px rgb(0 255 65 / 55%);
+
+    &:hover {
+        filter: brightness(1.1);
+    }
+}
+
+.mw-sa__note {
+    margin: 0;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: rgb(0 255 65 / 55%);
+}
+
+.mw-sa__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    display: grid;
+    place-items: center;
+    padding: 2rem;
+    background: rgb(0 0 0 / 82%);
+}
+
+.mw-sa__terminal {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: min(86rem, 100%);
+    height: min(56rem, 88vh);
+    border: 1px solid $sa-green;
+    border-radius: 8px;
+    background: $sa-ground;
+    box-shadow: 0 0 30px rgb(0 255 65 / 45%);
+    overflow: hidden;
+}
+
+// Behind everything in the terminal, and never in the way of a click.
+.mw-sa__rain {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.mw-sa__bar {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.2rem;
+    padding: 1rem 1.4rem;
+    border-bottom: 1px solid rgb(0 255 65 / 45%);
+    background: rgb(0 0 0 / 70%);
+
+    h2 {
+        margin: 0;
+        font-size: 1.4rem;
+        color: $sa-green;
+    }
+}
+
+.mw-sa__bar-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.mw-sa__mute {
+    padding: 0.5rem 0.9rem;
+    border: 1px solid rgb(0 255 65 / 45%);
+    border-radius: 4px;
+    background: transparent;
+    color: $sa-green;
+    font-family: inherit;
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+.mw-sa__close {
+    width: 2.8rem;
+    height: 2.8rem;
+    border: 1px solid $sa-red;
+    border-radius: 4px;
+    background: transparent;
+    color: $sa-red;
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover {
+        background: $sa-red;
+        color: #000;
+    }
+}
+
+.mw-sa__log {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    min-height: 0;
+    padding: 1.6rem;
+    overflow-y: auto;
+    font-size: 1.35rem;
+    line-height: 1.8;
+}
+
+.mw-sa__line {
+    margin: 0;
+    color: $sa-green;
+    text-shadow: 0 0 6px rgb(0 255 65 / 45%);
+    word-break: break-word;
+
+    &--error {
+        color: $sa-red;
+        text-shadow: 0 0 6px rgb(255 59 59 / 45%);
+    }
+
+    &--good {
+        color: #7bff9b;
+    }
+
+    &--dim {
+        color: rgb(0 255 65 / 55%);
+        font-size: 1.15rem;
+        text-shadow: none;
+    }
+
+    &--cipher {
+        color: rgb(0 255 65 / 60%);
+        font-size: 1.2rem;
+        letter-spacing: 0.08rem;
+        text-shadow: none;
+        word-break: break-all;
+    }
+}
+
+.mw-sa__result {
+    margin-top: 1.2rem;
+    padding: 1.2rem;
+    border: 1px solid rgb(0 255 65 / 45%);
+    border-radius: 6px;
+    background: rgb(0 0 0 / 55%);
+}
+
+.mw-sa__headline {
+    margin: 0 0 0.6rem;
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: $sa-green;
+    text-shadow: 0 0 10px rgb(0 255 65 / 70%);
+}
+
+.mw-sa__activated {
+    margin: 0.6rem 0 0;
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: #34d399;
+    text-shadow: 0 0 12px rgb(52 211 153 / 70%);
+}
