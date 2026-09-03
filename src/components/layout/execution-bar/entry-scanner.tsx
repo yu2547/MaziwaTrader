@@ -7,6 +7,7 @@ import { useStore } from '@/hooks/useStore';
 import { getLastDigit, toDecimalPlaces } from '@/utils/market-data/last-digit';
 import { TActiveSymbol } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
+import { scan_sound } from './scan-sound';
 
 /**
  * Ranks markets for a digits Over/Under entry from real tick history - the
@@ -190,6 +191,22 @@ const EntryScanner = observer(
         }, [is_scanning, onScanningChange]);
 
         useEffect(() => () => onScanningChange?.(false), [onScanningChange]);
+
+        /**
+         * The scanning sound follows the same flag the spinner does, so it
+         * lasts exactly as long as the scan - however many markets that turns
+         * out to be, however long each one takes. No timer of its own decides
+         * when it ends.
+         *
+         * The cleanup covers every way a scan can stop being watched: a result,
+         * an empty result, Escape, the close button, a route change, or the
+         * panel being torn down under a thrown error.
+         */
+        useEffect(() => {
+            if (is_scanning) scan_sound.start();
+            else scan_sound.stop();
+            return () => scan_sound.stop();
+        }, [is_scanning]);
 
         // A scan is a sequential await-loop over every market, so closing the
         // scanner part-way through left it running to completion against a
@@ -540,7 +557,14 @@ const EntryScanner = observer(
                             <button
                                 type='button'
                                 className='mw-scanner__scan'
-                                onClick={scanMarkets}
+                                // Primed here rather than in the effect above:
+                                // Safari only honours an AudioContext resumed
+                                // inside the gesture's own call stack, and an
+                                // effect runs after that stack has unwound.
+                                onClick={() => {
+                                    scan_sound.prime();
+                                    scanMarkets();
+                                }}
                                 disabled={is_scanning || symbols.length === 0}
                             >
                                 {is_scanning ? localize('Scanning Markets…') : localize('Scan Markets')}
