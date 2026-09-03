@@ -17,7 +17,6 @@ import { Tooltip } from '@deriv-com/ui';
 import CustomNotifications from './custom-notifications/custom-notifications';
 import AccountsInfoLoader from './account-info-loader';
 import AccountSwitcher from './account-switcher';
-import HeaderClock from './HeaderClock';
 import MenuItems from './menu-items';
 import MobileMenu from './mobile-menu';
 import OAuthFlatNav from './oauth-flat-nav';
@@ -100,8 +99,6 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
                         <AccountSwitcher activeAccount={activeAccount} />
                     </div>
 
-                    <HeaderClock />
-
                     {isDesktop &&
                         (() => {
                             let redirect_url = new URL(standalone_routes.personal_details);
@@ -142,7 +139,6 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
         } else {
             return (
                 <div className='auth-actions'>
-                    <HeaderClock />
                     <Button
                         tertiary
                         onClick={async () => {

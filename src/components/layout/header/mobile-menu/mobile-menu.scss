@@ -54,15 +54,6 @@
         flex-direction: column;
         height: 100%;
 
-        &__platform {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-bottom: 1px solid var(--general-section-1);
-            min-height: 7rem;
-            cursor: pointer;
-        }
-
         .deriv-context-menu {
             box-shadow: none !important;
         }

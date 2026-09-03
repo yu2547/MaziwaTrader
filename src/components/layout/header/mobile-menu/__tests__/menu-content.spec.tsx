@@ -10,8 +10,6 @@ jest.mock('@deriv-com/ui', () => ({
     useDevice: jest.fn(() => ({ isDesktop: false })),
 }));
 
-jest.mock('../../platform-switcher', () => jest.fn(() => <div>Mock Platform Switcher</div>));
-
 describe('MenuContent Component', () => {
     const mock_store = mockStore(mock_ws as any);
 
@@ -28,23 +26,28 @@ describe('MenuContent Component', () => {
         });
     });
 
-    it('renders PlatformSwitcher and MenuItem components correctly', () => {
+    it('renders the menu items and none of the links out of this app', () => {
         render(<MenuContent />, { wrapper });
-        expect(screen.getByText(/Mock Platform Switcher/)).toBeInTheDocument();
-        expect(screen.getByText(/Trader's Hub/)).toBeInTheDocument();
-        expect(screen.getByText(/Deriv.com/)).toBeInTheDocument();
+        expect(screen.getByText(/Dark theme/)).toBeInTheDocument();
+        expect(screen.getByText(/Responsible trading/)).toBeInTheDocument();
+        // Removed on request, along with the platform switcher above them.
+        expect(screen.queryByText(/Deriv.com/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Account Settings/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Cashier/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Help center/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Account limits/)).not.toBeInTheDocument();
     });
 
     it('adjusts text size for mobile devices', () => {
         render(<MenuContent />, { wrapper });
-        const text = screen.getByText(/Trader's Hub/);
+        const text = screen.getByText(/Dark theme/);
         expect(text).toHaveClass('derivs-text__size--md');
     });
 
     it('adjusts text size for desktop devices', () => {
         (useDevice as jest.Mock).mockReturnValue({ isDesktop: true });
         render(<MenuContent />, { wrapper });
-        const text = screen.getByText(/Trader's Hub/);
+        const text = screen.getByText(/Dark theme/);
         expect(text).toHaveClass('derivs-text__size--sm');
     });
 });

@@ -3,7 +3,6 @@ import { observer } from 'mobx-react-lite';
 import { useStore } from '@/hooks/useStore';
 import { LegacyChevronRight1pxIcon } from '@deriv/quill-icons/Legacy';
 import { MenuItem, Text, useDevice } from '@deriv-com/ui';
-import PlatformSwitcher from '../platform-switcher';
 import useMobileMenuConfig from './use-mobile-menu-config';
 
 type TMenuContentProps = {
@@ -18,10 +17,8 @@ const MenuContent = observer(({ onOpenSubmenu }: TMenuContentProps) => {
 
     return (
         <div className='mobile-menu__content'>
-            <div className='mobile-menu__content__platform'>
-                <PlatformSwitcher />
-            </div>
-
+            {/* No platform switcher: it offered Deriv's other platforms, which
+                is a way out of this app rather than around it. */}
             <div className='mobile-menu__content__items'>
                 {config.map((item, index) => {
                     const removeBorderBottom = item.find(({ removeBorderBottom }) => removeBorderBottom);
@@ -46,15 +43,17 @@ const MenuContent = observer(({ onOpenSubmenu }: TMenuContentProps) => {
                                     target,
                                     isActive,
                                 }) => {
-                                    const is_deriv_logo = label === 'Deriv.com';
                                     if (as === 'a') {
                                         return (
                                             <MenuItem
                                                 as='a'
-                                                className={clsx('mobile-menu__content__items__item', {
-                                                    'mobile-menu__content__items__icons': !is_deriv_logo,
-                                                    'mobile-menu__content__items__item--active': isActive,
-                                                })}
+                                                className={clsx(
+                                                    'mobile-menu__content__items__item',
+                                                    'mobile-menu__content__items__icons',
+                                                    {
+                                                        'mobile-menu__content__items__item--active': isActive,
+                                                    }
+                                                )}
                                                 disableHover
                                                 href={href}
                                                 key={label}
@@ -74,10 +73,13 @@ const MenuContent = observer(({ onOpenSubmenu }: TMenuContentProps) => {
                                     return (
                                         <MenuItem
                                             as='button'
-                                            className={clsx('mobile-menu__content__items__item', {
-                                                'mobile-menu__content__items__icons': !is_deriv_logo,
-                                                'mobile-menu__content__items__item--active': isActive,
-                                            })}
+                                            className={clsx(
+                                                'mobile-menu__content__items__item',
+                                                'mobile-menu__content__items__icons',
+                                                {
+                                                    'mobile-menu__content__items__item--active': isActive,
+                                                }
+                                            )}
                                             disableHover
                                             key={label}
                                             leftComponent={
