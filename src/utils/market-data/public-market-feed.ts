@@ -303,7 +303,10 @@ class PublicMarketFeed {
      * against this endpoint: `style: 'ticks'` returns
      * {history: {prices, times}, pip_size}.
      */
-    async getTickHistory(symbol: string, count = 1000): Promise<{ prices: number[]; pip_size: number }> {
+    async getTickHistory(
+        symbol: string,
+        count = 1000
+    ): Promise<{ prices: number[]; pip_size: number; times: number[] }> {
         const response = await this.send({
             ticks_history: symbol,
             adjust_start_time: 1,
@@ -311,10 +314,13 @@ class PublicMarketFeed {
             end: 'latest',
             style: 'ticks',
         });
-        const history = response.history as { prices?: number[] } | undefined;
+        const history = response.history as { prices?: number[]; times?: number[] } | undefined;
         return {
-            prices: history?.prices ?? [],
             pip_size: (response.pip_size as number) ?? 2,
+            prices: history?.prices ?? [],
+            // Carried alongside the prices so a chart can put a time under
+            // them; callers that only count digits ignore it.
+            times: history?.times ?? [],
         };
     }
 

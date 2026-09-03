@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { redirectToLogin } from '@/components/shared';
 import { observer as globalObserver } from '@/external/bot-skeleton';
@@ -13,6 +13,7 @@ import useManualTrade from '../bulk-trader/use-manual-trade';
 import DigitCircles from './digit-circles';
 import MarketSelect from './market-select';
 import PositionsPanel, { TPosition } from './positions-panel';
+import PriceChart from './price-chart';
 import {
     DEFAULT_PARAMS,
     durationBounds,
@@ -25,15 +26,12 @@ import {
 import useTradeProposal from './use-trade-proposal';
 import './dtrader.scss';
 
-// The app's own chart, lazy for the same reason the Charts tab loads it lazily.
-const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
-
 const DEFAULT_SYMBOL = '1HZ100V';
 const DIGIT_WINDOW = 1000;
 
 const DTrader = observer(() => {
     const { feed, isConnected } = usePublicMarketFeed();
-    const { chart_store, client, oauth_session, run_panel } = useStore() ?? {};
+    const { client, oauth_session, run_panel } = useStore() ?? {};
     const { localize } = useTranslations();
     const trade = useManualTrade();
 
@@ -45,6 +43,7 @@ const DTrader = observer(() => {
     const [params, setParams] = useState<TTradeParams>(DEFAULT_PARAMS);
 
     const [prices, setPrices] = useState<number[]>([]);
+    const [epochs, setEpochs] = useState<number[]>([]);
     const [decimals, setDecimals] = useState(2);
     const [positions, setPositions] = useState<TPosition[]>([]);
     const [is_positions_collapsed, setIsPositionsCollapsed] = useState(false);
@@ -115,12 +114,14 @@ const DTrader = observer(() => {
         if (!isConnected) return undefined;
         const id = ++request_id.current;
         setPrices([]);
+        setEpochs([]);
 
         feed.getTickHistory(symbol, DIGIT_WINDOW)
-            .then(({ pip_size, prices: history }) => {
+            .then(({ pip_size, prices: history, times }) => {
                 if (id !== request_id.current) return;
                 setDecimals(toDecimalPlaces(pip_size) ?? 2);
                 setPrices(history);
+                setEpochs(times);
             })
             .catch(() => {
                 // Non-fatal: the live stream fills the window on its own.
@@ -130,13 +131,9 @@ const DTrader = observer(() => {
             if (id !== request_id.current) return;
             setDecimals(toDecimalPlaces(tick.pip_size) ?? 2);
             setPrices(current => [...current, tick.quote].slice(-DIGIT_WINDOW));
+            setEpochs(current => [...current, tick.epoch].slice(-DIGIT_WINDOW));
         });
     }, [isConnected, feed, symbol]);
-
-    // The chart follows the market picked here rather than keeping its own.
-    useEffect(() => {
-        chart_store?.onSymbolChange?.(symbol);
-    }, [chart_store, symbol]);
 
     /**
      * Contracts bought from this page, followed on the same stream the rest of
@@ -185,6 +182,19 @@ const DTrader = observer(() => {
         if (!contracts_for.length) return null;
         return new Set(contracts_for.map(contract => contract.contract_category));
     }, [contracts_for]);
+
+    // Markets do not all offer the same contracts - Deriv sells only
+    // accumulators and multipliers on the Boom indices, for instance - so
+    // moving to one that cannot trade the tab you are on lands on a tab it can
+    // trade, rather than on a ticket whose only possible answer is a refusal.
+    useEffect(() => {
+        if (!supported || supported.has(type.category)) return;
+        const next = TRADE_TYPES.find(item => supported.has(item.category));
+        if (next) {
+            setTypeId(next.id);
+            setSideIndex(0);
+        }
+    }, [supported, type.category]);
 
     const payout = proposal?.payout ?? 0;
     const details = proposal?.contract_details;
@@ -306,12 +316,7 @@ const DTrader = observer(() => {
                         symbols={symbols}
                     />
 
-                    <div className='mw-dt__chart'>
-                        <p className='mw-dt__chart-waiting'>{localize('Starting the chart...')}</p>
-                        <Suspense fallback={null}>
-                            <ChartWrapper show_digits_stats={false} />
-                        </Suspense>
-                    </div>
+                    <PriceChart decimals={decimals} epochs={epochs} prices={prices} />
 
                     {type.shows_digit_stats && <DigitCircles distribution={distribution} latest={latest_digit} />}
                 </section>

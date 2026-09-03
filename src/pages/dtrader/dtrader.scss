@@ -427,22 +427,71 @@ $dt-red: #de0040;
     cursor: pointer;
 }
 
-// The waiting line sits behind the chart and is covered by it, so the area is
-// never an unexplained blank while SmartCharts starts.
 .mw-dt__chart {
     position: relative;
     display: flex;
     flex-direction: column;
     flex: 1;
     min-height: 30rem;
+    padding: 0.8rem;
     border: 1px solid var(--general-section-1);
     border-radius: 10px;
     overflow: hidden;
 
-    > div {
-        flex: 1;
-        min-height: 0;
+    // The gradient under the line inherits this, so the fill always belongs to
+    // the line's own colour.
+    color: var(--text-prominent);
+}
+
+.mw-dt__chart-svg {
+    display: block;
+}
+
+.mw-dt__chart-grid {
+    stroke: var(--general-section-1);
+    stroke-width: 1;
+}
+
+.mw-dt__chart-axis {
+    fill: var(--text-less-prominent);
+    font-size: 1rem;
+}
+
+.mw-dt__chart-line {
+    fill: none;
+    stroke: currentcolor;
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.mw-dt__chart-area {
+    stroke: none;
+}
+
+.mw-dt__chart-now {
+    stroke: var(--text-less-prominent);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    opacity: 0.7;
+}
+
+.mw-dt__chart-dot {
+    fill: currentcolor;
+}
+
+.mw-dt__chart-badge {
+    fill: $dt-green;
+
+    &--down {
+        fill: $dt-red;
     }
+}
+
+.mw-dt__chart-badge-text {
+    fill: #fff;
+    font-size: 1.05rem;
+    font-weight: 700;
 }
 
 .mw-dt__chart-waiting {
