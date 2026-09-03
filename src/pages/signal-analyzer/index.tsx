@@ -51,9 +51,27 @@ const MARKETS = [
 
 const CIPHER_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#@%&*()[]{}<>/\\|=+-_$';
 const RAIN_ALPHABET = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎ0123456789';
+const RAIN_GREEN = '#00FF41';
+const RAIN_FONT = 'ui-monospace, Menlo, Consolas, "Courier New", monospace';
 
 const cipherLine = (length: number) =>
     Array.from({ length }, () => CIPHER_ALPHABET[Math.floor(Math.random() * CIPHER_ALPHABET.length)]).join('');
+
+const binaryLine = (length: number) => Array.from({ length }, () => (Math.random() > 0.5 ? '1' : '0')).join('');
+
+/**
+ * The stream that runs while the window is counted: garbage, binary, and a few
+ * structured lines, alternating bright and dim so it reads as data going past
+ * rather than as a paragraph.
+ */
+const cipherBlock = (index: number): TLine => {
+    const dim = index % 2 === 1;
+    const tone = dim ? 'cipher-dim' : 'cipher';
+    if (index === 2) return { text: `> NODE_0${1 + (index % 4)}::DATA_STREAM`, tone };
+    if (index === 5) return { text: `> BUFFER: ${binaryLine(24)}`, tone };
+    if (index % 3 === 1) return { text: binaryLine(52), tone };
+    return { text: cipherLine(52), tone };
+};
 
 const pct = (part: number, total: number) => (total ? (part / total) * 100 : 0);
 
@@ -61,7 +79,7 @@ const pct = (part: number, total: number) => (total ? (part / total) * 100 : 0);
 // in two lists at first, which rendered every block after every line, so
 // "Analysis Complete!" appeared above the decryption that supposedly produced
 // it.
-type TLine = { text: string; tone?: 'error' | 'good' | 'dim' | 'cipher' };
+type TLine = { text: string; tone?: 'error' | 'good' | 'dim' | 'cipher' | 'cipher-dim' };
 
 /** What the window says, per strategy. Counted, never predicted. */
 type TResult = { headline: string; lines: TLine[] };
@@ -228,19 +246,25 @@ const MatrixRain = () => {
 
         const draw = () => {
             const rect = element.getBoundingClientRect();
-            // A translucent wash rather than a clear, which is what leaves the
-            // trail behind each falling character.
-            context.fillStyle = 'rgba(0, 12, 0, 0.09)';
+            // A translucent wash of the terminal's own background rather than a
+            // clear, which is what leaves the trail behind each falling
+            // character.
+            context.fillStyle = 'rgba(5, 8, 5, 0.09)';
             context.fillRect(0, 0, rect.width, rect.height);
-            context.font = `${font_size}px monospace`;
+            context.font = `${font_size}px ${RAIN_FONT}`;
 
             columns.forEach((y, index) => {
                 const character = RAIN_ALPHABET[Math.floor(Math.random() * RAIN_ALPHABET.length)];
                 const x = index * font_size;
-                context.fillStyle = y * font_size < 40 ? '#c9ffc9' : '#00ff41';
+                // One colour, varied only in how faint it is - the head of each
+                // column a little brighter than its tail, and none of it strong
+                // enough to compete with the log in front.
+                context.globalAlpha = y * font_size < 40 ? 0.65 : 0.15 + Math.random() * 0.3;
+                context.fillStyle = RAIN_GREEN;
                 context.fillText(character, x, y * font_size);
                 columns[index] = y * font_size > rect.height && Math.random() > 0.975 ? 0 : y + 1;
             });
+            context.globalAlpha = 1;
 
             frame = requestAnimationFrame(draw);
         };
@@ -271,6 +295,7 @@ const SignalAnalyzer = () => {
     const [countdown, setCountdown] = useState<number | null>(null);
 
     const audio = useRef<AudioContext | null>(null);
+    const last_click = useRef(0);
     const muted = useRef(false);
     const run_id = useRef(0);
     const log = useRef<HTMLDivElement>(null);
@@ -294,23 +319,56 @@ const SignalAnalyzer = () => {
     }, [feed, isConnected, symbol]);
 
     /**
-     * One keystroke: a short square blip with a fast decay. Synthesised rather
-     * than loaded so there is no audio file to fetch, and built on the click
-     * that opens the terminal, which is the gesture browsers require before
-     * any sound may play.
+     * One keystroke: a square blip 20-60ms long with a hard attack and an
+     * immediate decay, plus a whisper of high-passed noise so it lands like a
+     * key on a circuit rather than a tone. Synthesised, so there is no audio
+     * file to fetch.
+     *
+     * Throttled to one every 40-90ms. Without that, a line typed at a
+     * character every few milliseconds runs the clicks together into a buzz,
+     * which is the one thing this must not sound like.
+     *
+     * An error clicks lower and shorter. No alarm, no repeat.
      */
-    const click = useCallback(() => {
+    const click = useCallback((kind: 'key' | 'error' = 'key') => {
         const context = audio.current;
-        if (!context || muted.current || context.state === 'closed') return;
+        if (!context || muted.current || context.state !== 'running') return;
+
+        const now = context.currentTime;
+        if (now - last_click.current < 0.04 + Math.random() * 0.05) return;
+        last_click.current = now;
+
+        const length = kind === 'error' ? 0.05 : 0.02 + Math.random() * 0.02;
+        const peak = kind === 'error' ? 0.05 : 0.035;
+
         const oscillator = context.createOscillator();
         const gain = context.createGain();
-        oscillator.type = 'square';
-        oscillator.frequency.value = 1100 + Math.random() * 700;
-        gain.gain.setValueAtTime(0.045, context.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.03);
+        oscillator.type = kind === 'error' ? 'triangle' : 'square';
+        oscillator.frequency.value = kind === 'error' ? 240 + Math.random() * 60 : 700 + Math.random() * 1100;
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(peak, now + 0.002);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + length);
         oscillator.connect(gain).connect(context.destination);
-        oscillator.start();
-        oscillator.stop(context.currentTime + 0.035);
+        oscillator.start(now);
+        oscillator.stop(now + length + 0.005);
+
+        // The contact, under the tone: a few milliseconds of noise rolled off
+        // below 2kHz, quiet enough to be felt rather than heard on its own.
+        const frames = Math.floor(context.sampleRate * 0.008);
+        const buffer = context.createBuffer(1, frames, context.sampleRate);
+        const channel = buffer.getChannelData(0);
+        for (let index = 0; index < frames; index++) {
+            channel[index] = (Math.random() * 2 - 1) * (1 - index / frames);
+        }
+        const noise = context.createBufferSource();
+        const filter = context.createBiquadFilter();
+        const noise_gain = context.createGain();
+        noise.buffer = buffer;
+        filter.type = 'highpass';
+        filter.frequency.value = 2000;
+        noise_gain.gain.value = 0.02;
+        noise.connect(filter).connect(noise_gain).connect(context.destination);
+        noise.start(now);
     }, []);
 
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -326,7 +384,9 @@ const SignalAnalyzer = () => {
                     next[next.length - 1] = { ...line, text: line.text.slice(0, index) };
                     return next;
                 });
-                if (index % 3 === 0) click();
+                // The throttle inside click() decides what actually sounds; an
+                // error line clicks lower as it types.
+                if (index % 3 === 0) click(line.tone === 'error' ? 'error' : 'key');
                 await sleep(12);
             }
         },
@@ -380,11 +440,11 @@ const SignalAnalyzer = () => {
 
         // Cipher noise while the window is counted. Decoration, and only ever
         // over a window that is genuinely being read.
-        for (let block = 0; block < 4; block++) {
+        for (let block = 0; block < 6; block++) {
             if (id !== run_id.current) return;
-            setLines(current => [...current, { text: cipherLine(58), tone: 'cipher' }]);
+            setLines(current => [...current, cipherBlock(block)]);
             click();
-            await sleep(140);
+            await sleep(120);
         }
         if (id !== run_id.current) return;
 

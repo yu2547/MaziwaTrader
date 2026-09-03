@@ -1,9 +1,20 @@
-// A terminal green that reads on black without vibrating, and the red the
-// title bar and errors share.
+// The terminal palette, and nothing outside these classes uses it - the rest
+// of MaziwaTrader keeps its own colours and its own typeface.
+$sa-bg: #050805;
+$sa-bg-2: #081008;
+$sa-panel: #0a120a;
 $sa-green: #00ff41;
-$sa-dim: #0f0;
-$sa-red: #ff3b3b;
-$sa-ground: #04120a;
+$sa-green-2: #00c853;
+$sa-green-dim: #16823a;
+$sa-green-faint: #0b4d25;
+$sa-red: #ff3030;
+$sa-red-bright: #f00;
+$sa-text: #d8e8d8;
+$sa-muted: #7f987f;
+$sa-border: #0f6b32;
+$sa-glow: 0 0 4px rgb(0 255 65 / 15%); // A hint of phosphor behind a thin line, not neon tubing.
+$sa-glow-active: 0 0 6px rgb(0 255 65 / 25%);
+$sa-mono: ui-monospace, sfmono-regular, menlo, monaco, consolas, 'Liberation Mono', 'Courier New', monospace;
 
 .mw-sa {
     display: flex;
@@ -11,69 +22,68 @@ $sa-ground: #04120a;
     justify-content: center;
     width: 100%;
     height: 100%;
-    padding: 2.4rem 1.6rem;
+    padding: 2rem 1.2rem;
+    overflow-x: hidden;
     overflow-y: auto;
-    background: radial-gradient(circle at 50% 0%, #0a2417 0%, #010704 60%);
-    font-family: 'Courier New', monospace;
+    background: $sa-bg;
+    color: $sa-text;
+    font-family: $sa-mono;
 }
 
 .mw-sa__card {
     display: flex;
     flex-direction: column;
-    gap: 1.6rem;
+    gap: 1.4rem;
     width: min(52rem, 100%);
-    padding: 2.4rem;
-    border: 1px solid $sa-green;
-    border-radius: 10px;
-    background: rgb(0 0 0 / 62%);
-    box-shadow:
-        0 0 12px rgb(0 255 65 / 35%),
-        inset 0 0 24px rgb(0 255 65 / 12%);
+    padding: 2rem;
+    border: 1px solid $sa-border;
+    border-radius: 4px;
+    background: $sa-panel;
+    box-shadow: $sa-glow;
 }
 
 .mw-sa__title {
     margin: 0;
-    font-size: 3.2rem;
-    font-weight: 700;
-    letter-spacing: 0.2rem;
+    font-size: 2.6rem;
+    font-weight: 800;
+    letter-spacing: 0.18rem;
     text-align: center;
     text-transform: uppercase;
     color: $sa-green;
-    text-shadow:
-        0 0 8px rgb(0 255 65 / 90%),
-        0 0 22px rgb(255 0 60 / 45%);
+    text-shadow: 0 0 5px rgb(0 255 65 / 35%);
 }
 
 .mw-sa__field {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 0.5rem;
 
     span {
-        font-size: 1.2rem;
-        letter-spacing: 0.1rem;
+        font-size: 1.15rem;
+        letter-spacing: 0.08rem;
         text-transform: uppercase;
-        color: $sa-green;
+        color: $sa-muted;
     }
 
     select {
-        padding: 1.1rem 1.2rem;
-        border: 1px solid rgb(0 255 65 / 55%);
-        border-radius: 6px;
-        background: #000;
+        padding: 1rem 1.1rem;
+        border: 1px solid $sa-border;
+        border-radius: 3px;
+        background: $sa-bg-2;
         color: $sa-green;
         font-family: inherit;
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         outline: none;
         cursor: pointer;
 
-        &:focus {
+        &:focus,
+        &:hover {
             border-color: $sa-green;
-            box-shadow: 0 0 10px rgb(0 255 65 / 45%);
+            box-shadow: $sa-glow-active;
         }
 
         option {
-            background: #000;
+            background: $sa-bg-2;
             color: $sa-green;
         }
     }
@@ -83,50 +93,51 @@ $sa-ground: #04120a;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
-    padding: 1.2rem;
-    border: 1px dashed rgb(0 255 65 / 45%);
-    border-radius: 6px;
+    padding: 1.1rem;
+    border: 1px solid $sa-green-faint;
+    border-radius: 3px;
+    background: $sa-bg-2;
 
     p {
         margin: 0;
-        font-size: 1.3rem;
-        color: rgb(0 255 65 / 75%);
+        font-size: 1.2rem;
+        color: $sa-muted;
     }
 
     b {
         display: block;
         margin-top: 0.3rem;
-        font-size: 2rem;
+        font-size: 1.9rem;
         font-variant-numeric: tabular-nums;
         color: $sa-green;
-        text-shadow: 0 0 8px rgb(0 255 65 / 70%);
+        text-shadow: 0 0 5px rgb(0 255 65 / 35%);
     }
 }
 
 .mw-sa__go {
-    min-height: 5rem;
-    border: none;
-    border-radius: 6px;
-    background: $sa-green;
-    color: #012;
+    min-height: 4.4rem;
+    border: 1px solid $sa-green;
+    border-radius: 3px;
+    background: $sa-green-2;
+    color: #020602;
     font-family: inherit;
-    font-size: 1.7rem;
+    font-size: 1.5rem;
     font-weight: 700;
-    letter-spacing: 0.2rem;
+    letter-spacing: 0.18rem;
     text-transform: uppercase;
     cursor: pointer;
-    box-shadow: 0 0 18px rgb(0 255 65 / 55%);
+    box-shadow: $sa-glow;
 
     &:hover {
-        filter: brightness(1.1);
+        background: $sa-green;
     }
 }
 
 .mw-sa__note {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     line-height: 1.6;
-    color: rgb(0 255 65 / 55%);
+    color: $sa-muted;
 }
 
 .mw-sa__overlay {
@@ -135,8 +146,8 @@ $sa-ground: #04120a;
     z-index: 120;
     display: grid;
     place-items: center;
-    padding: 2rem;
-    background: rgb(0 0 0 / 82%);
+    padding: 1.6rem;
+    background: rgb(2 4 2 / 88%);
 }
 
 .mw-sa__terminal {
@@ -145,20 +156,21 @@ $sa-ground: #04120a;
     flex-direction: column;
     width: min(86rem, 100%);
     height: min(56rem, 88vh);
-    border: 1px solid $sa-green;
-    border-radius: 8px;
-    background: $sa-ground;
-    box-shadow: 0 0 30px rgb(0 255 65 / 45%);
+    border: 1px solid $sa-border;
+    border-radius: 4px;
+    background: $sa-bg;
+    box-shadow: $sa-glow-active;
     overflow: hidden;
 }
 
-// Behind everything in the terminal, and never in the way of a click.
+// Behind everything in the terminal, and never in the way of a click. Held
+// well under the text so the log stays the brightest thing on screen.
 .mw-sa__rain {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    opacity: 0.5;
+    opacity: 0.38;
     pointer-events: none;
 }
 
@@ -168,49 +180,57 @@ $sa-ground: #04120a;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1.2rem;
-    padding: 1rem 1.4rem;
-    border-bottom: 1px solid rgb(0 255 65 / 45%);
-    background: rgb(0 0 0 / 70%);
+    gap: 1rem;
+    padding: 0.9rem 1.2rem;
+    border-bottom: 1px solid $sa-border;
+    background: $sa-bg-2;
 
     h2 {
         margin: 0;
-        font-size: 1.4rem;
+        font-size: 1.3rem;
+        font-weight: 700;
         color: $sa-green;
+        text-shadow: 0 0 5px rgb(0 255 65 / 35%);
     }
 }
 
 .mw-sa__bar-buttons {
     display: flex;
     align-items: center;
-    gap: 0.8rem;
+    gap: 0.7rem;
+    flex-shrink: 0;
 }
 
 .mw-sa__mute {
-    padding: 0.5rem 0.9rem;
-    border: 1px solid rgb(0 255 65 / 45%);
-    border-radius: 4px;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid $sa-border;
+    border-radius: 3px;
     background: transparent;
-    color: $sa-green;
+    color: $sa-green-dim;
     font-family: inherit;
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     cursor: pointer;
+
+    &:hover {
+        border-color: $sa-green;
+        color: $sa-green;
+    }
 }
 
 .mw-sa__close {
-    width: 2.8rem;
-    height: 2.8rem;
+    width: 2.6rem;
+    height: 2.6rem;
     border: 1px solid $sa-red;
-    border-radius: 4px;
+    border-radius: 3px;
     background: transparent;
     color: $sa-red;
-    font-size: 1.4rem;
+    font-family: inherit;
+    font-size: 1.3rem;
     line-height: 1;
     cursor: pointer;
 
     &:hover {
-        background: $sa-red;
-        color: #000;
+        background: rgb(255 48 48 / 12%);
     }
 }
 
@@ -219,62 +239,125 @@ $sa-ground: #04120a;
     z-index: 1;
     flex: 1;
     min-height: 0;
-    padding: 1.6rem;
+    padding: 1.4rem;
+    overflow-x: hidden;
     overflow-y: auto;
-    font-size: 1.35rem;
-    line-height: 1.8;
+    font-size: 1.3rem;
+    line-height: 1.75;
 }
 
 .mw-sa__line {
     margin: 0;
     color: $sa-green;
-    text-shadow: 0 0 6px rgb(0 255 65 / 45%);
-    word-break: break-word;
+    text-shadow: 0 0 4px rgb(0 255 65 / 25%);
+    overflow-wrap: anywhere;
 
     &--error {
         color: $sa-red;
-        text-shadow: 0 0 6px rgb(255 59 59 / 45%);
+        text-shadow: 0 0 4px rgb(255 48 48 / 25%);
     }
 
     &--good {
-        color: #7bff9b;
+        color: $sa-green;
+        font-weight: 700;
     }
 
     &--dim {
-        color: rgb(0 255 65 / 55%);
-        font-size: 1.15rem;
+        color: $sa-muted;
+        font-size: 1.1rem;
         text-shadow: none;
     }
 
+    // Not every cipher line at the same brightness: the stream reads as data
+    // going past rather than as a block of text.
     &--cipher {
-        color: rgb(0 255 65 / 60%);
-        font-size: 1.2rem;
-        letter-spacing: 0.08rem;
+        color: $sa-green-2;
+        font-size: 1.15rem;
+        letter-spacing: 0.06rem;
+        text-shadow: none;
+        word-break: break-all;
+    }
+
+    &--cipher-dim {
+        color: $sa-green-dim;
+        font-size: 1.15rem;
+        letter-spacing: 0.06rem;
         text-shadow: none;
         word-break: break-all;
     }
 }
 
 .mw-sa__result {
-    margin-top: 1.2rem;
-    padding: 1.2rem;
-    border: 1px solid rgb(0 255 65 / 45%);
-    border-radius: 6px;
-    background: rgb(0 0 0 / 55%);
+    margin-top: 1rem;
+    padding: 1.1rem;
+    border: 1px solid $sa-border;
+    border-radius: 3px;
+    background: $sa-bg-2;
+    box-shadow: $sa-glow;
 }
 
 .mw-sa__headline {
-    margin: 0 0 0.6rem;
-    font-size: 1.9rem;
+    margin: 0 0 0.5rem;
+    font-size: 1.7rem;
     font-weight: 700;
     color: $sa-green;
-    text-shadow: 0 0 10px rgb(0 255 65 / 70%);
+    text-shadow: 0 0 5px rgb(0 255 65 / 35%);
 }
 
 .mw-sa__activated {
-    margin: 0.6rem 0 0;
-    font-size: 1.7rem;
+    margin: 0.5rem 0 0;
+    font-size: 1.5rem;
     font-weight: 700;
-    color: #34d399;
-    text-shadow: 0 0 12px rgb(52 211 153 / 70%);
+    color: $sa-green;
+    text-shadow: 0 0 5px rgb(0 255 65 / 35%);
+}
+
+// Phones: same palette, same borders, only tighter. Nothing here may push the
+// page sideways, so the terminal is full-bleed and every long string wraps.
+@media (width <= 480px) {
+    .mw-sa {
+        padding: 1.2rem 0.8rem;
+    }
+
+    .mw-sa__card {
+        padding: 1.4rem;
+        gap: 1.1rem;
+    }
+
+    .mw-sa__title {
+        font-size: 2rem;
+        letter-spacing: 0.1rem;
+    }
+
+    .mw-sa__live b {
+        font-size: 1.6rem;
+    }
+
+    .mw-sa__overlay {
+        padding: 0.6rem;
+    }
+
+    .mw-sa__terminal {
+        width: 100%;
+        height: 92vh;
+    }
+
+    .mw-sa__bar {
+        align-items: flex-start;
+        flex-wrap: wrap;
+
+        h2 {
+            font-size: 1.15rem;
+            line-height: 1.4;
+        }
+    }
+
+    .mw-sa__log {
+        padding: 1rem;
+        font-size: 1.2rem;
+    }
+
+    .mw-sa__headline {
+        font-size: 1.45rem;
+    }
 }

@@ -120,11 +120,8 @@ const ROUTE_DESTINATIONS: TRouteDestination[] = [
         label: <Localize i18n_default_text='DTrader' />,
         path: '/dtrader',
     },
-    {
-        icon: <LabelPairedChartLineCaptionRegularIcon {...ICON_PROPS} />,
-        label: <Localize i18n_default_text='Signal Analyzer' />,
-        path: '/signal-analyzer',
-    },
+    // No Signal Analyzer entry: it lives under Analysis Tool, beside Signals.
+    // The /signal-analyzer route still resolves, so a link to it keeps working.
 ];
 
 const ShellNav = observer(() => {

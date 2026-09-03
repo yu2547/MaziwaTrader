@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useTranslations } from '@deriv-com/translations';
+import SignalAnalyzer from '../signal-analyzer';
 import Dcircles from './dcircles';
 import DualEdge from './dual-edge';
 import ProAi from './pro-ai';
-import Signals from './signals';
 import './analysis-tool.scss';
 
 type TAnalysisView =
@@ -12,6 +12,8 @@ type TAnalysisView =
 
 const VIEWS: { id: TAnalysisView; label: string }[] = [
     { id: 'dcircles', label: 'Dcircles' },
+    // Signals is the analyzer terminal now - the same component the
+    // /signal-analyzer route renders, mounted here rather than copied.
     { id: 'signals', label: 'Signals' },
     { id: 'analysis_tool', label: 'Analysis Tool' },
     { id: 'sl_tools', label: 'SL Tools' },
@@ -23,7 +25,8 @@ const VIEWS: { id: TAnalysisView; label: string }[] = [
 
 /**
  * Dcircles, Signals, Pro AI and Analysis Tool have something behind them: the
- * first three read the app's live tick feed, Analysis Tool is the hosted tool
+ * first three read the app's live tick feed - Signals is the analyzer terminal
+ * (pages/signal-analyzer) - and Analysis Tool is the hosted tool
  * this page has always embedded. SL Tools and Tick Analyser have no data source
  * in this build, so they say so instead of rendering numbers nobody measured.
  */
@@ -76,7 +79,7 @@ const AnalysisTool = observer(() => {
                         />
                     </div>
                 )}
-                {view === 'signals' && <Signals />}
+                {view === 'signals' && <SignalAnalyzer />}
                 {view === 'sl_tools' && <NotConnected title={localize('SL Tools')} />}
                 {view === 'pro_ai' && <ProAi />}
                 {view === 'tick_analyser' && <NotConnected title={localize('Tick Analyser')} />}
