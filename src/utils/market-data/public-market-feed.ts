@@ -39,6 +39,54 @@ export type TTick = {
     symbol: string;
 };
 
+/**
+ * A priced contract, as Deriv returns it. Only the fields this app reads are
+ * named; every one of them is optional because which ones come back depends
+ * on the contract - an accumulator carries barriers and a tick ceiling, a
+ * multiplier carries commission and a stop out, a vanilla carries its strike
+ * choices.
+ */
+export type TProposalResponse = {
+    error?: { code?: string; message?: string };
+    proposal?: {
+        ask_price?: number;
+        barrier_choices?: string[];
+        commission?: number;
+        contract_details?: {
+            barrier?: string;
+            barrier_spot_distance?: string;
+            high_barrier?: string;
+            low_barrier?: string;
+            maximum_payout?: number;
+            maximum_ticks?: number;
+            tick_size_barrier_percentage?: string;
+            ticks_stayed_in?: number[];
+        };
+        display_number_of_contracts?: string;
+        id?: string;
+        limit_order?: { stop_out?: { display_order_amount?: string; value?: string } };
+        longcode?: string;
+        payout?: number;
+        spot?: number;
+        validation_params?: {
+            max_payout?: string;
+            max_ticks?: number;
+            payout?: { max?: string };
+            stake?: { max?: string; min?: string };
+            take_profit?: { max?: string; min?: string };
+        };
+    };
+};
+
+/** One tradable contract on a symbol, from `contracts_for`. */
+export type TContractForSymbol = {
+    contract_category: string;
+    contract_type: string;
+    expiry_type: string;
+    max_contract_duration: string;
+    min_contract_duration: string;
+};
+
 export type TCandle = {
     open: number;
     high: number;
@@ -197,6 +245,40 @@ class PublicMarketFeed {
     async getActiveSymbols(): Promise<TActiveSymbol[]> {
         const response = await this.send({ active_symbols: 'brief' });
         return (response.active_symbols as TActiveSymbol[]) ?? [];
+    }
+
+    /**
+     * Prices one contract, exactly as it would be bought.
+     *
+     * This endpoint answers `proposal` without a session (confirmed live:
+     * stake 10 on CALL R_100 came back payout 19.54, spot 613.02), which is
+     * what lets a trade panel show Deriv's own payout, barriers and stake
+     * limits before anyone logs in. Nothing here buys anything - a purchase
+     * goes out on the authorised socket api_base owns.
+     *
+     * Deriv's rejections are returned rather than thrown, because they are
+     * the useful answer: an unavailable barrier comes back as "Barriers
+     * available are -2.43, -4.28, ..." and belongs on screen.
+     */
+    async getProposal(request: Record<string, unknown>): Promise<TProposalResponse> {
+        try {
+            const response = await this.send({ proposal: 1, ...request });
+            return { proposal: response.proposal as TProposalResponse['proposal'] };
+        } catch (thrown) {
+            // send() rejects on a refusal, and a refusal is the answer here -
+            // Deriv turns down a turbo priced at a payout per point it does not
+            // offer by naming the ones it does, and that list is what the
+            // control is built from. Throwing it away left the trader with an
+            // empty selector and no explanation.
+            return { error: { message: thrown instanceof Error ? thrown.message : 'The price request failed.' } };
+        }
+    }
+
+    /** What a symbol can actually be traded as, with each one's duration bounds. */
+    async getContractsFor(symbol: string): Promise<TContractForSymbol[]> {
+        const response = await this.send({ contracts_for: symbol });
+        const contracts_for = (response.contracts_for ?? {}) as { available?: TContractForSymbol[] };
+        return Array.isArray(contracts_for.available) ? contracts_for.available : [];
     }
 
     async getCandles(symbol: string, granularity: number, count = 200): Promise<TCandle[]> {

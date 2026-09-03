@@ -2,7 +2,6 @@
 // theme, so a ground of its own would fight it.
 $dt-green: #00a79e;
 $dt-red: #de0040;
-$dt-blue: #1a5cff;
 
 .mw-dt {
     display: flex;
@@ -14,8 +13,16 @@ $dt-blue: #1a5cff;
     color: var(--text-prominent);
 }
 
-// One scrolling row at every width, so the tabs never wrap and push the chart
-// down the page.
+.mw-dt__up {
+    color: $dt-green;
+}
+
+.mw-dt__down {
+    color: $dt-red;
+}
+
+// One scrolling row at every width, so ten trade types never wrap and push the
+// chart down the page.
 .mw-dt__types {
     display: flex;
     gap: 0.8rem;
@@ -42,8 +49,13 @@ $dt-blue: #1a5cff;
     white-space: nowrap;
     cursor: pointer;
 
-    &:hover {
+    &:hover:not(:disabled) {
         color: var(--text-prominent);
+    }
+
+    &:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
     }
 
     &--on {
@@ -56,15 +68,159 @@ $dt-blue: #1a5cff;
 .mw-dt__body {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 1.6rem;
+    gap: 1.2rem;
     flex: 1;
     min-height: 0;
-    padding: 1.6rem;
+    padding: 1.2rem 1.6rem 1.6rem;
 
-    @media (width >= 1000px) {
-        grid-template-columns: minmax(0, 1fr) 32rem;
+    @media (width >= 1100px) {
+        grid-template-columns: 26rem minmax(0, 1fr) 30rem;
         align-items: stretch;
     }
+}
+
+// The run panel's drawer is 36.6rem wide and overlays the right edge; while it
+// is open the page ends where the drawer begins, so the ticket stays reachable.
+.mw-dt--drawer .mw-dt__body {
+    @media (width >= 1100px) {
+        padding-right: 37rem;
+    }
+}
+
+.mw-dt__positions {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border: 1px solid var(--general-section-1);
+    border-radius: 10px;
+    overflow: hidden;
+
+    &--min {
+        align-self: start;
+    }
+}
+
+.mw-dt__positions-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 1.4rem;
+    border-bottom: 1px solid var(--general-section-1);
+
+    h2 {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 700;
+    }
+
+    button {
+        border: none;
+        background: transparent;
+        color: var(--text-general);
+        font-size: 1.8rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+}
+
+.mw-dt__positions-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    flex: 1;
+    min-height: 12rem;
+    padding: 1.2rem;
+    overflow-y: auto;
+}
+
+.mw-dt__positions-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex: 1;
+    color: var(--text-less-prominent);
+
+    span {
+        font-size: 3.2rem;
+        opacity: 0.5;
+    }
+
+    p {
+        margin: 0;
+        font-size: 1.3rem;
+    }
+}
+
+.mw-dt__position {
+    padding: 1.2rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 8px;
+
+    header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+
+        b {
+            flex: 1;
+            color: var(--text-prominent);
+            font-size: 1.2rem;
+        }
+
+        button {
+            border: none;
+            background: transparent;
+            color: var(--text-less-prominent);
+            font-size: 1.6rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+    }
+
+    p {
+        margin: 0.4rem 0 0;
+    }
+
+    &--won {
+        border-color: rgb(0 167 158 / 45%);
+        background: rgb(0 167 158 / 8%);
+    }
+
+    &--lost {
+        border-color: rgb(222 0 64 / 45%);
+        background: rgb(222 0 64 / 8%);
+    }
+}
+
+.mw-dt__position-state {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.mw-dt__position-profit {
+    font-size: 1.8rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.mw-dt__position-stake {
+    font-size: 1.15rem;
+    color: var(--text-less-prominent);
+}
+
+.mw-dt__positions-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.4rem;
+    border-top: 1px solid var(--general-section-1);
+    font-size: 1.2rem;
+    color: var(--text-less-prominent);
 }
 
 .mw-dt__chart-side {
@@ -75,46 +231,200 @@ $dt-blue: #1a5cff;
     min-height: 0;
 }
 
+// Anchors the dropdown, which is why it is positioned rather than the chip.
 .mw-dt__market {
+    position: relative;
+    z-index: 5;
+}
+
+.mw-dt__market-chip {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1.6rem;
-    flex-wrap: wrap;
-    padding: 1.2rem 1.4rem;
+    gap: 1rem;
+    width: 100%;
+    max-width: 34rem;
+    padding: 0.8rem 1.2rem;
     border: 1px solid var(--general-section-1);
     border-radius: 10px;
+    background: var(--general-main-1);
+    color: var(--text-prominent);
+    text-align: left;
+    cursor: pointer;
 
-    select {
-        min-width: 0;
-        border: none;
-        background: transparent;
-        color: var(--text-prominent);
-        font-size: 1.7rem;
-        font-weight: 700;
-        cursor: pointer;
-        outline: none;
-
-        option {
-            background: var(--general-main-1);
-            color: var(--text-prominent);
-        }
+    &--open {
+        border-color: var(--text-prominent);
     }
 }
 
-.mw-dt__spot {
-    font-size: 1.6rem;
+.mw-dt__market-badge {
+    display: grid;
+    place-items: center;
+    width: 3.2rem;
+    height: 3.2rem;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: var(--general-section-1);
+    font-size: 1.1rem;
     font-weight: 700;
-    font-variant-numeric: tabular-nums;
+}
+
+.mw-dt__market-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+
+    b {
+        font-size: 1.5rem;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    i {
+        font-style: normal;
+        font-size: 1.2rem;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-less-prominent);
+    }
+
+    em {
+        font-style: normal;
+    }
+}
+
+.mw-dt__market-caret {
+    font-size: 0.9rem;
+    color: var(--text-less-prominent);
+}
+
+.mw-dt__markets {
+    position: absolute;
+    top: calc(100% + 0.6rem);
+    left: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: 16rem minmax(0, 24rem);
+    width: min(40rem, calc(100vw - 4rem));
+    max-height: 42rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 10px;
+    background: var(--general-main-1);
+    box-shadow: 0 12px 32px rgb(0 0 0 / 24%);
+    overflow: hidden;
+}
+
+.mw-dt__markets-side {
+    display: flex;
+    flex-direction: column;
+    padding: 1.2rem 0;
+    border-right: 1px solid var(--general-section-1);
+    overflow-y: auto;
+
+    h3 {
+        margin: 0 0 0.8rem;
+        padding: 0 1.4rem;
+        font-size: 1.4rem;
+    }
+}
+
+.mw-dt__markets-cat {
+    padding: 0.9rem 1.4rem;
+    border: none;
+    border-left: 3px solid transparent;
+    background: transparent;
     color: var(--text-general);
+    font-size: 1.25rem;
+    text-align: left;
+    cursor: pointer;
 
-    &--up {
-        color: $dt-green;
+    &--on {
+        border-left-color: $dt-red;
+        color: var(--text-prominent);
+        font-weight: 700;
+    }
+}
+
+.mw-dt__markets-list {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 1.2rem;
+}
+
+.mw-dt__markets-search {
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 8px;
+    background: var(--general-section-1);
+    color: var(--text-prominent);
+    font-size: 1.25rem;
+    outline: none;
+}
+
+.mw-dt__markets-scroll {
+    min-height: 0;
+    margin-top: 1rem;
+    overflow-y: auto;
+
+    h4 {
+        margin: 1rem 0 0.4rem;
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+.mw-dt__markets-empty {
+    margin: 1rem 0;
+    font-size: 1.2rem;
+    color: var(--text-less-prominent);
+}
+
+.mw-dt__markets-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    border-radius: 6px;
+
+    &:hover {
+        background: var(--general-section-1);
     }
 
-    &--down {
-        color: $dt-red;
+    &--on {
+        background: var(--general-section-1);
     }
+}
+
+.mw-dt__markets-pick {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex: 1;
+    padding: 0.7rem 0.8rem;
+    border: none;
+    background: transparent;
+    color: var(--text-prominent);
+    font-size: 1.25rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.mw-dt__markets-closed {
+    padding: 0.1rem 0.5rem;
+    border-radius: 4px;
+    background: rgb(222 0 64 / 14%);
+    font-size: 1rem;
+    color: $dt-red;
+}
+
+.mw-dt__markets-star {
+    padding: 0.4rem 0.6rem;
+    border: none;
+    background: transparent;
+    color: var(--text-less-prominent);
+    font-size: 1.4rem;
+    cursor: pointer;
 }
 
 // The waiting line sits behind the chart and is covered by it, so the area is
@@ -124,7 +434,7 @@ $dt-blue: #1a5cff;
     display: flex;
     flex-direction: column;
     flex: 1;
-    min-height: 34rem;
+    min-height: 30rem;
     border: 1px solid var(--general-section-1);
     border-radius: 10px;
     overflow: hidden;
@@ -147,29 +457,78 @@ $dt-blue: #1a5cff;
     color: var(--text-less-prominent);
 }
 
+.mw-dt__digits {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.mw-dt__digit {
+    display: grid;
+    place-items: center;
+    width: 4.4rem;
+    height: 4.4rem;
+    border: 2px solid var(--general-section-1);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-general);
+
+    b {
+        font-size: 1.3rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    i {
+        font-style: normal;
+        font-size: 0.85rem;
+        color: var(--text-less-prominent);
+    }
+
+    &--latest {
+        border-color: $dt-green;
+        color: var(--text-prominent);
+    }
+
+    &--on {
+        border-color: var(--text-prominent);
+        background: var(--text-prominent);
+        color: var(--general-main-1);
+
+        i {
+            color: var(--general-main-1);
+        }
+    }
+}
+
+.mw-dt__digits--pick .mw-dt__digit {
+    cursor: pointer;
+}
+
 .mw-dt__ticket {
     display: flex;
     flex-direction: column;
-    gap: 1.2rem;
+    gap: 1rem;
     min-height: 0;
-    padding: 1.6rem;
+    padding: 1.4rem;
     border: 1px solid var(--general-section-1);
     border-radius: 10px;
 
-    h2 {
-        margin: 0;
-        font-size: 1.6rem;
-        font-weight: 700;
-    }
-
-    @media (width >= 1000px) {
+    @media (width >= 1100px) {
         overflow-y: auto;
     }
 }
 
+.mw-dt__how {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--text-less-prominent);
+}
+
 .mw-dt__sides {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: column;
     gap: 0.4rem;
     padding: 0.4rem;
     border-radius: 999px;
@@ -177,18 +536,18 @@ $dt-blue: #1a5cff;
 }
 
 .mw-dt__side {
-    min-height: 4.4rem;
+    min-height: 4rem;
     border: none;
     border-radius: 999px;
     background: transparent;
     color: var(--text-general);
-    font-size: 1.4rem;
+    font-size: 1.35rem;
     font-weight: 700;
     cursor: pointer;
 
     &--on {
         background: var(--general-main-1);
-        color: $dt-blue;
+        color: $dt-green;
     }
 }
 
@@ -196,24 +555,24 @@ $dt-blue: #1a5cff;
     display: flex;
     align-items: center;
     gap: 0.8rem;
-    padding: 1rem 1.4rem;
+    padding: 0.9rem 1.2rem;
     border: 1px solid var(--general-section-1);
     border-radius: 8px;
     background: var(--general-section-1);
 
     > span {
         flex: 1;
-        font-size: 1.2rem;
+        font-size: 1.15rem;
         color: var(--text-less-prominent);
     }
 
     input,
     select {
-        width: 7rem;
+        width: 8rem;
         border: none;
         background: transparent;
         color: var(--text-prominent);
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         font-weight: 600;
         text-align: right;
         outline: none;
@@ -226,8 +585,20 @@ $dt-blue: #1a5cff;
 
     i {
         font-style: normal;
-        font-size: 1.2rem;
+        font-size: 1.15rem;
         color: var(--text-less-prominent);
+    }
+
+    // The digit strip needs the full width, so its label sits above it.
+    &--block {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.8rem;
+
+        .mw-dt__digit {
+            width: 3.4rem;
+            height: 3.4rem;
+        }
     }
 }
 
@@ -236,17 +607,43 @@ $dt-blue: #1a5cff;
     align-items: center;
     justify-content: space-between;
     gap: 1.2rem;
-    min-height: 4.4rem;
-    padding: 0.6rem 1.4rem;
+    min-height: 4rem;
+    padding: 0.6rem 1.2rem;
     border: 1px solid var(--general-section-1);
     border-radius: 8px;
     background: var(--general-section-1);
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     color: var(--text-general);
 
     input {
-        width: 4rem;
-        height: 2.2rem;
+        width: 3.6rem;
+        height: 2rem;
+    }
+}
+
+.mw-dt__quote {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+
+    div {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    dt {
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+
+    dd {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
     }
 }
 
@@ -254,7 +651,7 @@ $dt-blue: #1a5cff;
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
-    min-height: 5.6rem;
+    min-height: 5.2rem;
     margin-top: auto;
     padding: 0.8rem;
     border: none;
@@ -264,7 +661,7 @@ $dt-blue: #1a5cff;
     cursor: pointer;
 
     b {
-        font-size: 1.7rem;
+        font-size: 1.6rem;
         font-weight: 700;
     }
 
@@ -284,27 +681,40 @@ $dt-blue: #1a5cff;
     }
 }
 
+.mw-dt__stats {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 1.1rem;
+    color: var(--text-less-prominent);
+
+    div {
+        display: flex;
+        gap: 0.6rem;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    b {
+        color: var(--text-prominent);
+        font-variant-numeric: tabular-nums;
+    }
+}
+
 .mw-dt__ok {
     margin: 0;
-    padding: 0.8rem 1.2rem;
+    padding: 0.7rem 1.1rem;
     border-radius: 6px;
     background: rgb(0 167 158 / 14%);
-    font-size: 1.25rem;
+    font-size: 1.2rem;
     color: $dt-green;
 }
 
 .mw-dt__error {
     margin: 0;
-    padding: 0.8rem 1.2rem;
+    padding: 0.7rem 1.1rem;
     border-radius: 6px;
     background: rgb(222 0 64 / 12%);
-    font-size: 1.25rem;
+    font-size: 1.2rem;
     color: $dt-red;
-}
-
-.mw-dt__note {
-    margin: 0;
-    font-size: 1.15rem;
-    line-height: 1.5;
-    color: var(--text-less-prominent);
 }

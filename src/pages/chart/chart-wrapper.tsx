@@ -11,10 +11,20 @@ interface ChartWrapperProps {
 }
 
 const ChartWrapper = observer(({ prefix = 'chart', show_digits_stats }: ChartWrapperProps) => {
-    const { client } = useStore();
+    // RootStore is built in StoreProvider's own effect, so useStore() is null
+    // on the first render. Destructuring it outright threw "Cannot destructure
+    // property 'client'" and took the whole page down with it - reachable by
+    // loading a route that mounts a chart directly rather than arriving at it
+    // from an already-running app.
+    const store = useStore();
     const [uuid] = useState(uuidv4());
 
-    const uniqueKey = client.loginid ? `${prefix}-${client.loginid}` : `${prefix}-${uuid}`;
+    // Chart itself reads chart_store, run_panel and dashboard straight off the
+    // store, so it must not mount until there is one - it renders on the next
+    // pass, a frame later, rather than not at all.
+    if (!store) return null;
+
+    const uniqueKey = store.client?.loginid ? `${prefix}-${store.client.loginid}` : `${prefix}-${uuid}`;
 
     return <Chart key={uniqueKey} show_digits_stats={show_digits_stats} />;
 });

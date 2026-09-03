@@ -29,7 +29,12 @@ export type TPlaceTradeParams = {
     contract_type: string;
     symbol: string;
     stake: number;
-    duration: number;
+    /**
+     * Left out entirely by the contracts that have no duration - an
+     * accumulator runs until it knocks out or its take profit is hit, and a
+     * multiplier until it is closed - and sending one gets those rejected.
+     */
+    duration?: number;
     /**
      * Deriv's own unit codes - 't' ticks, 's' seconds, 'm' minutes, 'h' hours,
      * 'd' days. Ticks by default, which is what every caller wanted until a
@@ -37,6 +42,14 @@ export type TPlaceTradeParams = {
      */
     duration_unit?: string;
     barrier?: number | string;
+    /** Multipliers: how far the move is geared. */
+    multiplier?: number;
+    /** Accumulators: the per-tick growth, as a fraction (0.03 is 3%). */
+    growth_rate?: number;
+    /** Turbos: Deriv prices these from the payout per point, not a barrier. */
+    payout_per_point?: string;
+    /** Take profit / stop loss, which Deriv carries as orders on the contract. */
+    limit_order?: Record<string, number>;
 };
 
 type TApiError = { error?: { message?: string; code?: string } };
@@ -200,7 +213,18 @@ const useManualTrade = () => {
     // flight. The batch below owns that flag.
     const placeTrade = useCallback(
         async (
-            { contract_type, symbol, stake, duration, duration_unit = 't', barrier }: TPlaceTradeParams,
+            {
+                contract_type,
+                symbol,
+                stake,
+                duration,
+                duration_unit = 't',
+                barrier,
+                multiplier,
+                growth_rate,
+                payout_per_point,
+                limit_order,
+            }: TPlaceTradeParams,
             on_contract?: (contract_id: number) => void
         ) => {
             const api = api_base.api;
@@ -223,11 +247,14 @@ const useManualTrade = () => {
                     basis: 'stake',
                     contract_type,
                     currency,
-                    duration,
-                    duration_unit,
+                    ...(duration !== undefined ? { duration, duration_unit } : {}),
                     ...(api_base.is_otp_transport ? { underlying_symbol: symbol } : { symbol }),
                 };
                 if (barrier !== undefined) proposal_request.barrier = barrier;
+                if (multiplier !== undefined) proposal_request.multiplier = multiplier;
+                if (growth_rate !== undefined) proposal_request.growth_rate = growth_rate;
+                if (payout_per_point !== undefined) proposal_request.payout_per_point = payout_per_point;
+                if (limit_order !== undefined) proposal_request.limit_order = limit_order;
 
                 const proposal_response = await api.send(proposal_request);
                 if (readError(proposal_response)) throw proposal_response;
@@ -256,7 +283,11 @@ const useManualTrade = () => {
                                 // Leave it pending - the stream may still deliver it.
                             });
                     },
-                    duration * 2000 + SETTLEMENT_GRACE_MS
+                    // A contract with no duration of its own (accumulator,
+                    // multiplier) runs until it is closed, so this is only a
+                    // late check: it asks once, and leaves the contract
+                    // pending if it is still open.
+                    (duration ?? 0) * 2000 + SETTLEMENT_GRACE_MS
                 );
 
                 open_contracts.current.set(contract_id, timeout);
