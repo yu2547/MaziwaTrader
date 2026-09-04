@@ -374,12 +374,16 @@ export const readVirtualHookFromWorkspace = () => {
         const block = workspace?.getAllBlocks()?.find(candidate => candidate.type === 'trade_definition_market');
         if (!block) return disabled;
 
-        // The checkbox on the block face is the switch a user actually sees,
-        // so it wins over whatever the stored settings claim.
-        const is_checked = block.getFieldValue?.('VIRTUAL_HOOK') === 'TRUE';
-        if (!is_checked || !block.data) return disabled;
+        // Read from the stored settings rather than a checkbox on the block
+        // face: that row is no longer drawn, and the two were always written
+        // together anyway - the dialog's save() set the field from the same
+        // `enabled` it wrote into block.data. So a strategy configured before
+        // the row was removed reports exactly what it reported then.
+        if (!block.data) return disabled;
 
         const stored = JSON.parse(block.data)?.vh ?? {};
+        if (!stored.enabled) return disabled;
+
         return {
             enabled: true,
             max_virtual_loss_steps: Math.max(1, Math.floor(Number(stored.max_virtual_loss_steps)) || 1),

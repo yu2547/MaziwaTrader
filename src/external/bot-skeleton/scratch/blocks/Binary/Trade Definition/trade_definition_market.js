@@ -1,20 +1,8 @@
-import { VH_SETTINGS_EVENT } from '@/utils/virtual-hook';
 import { localize } from '@deriv-com/translations';
 import ApiHelpers from '../../../../services/api/api-helpers';
 import DBotStore from '../../../dbot-store';
 import { excludeOptionFromContextMenu, modifyContextMenu, runIrreversibleEvents } from '../../../utils';
 
-// The "VH Settings" pill, inline so it needs no asset request and cannot go
-// missing from a build. FieldImage takes a src, and a data URI is a src.
-const VH_SETTINGS_BUTTON =
-    'data:image/svg+xml;charset=utf-8,' +
-    encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="78" height="20">' +
-            '<rect x="0.5" y="0.5" width="77" height="19" rx="4" fill="#fff8e1" stroke="#e0b400"/>' +
-            '<text x="39" y="14" text-anchor="middle" font-family="IBM Plex Sans, Arial, sans-serif" ' +
-            'font-size="11" font-weight="700" fill="#c62828">VH Settings</text>' +
-            '</svg>'
-    );
 /* eslint-disable */
 window.Blockly.Blocks.trade_definition_market = {
     init() {
@@ -51,26 +39,16 @@ window.Blockly.Blocks.trade_definition_market = {
         this.setMovable(false);
         this.setDeletable(false);
 
-        // Second row: the Virtual Hook toggle and its settings button. Added
-        // after jsonInit rather than as another message/args pair because the
-        // button needs a click handler, and a field_image declared in JSON
-        // cannot carry one - FieldImage's fifth argument is the only way, the
-        // same approach the procedures blocks use for their +/- controls.
+        // No Virtual Hook row. This block is the one trade-parameters block
+        // every strategy carries, so the checkbox and its "VH Settings" pill
+        // appeared on every bot in the app - on the Free Bots, on anything
+        // loaded from a saved workspace, and on anything imported.
         //
-        // This block is the single trade-parameters block every strategy uses,
-        // so defining the row here is what puts it on every bot: the Free Bots,
-        // anything loaded from a saved workspace, and anything imported. There
-        // is no per-bot wiring to do and no XML to migrate - a strategy that
-        // has never heard of Virtual Hook simply gets the field at its default
-        // of unchecked, and the engine gate reads that as disabled.
-        this.appendDummyInput('VIRTUAL_HOOK_ROW')
-            .appendField(localize('Virtual Hook:'))
-            .appendField(new window.Blockly.FieldCheckbox('FALSE'), 'VIRTUAL_HOOK')
-            .appendField(
-                new window.Blockly.FieldImage(VH_SETTINGS_BUTTON, 78, 20, localize('VH Settings'), () =>
-                    window.dispatchEvent(new CustomEvent(VH_SETTINGS_EVENT, { detail: { block_id: this.id } }))
-                )
-            );
+        // The hook itself is untouched. Its settings live in block.data, which
+        // Blockly serialises into the XML, so a strategy that already has it
+        // configured keeps exactly the behaviour it had - see
+        // readVirtualHookFromWorkspace in tradeEngine/utils/helpers.js, which
+        // now reads that stored flag rather than the field removed here.
     },
     customContextMenu(menu) {
         const menu_items = [localize('Enable Block'), localize('Disable Block')];
