@@ -1,0 +1,529 @@
+// The Signals panel. Same cards, same blue, same theme tokens as the rest of
+// the app - it is a view of the Analysis Tool, not a place of its own.
+$mw-green: #22a06b;
+$mw-red: #e04b4b;
+$mw-blue: #1a5cff;
+$mw-grey: #7d8fa3;
+
+.mw-tick {
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+    width: 100%;
+    padding: 1.6rem;
+    background: var(--general-section-1);
+}
+
+.mw-tick__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+
+    h2 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-prominent);
+    }
+
+    p {
+        margin: 0.3rem 0 0;
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+.mw-tick__head-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.mw-tick__badge {
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    background: var(--general-main-1);
+    color: var(--text-general);
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.05rem;
+
+    &--good_market {
+        background: rgb(34 160 107 / 14%);
+        color: $mw-green;
+    }
+
+    &--no_signal,
+    &--waiting {
+        background: rgb(125 143 163 / 16%);
+        color: $mw-grey;
+    }
+
+    &--scanning {
+        background: rgb(26 92 255 / 14%);
+        color: $mw-blue;
+    }
+
+    &--error {
+        background: rgb(224 75 75 / 14%);
+        color: $mw-red;
+    }
+}
+
+.mw-tick__ghost {
+    padding: 0.7rem 1.2rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 6px;
+    background: var(--general-main-1);
+    color: var(--text-general);
+    font-size: 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+        color: var(--text-prominent);
+    }
+}
+
+.mw-tick__launch {
+    padding: 0.7rem 1.4rem;
+    border: none;
+    border-radius: 6px;
+    background: $mw-blue;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.08);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+.mw-tick__notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1rem 1.2rem;
+    border: 1px solid rgb(26 92 255 / 30%);
+    border-radius: 8px;
+    background: rgb(26 92 255 / 8%);
+    font-size: 1.2rem;
+    color: var(--text-general);
+
+    button {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 6px;
+        background: $mw-blue;
+        color: #fff;
+        font-size: 1.15rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    &--error {
+        border-color: rgb(224 75 75 / 32%);
+        background: rgb(224 75 75 / 8%);
+
+        button {
+            background: $mw-red;
+        }
+    }
+}
+
+// One column on a phone, three where there is room. Nothing is sized in
+// viewport units, so nothing can push the page sideways.
+.mw-tick__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.6rem;
+
+    @media (width >= 900px) {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1.2fr);
+        align-items: start;
+    }
+}
+
+.mw-tick__card {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    min-width: 0;
+    padding: 1.6rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 10px;
+    background: var(--general-main-1);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+
+    h3 {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text-prominent);
+    }
+}
+
+.mw-tick__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    span {
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+    }
+
+    select {
+        width: 100%;
+        padding: 1rem 1.1rem;
+        border: 1px solid var(--general-section-1);
+        border-radius: 6px;
+        background: var(--general-main-1);
+        color: var(--text-prominent);
+        font-size: 1.35rem;
+        cursor: pointer;
+        outline: none;
+
+        &:focus {
+            border-color: $mw-blue;
+        }
+    }
+}
+
+.mw-tick__live {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+
+    div {
+        min-width: 0;
+        padding: 1rem;
+        border-radius: 8px;
+        background: var(--general-section-1);
+    }
+
+    span {
+        display: block;
+        font-size: 1.05rem;
+        color: var(--text-less-prominent);
+    }
+
+    b {
+        display: block;
+        margin-top: 0.3rem;
+        font-size: 1.7rem;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-prominent);
+        overflow-wrap: anywhere;
+    }
+}
+
+.mw-tick__meter {
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--general-section-1);
+    overflow: hidden;
+
+    div {
+        height: 100%;
+        border-radius: 999px;
+        background: $mw-blue;
+        transition: width 300ms ease;
+    }
+}
+
+.mw-tick__muted {
+    margin: 0;
+    font-size: 1.15rem;
+    color: var(--text-less-prominent);
+}
+
+.mw-tick__footnote {
+    line-height: 1.6;
+}
+
+// Ten across where there is room, five on a phone - so the row never overflows
+// and the digits never shrink to unreadable.
+.mw-tick__digits {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.6rem;
+
+    @media (width >= 620px) {
+        grid-template-columns: repeat(10, minmax(0, 1fr));
+    }
+}
+
+.mw-tick__digit {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    min-width: 0;
+    padding: 0.9rem 0.2rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 8px;
+    background: var(--general-main-1);
+    overflow: hidden;
+
+    b {
+        position: relative;
+        z-index: 1;
+        font-size: 1.5rem;
+        color: var(--text-prominent);
+    }
+
+    i {
+        position: relative;
+        z-index: 1;
+        font-style: normal;
+        font-size: 1rem;
+        color: var(--text-less-prominent);
+    }
+
+    // The bar behind each digit, drawn from the same percentage as its label.
+    span {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgb(26 92 255 / 10%);
+    }
+
+    &--most {
+        border-color: $mw-green;
+    }
+
+    &--least {
+        border-color: $mw-red;
+    }
+
+    &--now {
+        border-color: $mw-blue;
+        background: rgb(26 92 255 / 12%);
+    }
+}
+
+.mw-tick__facts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+
+    div {
+        min-width: 0;
+        padding: 1rem;
+        border-radius: 8px;
+        background: var(--general-section-1);
+    }
+
+    span {
+        display: block;
+        font-size: 1.05rem;
+        color: var(--text-less-prominent);
+    }
+
+    b {
+        display: block;
+        margin-top: 0.3rem;
+        font-size: 1.4rem;
+        color: var(--text-prominent);
+        overflow-wrap: anywhere;
+    }
+
+    &--tall b {
+        font-size: 1.9rem;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.mw-tick__card--signal {
+    dl {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        margin: 0;
+    }
+
+    dl > div {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    dt {
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+    }
+
+    dd {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-prominent);
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
+}
+
+.mw-tick__signal {
+    color: $mw-blue;
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+.mw-tick__conditions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+        position: relative;
+        padding-left: 2rem;
+        font-size: 1.15rem;
+        line-height: 1.5;
+        color: var(--text-general);
+
+        &:before {
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+    }
+}
+
+.mw-tick__cond--pass:before {
+    content: '\2713';
+    color: $mw-green;
+}
+
+.mw-tick__cond--fail:before {
+    content: '\2022';
+    color: $mw-grey;
+}
+
+.mw-tick__scan-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+
+    h3 {
+        margin: 0;
+    }
+}
+
+.mw-tick__result {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 0.8rem;
+    align-items: center;
+    padding: 1.2rem;
+    border: 1px solid rgb(34 160 107 / 35%);
+    border-radius: 8px;
+    background: rgb(34 160 107 / 8%);
+
+    span {
+        display: block;
+        font-size: 1.05rem;
+        color: var(--text-less-prominent);
+    }
+
+    b {
+        display: block;
+        margin-top: 0.2rem;
+        font-size: 1.4rem;
+        color: var(--text-prominent);
+        overflow-wrap: anywhere;
+    }
+}
+
+.mw-tick__log {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 1.1rem;
+    color: var(--text-less-prominent);
+
+    li {
+        overflow-wrap: anywhere;
+    }
+
+    &--head {
+        color: var(--text-prominent);
+        font-weight: 700;
+    }
+
+    &--ok {
+        color: var(--text-general);
+    }
+
+    &--warn {
+        color: $mw-red;
+    }
+}
+
+// Scrolls inside its own box on a phone rather than widening the page.
+.mw-tick__table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 1.15rem;
+
+    th,
+    td {
+        padding: 0.7rem 1rem;
+        border-bottom: 1px solid var(--general-section-1);
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    th {
+        color: var(--text-less-prominent);
+        font-weight: 600;
+    }
+
+    td {
+        color: var(--text-prominent);
+    }
+}
+
+@media (width <= 480px) {
+    .mw-tick {
+        gap: 1.2rem;
+        padding: 1.2rem 0.8rem;
+    }
+
+    .mw-tick__card {
+        padding: 1.2rem;
+    }
+
+    .mw-tick__live b {
+        font-size: 1.4rem;
+    }
+
+    .mw-tick__facts {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

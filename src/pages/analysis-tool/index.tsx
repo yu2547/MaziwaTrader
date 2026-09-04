@@ -5,6 +5,7 @@ import Dcircles from './dcircles';
 import DualEdge from './dual-edge';
 import ProAi from './pro-ai';
 import Signals from './signals';
+import TickAnalyser from './tick-analyser';
 import './analysis-tool.scss';
 
 type TAnalysisView =
@@ -22,10 +23,10 @@ const VIEWS: { id: TAnalysisView; label: string }[] = [
 ];
 
 /**
- * Dcircles, Signals, Pro AI and Analysis Tool have something behind them: the
- * first three read the app's live tick feed, Analysis Tool is the hosted tool
- * this page has always embedded. SL Tools and Tick Analyser have no data source
- * in this build, so they say so instead of rendering numbers nobody measured.
+ * Dcircles, Signals, Tick Analyser and Pro AI read the app's live tick feed;
+ * Analysis Tool is the hosted tool this page has always embedded. SL Tools has
+ * no data source in this build, so it says so instead of rendering numbers
+ * nobody measured.
  */
 const NotConnected = ({ title }: { title: string }) => {
     const { localize } = useTranslations();
@@ -79,7 +80,7 @@ const AnalysisTool = observer(() => {
                 {view === 'signals' && <Signals />}
                 {view === 'sl_tools' && <NotConnected title={localize('SL Tools')} />}
                 {view === 'pro_ai' && <ProAi />}
-                {view === 'tick_analyser' && <NotConnected title={localize('Tick Analyser')} />}
+                {view === 'tick_analyser' && <TickAnalyser />}
                 {/* One page, two rule sets. Each tab opens it on its own set,
                     and the pills at the top switch between them from either. */}
                 {view === 'dual_edge' && <DualEdge key='dual_edge' initial_mode='recovery' />}
