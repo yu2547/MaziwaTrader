@@ -337,4 +337,111 @@
             padding: 20px;
         }
     }
+
+    /**
+     * Phones. One centred column with the card sitting clear of both screen
+     * edges rather than stretched across them.
+     *
+     * The 22px comes from this container, not from the card: the card is
+     * width:100% of a padded content box, so there is one source of side
+     * spacing and no way for the two to stack up into a margin nobody
+     * intended. Measured at 390px: card 346px, 22px clear on each side.
+     */
+    @media (width <= 600px) {
+        padding-inline: 22px;
+
+        &__grid {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 32px;
+            margin-bottom: 24px;
+        }
+
+        &__card {
+            // Sized by its content and nothing else: no floor to hold a short
+            // card open, no ceiling to crop a long one.
+            width: 100%;
+            max-width: 580px;
+            min-height: 0;
+            height: auto;
+            padding: 20px 18px 18px;
+            border-radius: 20px;
+            box-shadow: 0 8px 24px rgb(20 50 120 / 12%);
+
+            &--premium {
+                border: 2px solid #1f438f;
+                border-radius: 20px;
+            }
+        }
+
+        // Stays pinned in the corner and out of the flow, so it cannot widen
+        // the card it is sitting on.
+        &__ribbon {
+            padding: 10px 18px;
+            border-radius: 0 18px 0 14px;
+            font-size: 13px;
+        }
+
+        &__card-header {
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+
+        &__rating {
+            justify-content: center;
+            gap: 3px;
+            margin: 6px 0 10px;
+            font-size: 18px;
+        }
+
+        &__card-title {
+            margin-bottom: 8px;
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.25;
+            text-align: center;
+            overflow-wrap: anywhere;
+        }
+
+        // No fixed height and no growing to fill: the description takes the
+        // room its own lines need, which is what keeps the card from opening
+        // up around a short one.
+        &__card-description {
+            flex-grow: 0;
+            max-width: 500px;
+            height: auto;
+            max-height: none;
+            margin: 0 auto;
+            font-size: 16px;
+            line-height: 1.45;
+            text-align: center;
+        }
+
+        &__card-btn {
+            min-height: 48px;
+            margin-top: 14px;
+            border-radius: 18px;
+            font-size: 17px;
+            font-weight: 700;
+        }
+    }
+
+    // Narrow phones: the same layout, a little less of everything, so a long
+    // bot name still fits on two lines rather than three.
+    @media (width <= 380px) {
+        padding-inline: 18px;
+
+        &__card {
+            padding: 20px 16px 18px;
+        }
+
+        &__card-title {
+            font-size: 18px;
+        }
+
+        &__card-description {
+            font-size: 15px;
+        }
+    }
 }
