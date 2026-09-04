@@ -97,7 +97,18 @@ $mw-tab-active: #1a3d7c;
             // spans exactly the gap between them.
             height: calc(100vh - var(--mw-exec-bar-height, 6rem) - 6rem);
             max-height: calc(100vh - var(--mw-exec-bar-height, 6rem) - 6rem);
-            z-index: var(--zindex-drawer);
+
+            // A number, not var(--zindex-drawer): that variable is declared on
+            // `.bot` (app.scss), and no element in this app carries that class,
+            // so the var resolved to nothing and took the whole declaration
+            // with it - the sheet computed z-index: auto. Being position:
+            // fixed it is its own stacking context, so the drawer's z-index 6
+            // was sealed inside it and could not lift it either. Bot Builder
+            // is position: absolute with z-index 1 while it is the active tab
+            // (main.scss), and a positioned element with z-index 1 paints over
+            // a positioned element with z-index auto - so the panel opened,
+            // full size and on screen, underneath the workspace.
+            z-index: 10;
             padding-bottom: 0;
             display: flex;
             flex-direction: column;
