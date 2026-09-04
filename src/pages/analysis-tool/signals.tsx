@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
+import { scan_sound } from '@/components/layout/execution-bar/scan-sound';
 import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
 import useUtcClock from '@/hooks/useUtcClock';
 import { getDigitDistribution, getLastDigit, toDecimalPlaces } from '@/utils/market-data/last-digit';
 import { TActiveSymbol, TTick } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
 import { evaluateWindow, MIN_ENTROPY, MIN_SAMPLE, MIN_SEPARATION_Z, TSide, TStrategy } from './signal-quality';
-import './signals.scss';
 
 /**
  * Volatility indices only - R_10..R_100 and their 1s variants. The synthetic
@@ -68,11 +68,7 @@ const STRATEGIES: { id: TStrategy; label: string }[] = [
     { id: 'matches_differs', label: 'Matches & Differs' },
     { id: 'even_odd', label: 'Even & Odd' },
     { id: 'over_under', label: 'Over & Under' },
-    { id: 'rise_fall', label: 'Rise & Fall' },
 ];
-
-/** The digit strategies read last digits; Rise & Fall reads the prices themselves. */
-const isDigitStrategy = (strategy: TStrategy) => strategy !== 'rise_fall';
 
 const STATUS_LABEL: Record<TStatus, string> = {
     error: 'SCANNER ERROR',
@@ -84,6 +80,44 @@ const STATUS_LABEL: Record<TStatus, string> = {
 
 /** Same UTC formatting the footer clock uses, so a signal time reads like the app's own clock. */
 const gmt = (date: Date) => date.toLocaleTimeString('en-GB', { hour12: false, timeZone: 'UTC' });
+
+/**
+ * Background chatter. Scenery - aria-hidden, behind a scrim, and nothing in it
+ * is a reading of anything. Every claim on this page is in the panel, from the
+ * live window.
+ */
+const RAIN_LINES = [
+    '[INFO] Connecting to server... [OK]',
+    '[SUCCESS] Data stream established...',
+    '[INFO] Authenticating API key... [OK]',
+    '[SECURITY] Encryption enabled...',
+    '[INFO] Fetching market data... [OK]',
+    '[INFO] Analysing Volatility Index...',
+    '[INFO] Compiling results...',
+    '[INFO] Predicting next digit...',
+    '[INFO] Data transmission complete...',
+    '[WARNING] High market volatility detected...',
+    '[WARNING] Unstable connection detected...',
+    '[ERROR] Connection timeout. Retrying...',
+];
+
+const RainColumn = ({ duration, seed }: { duration: number; seed: number }) => {
+    const lines = useMemo(() => {
+        const offset = seed % RAIN_LINES.length;
+        const rotated = [...RAIN_LINES.slice(offset), ...RAIN_LINES.slice(0, offset)];
+        const filled = Array.from({ length: 24 }, (_, index) => rotated[(index * 5 + seed) % rotated.length]);
+        // Two copies, so the second lands where the first began and -50% loops seamlessly.
+        return [...filled, ...filled];
+    }, [seed]);
+
+    return (
+        <div className='mw-signals__rain-col' style={{ animationDuration: `${duration}s` }}>
+            {lines.map((line, index) => (
+                <span key={`${seed}-${index}`}>{line}</span>
+            ))}
+        </div>
+    );
+};
 
 const Signals = observer(() => {
     const { feed, isConnected } = usePublicMarketFeed();
@@ -100,18 +134,10 @@ const Signals = observer(() => {
     // window - long enough to record a signal against the wrong market, which
     // is how Boom 50 and Boom 600 came to log the same reading in the same
     // second. Bound together they cannot drift.
-    // Prices ride along with the digits because Rise & Fall reads the quotes
-    // themselves rather than their last digit, and it has to be the same window
-    // the rest of the panel is describing.
-    const [sample, setSample] = useState<{ digits: number[]; prices: number[]; symbol: string }>({
-        digits: [],
-        prices: [],
-        symbol: '',
-    });
+    const [sample, setSample] = useState<{ digits: number[]; symbol: string }>({ digits: [], symbol: '' });
     // Memoised so the mismatch branch does not hand back a fresh [] on every
     // render and re-run every calculation below it on every tick.
     const digits = useMemo(() => (sample.symbol === symbol ? sample.digits : []), [sample, symbol]);
-    const prices = useMemo(() => (sample.symbol === symbol ? sample.prices : []), [sample, symbol]);
     const [last_tick, setLastTick] = useState<TTick | null>(null);
     // Held apart from last_tick because history arrives first: the sample is
     // already 1000 deep before a single live tick has landed, and reading the
@@ -152,7 +178,7 @@ const Signals = observer(() => {
     useEffect(() => {
         if (!isConnected || !symbol) return undefined;
         const id = ++request_id.current;
-        setSample({ digits: [], prices: [], symbol });
+        setSample({ digits: [], symbol });
         setLastTick(null);
         setQuote(null);
         setHistoryError(false);
@@ -164,11 +190,7 @@ const Signals = observer(() => {
                 setDecimals(places);
                 // History is oldest-first, so the newest price is the last one.
                 setQuote(prices[prices.length - 1] ?? null);
-                setSample({
-                    digits: prices.map(price => getLastDigit(price, places)).reverse(),
-                    prices: [...prices].reverse(),
-                    symbol,
-                });
+                setSample({ digits: prices.map(price => getLastDigit(price, places)).reverse(), symbol });
             })
             .catch(() => {
                 if (id !== request_id.current) return;
@@ -182,14 +204,13 @@ const Signals = observer(() => {
             setLastTick(tick);
             setQuote(tick.quote);
             setHistoryError(false);
-            setSample(prev => {
-                const same = prev.symbol === symbol;
-                return {
-                    digits: [getLastDigit(tick.quote, places), ...(same ? prev.digits : [])].slice(0, SAMPLE_SIZE),
-                    prices: [tick.quote, ...(same ? prev.prices : [])].slice(0, SAMPLE_SIZE),
-                    symbol,
-                };
-            });
+            setSample(prev => ({
+                digits: [getLastDigit(tick.quote, places), ...(prev.symbol === symbol ? prev.digits : [])].slice(
+                    0,
+                    SAMPLE_SIZE
+                ),
+                symbol,
+            }));
         });
 
         return () => unsubscribe();
@@ -203,27 +224,7 @@ const Signals = observer(() => {
     // One implementation of the sides, used by the live panel and by the
     // all-market scan, so the two can never disagree about what a market says.
     const makeSides = useCallback(
-        (window_digits: number[], window_prices: number[], for_strategy: TStrategy): TSide[] => {
-            if (for_strategy === 'rise_fall') {
-                // Counted on the quotes, not their last digit: a move up, a move
-                // down, and the ticks that did neither. Flat ticks are left out
-                // of the two sides but not out of the count, which is why these
-                // do not sum to 100 on a market that repeats a price.
-                if (window_prices.length < 2) return [];
-                let rise = 0;
-                let fall = 0;
-                for (let index = 1; index < window_prices.length; index++) {
-                    // Newest-first, so the later tick is the lower index.
-                    if (window_prices[index - 1] > window_prices[index]) rise += 1;
-                    else if (window_prices[index - 1] < window_prices[index]) fall += 1;
-                }
-                const moves = window_prices.length - 1;
-                return [
-                    { baseline: 50, label: localize('RISE'), pct: (rise / moves) * 100 },
-                    { baseline: 50, label: localize('FALL'), pct: (fall / moves) * 100 },
-                ];
-            }
-
+        (window_digits: number[], for_strategy: TStrategy): TSide[] => {
             if (!window_digits.length) return [];
             const total = window_digits.length;
             const distribution = getDigitDistribution(window_digits);
@@ -260,20 +261,7 @@ const Signals = observer(() => {
         [localize]
     );
 
-    const sides = useMemo(() => makeSides(digits, prices, strategy), [makeSides, digits, prices, strategy]);
-
-    // The window's own digit frequencies, and the two ends of them. Every
-    // figure on the digit card comes from here.
-    const distribution = useMemo(
-        () => (digits.length ? getDigitDistribution(digits) : Array.from({ length: 10 }, () => 0)),
-        [digits]
-    );
-    const ranked_digits = useMemo(
-        () => distribution.map((pct, digit) => ({ digit, pct })).sort((a, b) => b.pct - a.pct),
-        [distribution]
-    );
-    const most_frequent = digits.length ? ranked_digits[0] : null;
-    const least_frequent = digits.length ? ranked_digits[ranked_digits.length - 1] : null;
+    const sides = useMemo(() => makeSides(digits, strategy), [makeSides, digits, strategy]);
 
     // The verdict comes from one pure function so it can be exercised without a
     // feed, a socket or a DOM - see signal-quality.ts and its spec. Sides are
@@ -284,7 +272,7 @@ const Signals = observer(() => {
         () => evaluateWindow({ digits, has_feed, sides, strategy }),
         [digits, has_feed, sides, strategy]
     );
-    const { entropy, leader, required_z, separation_z } = evaluation;
+    const { entropy, leader, required_z, scored, separation_z } = evaluation;
 
     const conditions = useMemo(
         () => [
@@ -424,6 +412,10 @@ const Signals = observer(() => {
     };
 
     const runScan = async () => {
+        // Opened here, in the press's own call stack: Safari only honours an
+        // AudioContext resumed inside the gesture, and the effect that starts
+        // the loop runs after that stack has unwound.
+        scan_sound.prime();
         const token = ++scan_token.current;
         setScanPhase('scanning');
         setScanResult(null);
@@ -483,7 +475,7 @@ const Signals = observer(() => {
                                 evaluation: evaluateWindow({
                                     digits: window_digits,
                                     has_feed: true,
-                                    sides: makeSides(window_digits, [...prices].reverse(), strategy),
+                                    sides: makeSides(window_digits, strategy),
                                     strategy,
                                 }),
                                 item,
@@ -603,73 +595,38 @@ const Signals = observer(() => {
         return () => clearTimeout(timer);
     }, [countdown]);
 
-    const window_full = digits.length >= MIN_SAMPLE;
-    const failing = conditions.filter(condition => !condition.pass);
+    /**
+     * The scanning sound belongs to this scanner and to no other: it follows
+     * scan_phase, the same flag the dashboard's own sweeping state uses, so it
+     * lasts exactly as long as a sweep does and stops the moment one settles -
+     * on a market found, on nothing found, on an error, on the dashboard being
+     * closed, and on this view being left.
+     */
+    useEffect(() => {
+        if (scan_phase === 'scanning') scan_sound.start();
+        else scan_sound.stop();
+        return () => scan_sound.stop();
+    }, [scan_phase]);
 
     return (
-        <div className='mw-sig'>
-            <header className='mw-sig__head'>
-                <div>
-                    <h2>{localize('Signals')}</h2>
-                    <p>
-                        {localize('Live digit and price analysis over the last {{count}} ticks.', {
-                            count: SAMPLE_SIZE,
-                        })}
-                    </p>
-                </div>
-                <div className='mw-sig__head-actions'>
-                    <span className={`mw-sig__badge mw-sig__badge--${status}`}>{localize(STATUS_LABEL[status])}</span>
-                    <button type='button' className='mw-sig__ghost' onClick={toggleSound} aria-pressed={sound_on}>
-                        {sound_on ? localize('Alerts on') : localize('Alerts off')}
-                    </button>
-                    {/* Opens the app's own AI scanner - the floating orb's panel -
-                        rather than starting a second one of this page's own. */}
-                    <button
-                        type='button'
-                        className='mw-sig__launch'
-                        onClick={() => window.dispatchEvent(new CustomEvent('mw:open-entry-scanner'))}
-                    >
-                        {localize('Launch AI')}
-                    </button>
-                </div>
-            </header>
+        <div className='mw-signals'>
+            {/* Six columns rather than three: the reference fills the whole
+                field with chatter, and three left visible gutters between them. */}
+            <div className='mw-signals__rain' aria-hidden='true'>
+                <RainColumn duration={11} seed={1} />
+                <RainColumn duration={14} seed={7} />
+                <RainColumn duration={12} seed={4} />
+                <RainColumn duration={16} seed={9} />
+                <RainColumn duration={13} seed={2} />
+                <RainColumn duration={15} seed={5} />
+            </div>
 
-            {sound_blocked && (
-                <div className='mw-sig__notice'>
-                    <span>
-                        {localize('Your browser is holding back the alert sound until you interact with the page.')}
-                    </span>
-                    <button type='button' onClick={enableSound}>
-                        {localize('Enable sound')}
-                    </button>
-                </div>
-            )}
+            <div className='mw-signals__panel'>
+                <h2 className='mw-signals__title'>{localize('Signal Analyzer')}</h2>
 
-            {history_error && (
-                <div className='mw-sig__notice mw-sig__notice--error'>
-                    <span>{localize('Could not read tick history for this market.')}</span>
-                    <button type='button' onClick={() => setRetryToken(token => token + 1)}>
-                        {localize('Retry')}
-                    </button>
-                </div>
-            )}
-
-            <div className='mw-sig__grid'>
-                <section className='mw-sig__card'>
-                    <h3>{localize('Market & strategy')}</h3>
-                    <label className='mw-sig__field'>
-                        <span>{localize('Market')}</span>
-                        <select value={symbol} onChange={event => setSymbol(event.target.value)}>
-                            <option value={NO_SYMBOL}>{localize('Select a market')}</option>
-                            {symbols.map(item => (
-                                <option key={item.underlying_symbol} value={item.underlying_symbol}>
-                                    {item.underlying_symbol_name}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                    <label className='mw-sig__field'>
-                        <span>{localize('Strategy')}</span>
+                <div className='mw-signals__controls'>
+                    <label className='mw-signals__field'>
+                        <span>{localize('Select Strategy')}</span>
                         <select value={strategy} onChange={event => setStrategy(event.target.value as TStrategy)}>
                             {STRATEGIES.map(item => (
                                 <option key={item.id} value={item.id}>
@@ -679,257 +636,271 @@ const Signals = observer(() => {
                         </select>
                     </label>
 
-                    <div className='mw-sig__live'>
-                        <div>
-                            <span>{localize('Current price')}</span>
-                            <b>{quote === null ? '--' : quote.toFixed(decimals)}</b>
+                    <label className='mw-signals__field'>
+                        <span>{localize('Select Market')}</span>
+                        <select value={symbol} onChange={event => setSymbol(event.target.value)}>
+                            <option value={NO_SYMBOL}>{localize('-- Select Market --')}</option>
+                            {symbols.map(item => (
+                                <option key={item.underlying_symbol} value={item.underlying_symbol}>
+                                    {item.underlying_symbol_name}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                </div>
+
+                {/* The reference's headline readout: the two live numbers, big,
+                    green and centred, above everything the scanner concludes. */}
+                <div className='mw-signals__readout'>
+                    <p>
+                        {localize('Latest Tick:')} <b>{quote === null ? '--' : quote.toFixed(decimals)}</b>
+                    </p>
+                    <p>
+                        {localize('Last Digit:')} <b>{current_digit ?? '--'}</b>
+                    </p>
+                </div>
+
+                {/* Opens the Analysis Dashboard, which reads every market once
+                    and ranks them. The live panel below keeps running
+                    throughout - this is a sweep across markets, not a start
+                    button for the scanner. */}
+                <button
+                    type='button'
+                    className='mw-signals__analyse'
+                    onClick={runScan}
+                    disabled={scan_phase === 'scanning'}
+                >
+                    {scan_phase === 'scanning' ? localize('Analysing...') : localize('Analyse')}
+                </button>
+
+                {/* Nothing below appears until a market is chosen. With no
+                    selection there is no window, so a status would be a verdict
+                    on nothing - and NO SIGNAL sitting under an empty readout
+                    reads as a finding rather than as "you have not picked a
+                    market yet". */}
+                {!!symbol && (
+                    <div
+                        className={`mw-signals__status mw-signals__status--${status}`}
+                        role='status'
+                        aria-live='polite'
+                    >
+                        <span className='mw-signals__status-label'>{localize(STATUS_LABEL[status])}</span>
+                        {(status === 'scanning' || status === 'no_signal') && (
+                            <span className='mw-signals__dots' aria-hidden='true'>
+                                <i />
+                                <i />
+                                <i />
+                            </span>
+                        )}
+                        {status === 'good_market' && detected_at && (
+                            <span className='mw-signals__status-time'>
+                                {localize('Detected {{time}} GMT', { time: detected_at })}
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                {status === 'error' && (
+                    <div className='mw-signals__error'>
+                        <p>
+                            {localize(
+                                'The tick feed is not delivering data for this market, so nothing is being analysed.'
+                            )}
+                        </p>
+                        <button type='button' onClick={() => setRetryToken(value => value + 1)}>
+                            {localize('Retry')}
+                        </button>
+                    </div>
+                )}
+
+                {/* The tick and the digit moved up into the headline readout, so
+                    this row carries only what the scanner works out from them. */}
+                {!!symbol && (
+                    <div className='mw-signals__grid'>
+                        <div className='mw-signals__cell'>
+                            {/* Deliberately not "confidence": this is how many
+                            standard errors the window sits from uniform, which
+                            is a description of the sample, not a probability of
+                            anything happening next. The points figure it is
+                            derived from stays visible on the rows below. */}
+                            <span>{localize('Signal deviation')}</span>
+                            <b>
+                                {leader && status !== 'error' ? localize('{{z}} SE', { z: leader.z.toFixed(2) }) : '--'}
+                            </b>
                         </div>
-                        <div>
-                            <span>{localize('Last digit')}</span>
-                            <b>{current_digit === null ? '--' : current_digit}</b>
-                        </div>
-                        <div>
-                            <span>{localize('Ticks')}</span>
+                        <div className='mw-signals__cell'>
+                            <span>{localize('Sample')}</span>
                             <b>
                                 {digits.length}/{SAMPLE_SIZE}
                             </b>
                         </div>
                     </div>
-                    <div className='mw-sig__meter'>
-                        <div style={{ width: `${Math.min(100, (digits.length / SAMPLE_SIZE) * 100)}%` }} />
-                    </div>
-                    <p className='mw-sig__muted'>{symbol ? symbol_name : localize('No market selected')}</p>
-                </section>
+                )}
 
-                {/* Digit frequencies are meaningless for Rise & Fall, so that
-                    strategy gets the move breakdown in their place rather than
-                    a card that does not apply to it. */}
-                <section className='mw-sig__card mw-sig__card--wide'>
-                    <h3>{isDigitStrategy(strategy) ? localize('Digit frequency') : localize('Tick moves')}</h3>
-
-                    {isDigitStrategy(strategy) ? (
-                        <>
-                            <div className='mw-sig__digits'>
-                                {distribution.map((pct, digit) => (
-                                    <div
-                                        key={digit}
-                                        className={`mw-sig__digit${digit === current_digit ? ' mw-sig__digit--now' : ''}${
-                                            digit === most_frequent?.digit ? ' mw-sig__digit--most' : ''
-                                        }${digit === least_frequent?.digit ? ' mw-sig__digit--least' : ''}`}
-                                    >
-                                        <b>{digit}</b>
-                                        <i>{digits.length ? `${pct.toFixed(1)}%` : '--'}</i>
-                                        <span style={{ height: `${Math.min(100, pct * 5)}%` }} />
-                                    </div>
-                                ))}
-                            </div>
-                            <div className='mw-sig__facts'>
-                                <div>
-                                    <span>{localize('Current digit')}</span>
-                                    <b>{current_digit === null ? '--' : current_digit}</b>
-                                </div>
-                                <div>
-                                    <span>{localize('Most frequent')}</span>
-                                    <b>
-                                        {most_frequent
-                                            ? `${most_frequent.digit} · ${most_frequent.pct.toFixed(1)}%`
-                                            : '--'}
-                                    </b>
-                                </div>
-                                <div>
-                                    <span>{localize('Least frequent')}</span>
-                                    <b>
-                                        {least_frequent
-                                            ? `${least_frequent.digit} · ${least_frequent.pct.toFixed(1)}%`
-                                            : '--'}
-                                    </b>
-                                </div>
-                            </div>
-                        </>
-                    ) : (
-                        <div className='mw-sig__facts mw-sig__facts--tall'>
-                            {sides.map(side => (
-                                <div key={side.label}>
-                                    <span>{side.label}</span>
-                                    <b>{side.pct.toFixed(2)}%</b>
-                                </div>
-                            ))}
-                            <div>
-                                <span>{localize('Moves counted')}</span>
-                                <b>{Math.max(0, prices.length - 1)}</b>
-                            </div>
-                        </div>
-                    )}
-                </section>
-
-                <section className='mw-sig__card mw-sig__card--signal'>
-                    <h3>{localize('AI signal')}</h3>
-                    <dl>
-                        <div>
-                            <dt>{localize('Market')}</dt>
-                            <dd>{symbol ? symbol_name : '--'}</dd>
-                        </div>
-                        <div>
-                            <dt>{localize('Strategy')}</dt>
-                            <dd>{strategy_label}</dd>
-                        </div>
-                        <div>
-                            <dt>{localize('Signal')}</dt>
-                            <dd className='mw-sig__signal'>{leader ? leader.label : '--'}</dd>
-                        </div>
-                        <div>
-                            <dt>{localize('Observed share')}</dt>
-                            <dd>{leader ? `${leader.pct.toFixed(2)}%` : '--'}</dd>
-                        </div>
-                        {/* Evidence, not a win rate: how far the leading side sits
-                            from its own baseline, against what this strategy has
-                            to clear. */}
-                        <div>
-                            <dt>{localize('Evidence')}</dt>
-                            <dd>
-                                {leader
-                                    ? localize('{{z}} of {{required}} SE', {
-                                          required: required_z.toFixed(2),
-                                          z: leader.z.toFixed(2),
-                                      })
-                                    : '--'}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt>{localize('Current digit')}</dt>
-                            <dd>{current_digit === null ? '--' : current_digit}</dd>
-                        </div>
-                        <div>
-                            <dt>{localize('Market condition')}</dt>
-                            <dd>
-                                {localize('{{status}} · spread {{entropy}}', {
-                                    entropy: entropy.toFixed(3),
-                                    status: localize(STATUS_LABEL[status]),
-                                })}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt>{localize('Entry condition')}</dt>
-                            <dd>
-                                {status === 'good_market'
-                                    ? localize('All conditions met at {{time}} GMT', {
-                                          time: detected_at ?? gmt(now),
-                                      })
-                                    : failing.length
-                                      ? failing[0].label
-                                      : localize('Waiting for the window to fill')}
-                            </dd>
-                        </div>
-                    </dl>
-
-                    <ul className='mw-sig__conditions'>
-                        {conditions.map(condition => (
-                            <li
-                                key={condition.label}
-                                className={condition.pass ? 'mw-sig__cond--pass' : 'mw-sig__cond--fail'}
-                            >
-                                {condition.label}
+                {/* Nothing from the last good window survives on screen while the
+                    feed is down: a reading that is no longer being updated is not
+                    a reading, and leaving it up next to SCANNER ERROR would be
+                    presenting stale numbers as current. */}
+                {!!scored.length && status !== 'error' && (
+                    <ul className='mw-signals__sides'>
+                        {scored.map(side => (
+                            <li key={side.label} className={side === leader ? 'mw-signals__sides--lead' : undefined}>
+                                <span>{side.label}</span>
+                                <b>{side.pct.toFixed(1)}%</b>
+                                <i>
+                                    {side.edge >= 0 ? '+' : ''}
+                                    {side.edge.toFixed(2)}{' '}
+                                    {localize('pts vs {{baseline}}% baseline · {{z}} SE', {
+                                        baseline: side.baseline,
+                                        z: side.z.toFixed(2),
+                                    })}
+                                </i>
                             </li>
                         ))}
                     </ul>
-                </section>
+                )}
+
+                {!!symbol && (
+                    <div className='mw-signals__conditions'>
+                        <h3>{localize('Conditions')}</h3>
+                        <ul>
+                            {conditions.map(condition => (
+                                <li
+                                    key={condition.label}
+                                    className={condition.pass ? 'mw-signals__cond--pass' : 'mw-signals__cond--fail'}
+                                >
+                                    <span aria-hidden='true'>{condition.pass ? '✓' : '×'}</span>
+                                    {condition.label}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
+                <div className='mw-signals__foot'>
+                    <span>{localize('Last scan {{time}} GMT', { time: gmt(now) })}</span>
+                    <button
+                        type='button'
+                        className={`mw-signals__sound${sound_on ? ' mw-signals__sound--on' : ''}`}
+                        onClick={toggleSound}
+                        aria-pressed={sound_on}
+                    >
+                        {localize('Sound alerts: {{state}}', { state: sound_on ? localize('ON') : localize('OFF') })}
+                    </button>
+                </div>
+
+                {sound_on && sound_blocked && (
+                    <button type='button' className='mw-signals__unblock' onClick={enableSound}>
+                        {localize('Tap to enable alert sound')}
+                    </button>
+                )}
+
+                {!!history.length && (
+                    <div className='mw-signals__history'>
+                        <h3>{localize('Recent signals')}</h3>
+                        <ul>
+                            {history.map(record => (
+                                <li key={record.id}>
+                                    <span>{record.market}</span>
+                                    <b>{record.signal}</b>
+                                    <i>
+                                        {record.edge >= 0 ? '+' : ''}
+                                        {record.edge.toFixed(2)}
+                                    </i>
+                                    <time>{record.time}</time>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </div>
 
-            <section className='mw-sig__card'>
-                <div className='mw-sig__scan-head'>
-                    <h3>{localize('Scan every market')}</h3>
-                    <div>
-                        {scan_phase === 'scanning' ? (
-                            <button type='button' className='mw-sig__ghost' onClick={closeScan}>
-                                {localize('Stop')}
-                            </button>
-                        ) : (
-                            <button
-                                type='button'
-                                className='mw-sig__launch'
-                                onClick={runScan}
-                                disabled={!symbols.length}
-                            >
-                                {localize('Scan markets')}
-                            </button>
+            {scan_phase !== 'idle' && (
+                <div
+                    className='mw-signals__dash'
+                    role='dialog'
+                    aria-modal='true'
+                    aria-label={localize('Analysis Dashboard')}
+                >
+                    <div className='mw-signals__dash-bar'>
+                        <span className='mw-signals__dot' />
+                        <span className='mw-signals__dot' />
+                        <span className='mw-signals__dot' />
+                        <button
+                            type='button'
+                            className='mw-signals__dash-close'
+                            onClick={closeScan}
+                            aria-label={localize('Close the analysis dashboard')}
+                        >
+                            X
+                        </button>
+                    </div>
+
+                    <div className='mw-signals__dash-body' aria-live='polite'>
+                        {scan_log.map((line, index) => (
+                            <p key={index} className={`mw-signals__dash-line mw-signals__dash-line--${line.tone}`}>
+                                {line.text}
+                            </p>
+                        ))}
+
+                        {scan_phase === 'scanning' && (
+                            <p className='mw-signals__dash-line'>
+                                {localize('Scanning')}
+                                <span className='mw-signals__dots' aria-hidden='true'>
+                                    <i />
+                                    <i />
+                                    <i />
+                                </span>
+                            </p>
+                        )}
+
+                        {scan_result && (
+                            <>
+                                <p className='mw-signals__dash-line mw-signals__dash-line--head'>
+                                    {localize('Best market: {{market}}', { market: scan_result.name })}
+                                </p>
+                                <p className='mw-signals__dash-line'>
+                                    {localize('{{side}} at {{pct}}% of the last {{sample}} ticks', {
+                                        pct: scan_result.pct.toFixed(1),
+                                        sample: scan_result.sample,
+                                        side: scan_result.side,
+                                    })}
+                                </p>
+                                <p className='mw-signals__dash-line mw-signals__dash-line--dim'>
+                                    {localize('Signal deviation {{z}} SE above baseline', {
+                                        z: scan_result.z.toFixed(2),
+                                    })}
+                                </p>
+                                <p className='mw-signals__dash-line mw-signals__dash-line--dim'>
+                                    {localize('Recent digits: {{digits}}', { digits: scan_result.digits.join(', ') })}
+                                </p>
+                                {/* The setup is the contract this reading points at,
+                                    which is a fact about the reading. No entry rule is
+                                    invented here and nothing is promised about the
+                                    next tick. */}
+                                <p className='mw-signals__dash-line'>
+                                    {localize('Setup: {{side}} on {{symbol}}', {
+                                        side: scan_result.side,
+                                        symbol: scan_result.symbol,
+                                    })}
+                                </p>
+                                {countdown !== null && countdown >= 0 && (
+                                    <p className='mw-signals__dash-line'>
+                                        {localize('Ready in {{count}} seconds...', { count: countdown })}
+                                    </p>
+                                )}
+                                {countdown !== null && countdown < 0 && (
+                                    <p className='mw-signals__dash-line mw-signals__dash-line--head'>
+                                        {localize(
+                                            'Signal ready. Load this setup in the Bot Builder to trade it - nothing is placed from here.'
+                                        )}
+                                    </p>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
-
-                {scan_result && (
-                    <div className='mw-sig__result'>
-                        <div>
-                            <span>{localize('Market')}</span>
-                            <b>{scan_result.name}</b>
-                        </div>
-                        <div>
-                            <span>{localize('Signal')}</span>
-                            <b>{scan_result.side}</b>
-                        </div>
-                        <div>
-                            <span>{localize('Observed share')}</span>
-                            <b>{scan_result.pct.toFixed(2)}%</b>
-                        </div>
-                        <div>
-                            <span>{localize('Evidence')}</span>
-                            <b>{localize('{{z}} SE', { z: scan_result.z.toFixed(2) })}</b>
-                        </div>
-                        <div>
-                            <span>{localize('Sample')}</span>
-                            <b>{scan_result.sample}</b>
-                        </div>
-                        <button type='button' className='mw-sig__ghost' onClick={() => setSymbol(scan_result.symbol)}>
-                            {localize('Open this market')}
-                        </button>
-                    </div>
-                )}
-
-                {scan_log.length > 0 && (
-                    <ul className='mw-sig__log'>
-                        {scan_log.slice(-8).map((line, index) => (
-                            // Lines are appended in order and only the tail is
-                            // shown, so the index is stable for this render.
-                            // eslint-disable-next-line react/no-array-index-key
-                            <li key={`${line.text}-${index}`} className={`mw-sig__log--${line.tone}`}>
-                                {line.text}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </section>
-
-            {history.length > 0 && (
-                <section className='mw-sig__card'>
-                    <h3>{localize('Recent signals')}</h3>
-                    <table className='mw-sig__table'>
-                        <thead>
-                            <tr>
-                                <th>{localize('Time (GMT)')}</th>
-                                <th>{localize('Market')}</th>
-                                <th>{localize('Signal')}</th>
-                                <th>{localize('Edge')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {history.map(record => (
-                                <tr key={record.id}>
-                                    <td>{record.time}</td>
-                                    <td>{record.market}</td>
-                                    <td>{record.signal}</td>
-                                    <td>{record.edge.toFixed(2)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </section>
             )}
-
-            <p className='mw-sig__muted mw-sig__footnote'>
-                {localize(
-                    'Every figure is counted from the live feed over the window shown. They describe ticks that have already happened, not the next one, and nothing here places a trade.'
-                )}
-                {window_full ? '' : ` ${localize('The window is still filling.')}`}
-            </p>
         </div>
     );
 });
