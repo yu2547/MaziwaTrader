@@ -177,11 +177,29 @@ const OAuthFlatNav = observer(() => {
             // top-up Deriv refuses (the balance is too high to qualify) from a
             // request this socket does not implement - and those need opposite
             // responses from whoever is reading it.
-            const detail = (error as { code?: string; message?: string }) ?? {};
+            // A rejected send() hands back the whole response envelope, so the
+            // useful fields are one level down in `.error` - reading code and
+            // message off the top of it is what produced "unknown [object
+            // Object]". A thrown response.error is already unwrapped, hence
+            // both shapes. Anything else is stringified rather than left to
+            // print as [object Object] again.
+            const raw = (error ?? {}) as {
+                code?: string;
+                message?: string;
+                error?: { code?: string; message?: string };
+            };
+            const detail = raw.error ?? raw;
             const code = detail.code ?? 'unknown';
-            const message = detail.message ?? String(error);
+            let message = detail.message ?? '';
+            if (!message) {
+                try {
+                    message = JSON.stringify(error);
+                } catch {
+                    message = String(error);
+                }
+            }
             // eslint-disable-next-line no-console
-            console.warn('Demo balance reset failed:', code, message);
+            console.warn('Demo balance reset failed:', code, message, error);
             setResetError(`${message} (${code})`);
             setResetState('error');
             returnToIdle(8000);
