@@ -282,6 +282,19 @@
         text-align: left;
     }
 
+    // Deriv's own refusal text, wrapped rather than truncated - the reason is
+    // the whole point of showing it.
+    &__panel-reset-error {
+        margin: 0.2rem 0.4rem 0;
+        padding: 0.6rem 0.8rem;
+        border-radius: 6px;
+        background: var(--general-section-1);
+        color: var(--text-loss-danger);
+        font-size: 1.1rem;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+    }
+
     &__panel-account-reset {
         flex: none;
         min-height: 3.6rem;

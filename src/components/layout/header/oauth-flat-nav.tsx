@@ -55,6 +55,7 @@ const OAuthFlatNav = observer(() => {
     const { rates } = useExchangeRates();
     const panel_ref = useRef<HTMLDivElement | null>(null);
     const [reset_state, setResetState] = useState<TResetState>('idle');
+    const [reset_error, setResetError] = useState<string | null>(null);
     const reset_timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const active_type = oauth_session?.account_type === 'demo' ? 'demo' : 'real';
@@ -144,10 +145,14 @@ const OAuthFlatNav = observer(() => {
         if (reset_state === 'working' || !is_demo) return;
 
         clearTimeout(reset_timer.current ?? undefined);
+        setResetError(null);
         setResetState('working');
 
         const returnToIdle = (delay: number) => {
-            reset_timer.current = setTimeout(() => setResetState('idle'), delay);
+            reset_timer.current = setTimeout(() => {
+                setResetState('idle');
+                setResetError(null);
+            }, delay);
         };
 
         try {
@@ -167,13 +172,19 @@ const OAuthFlatNav = observer(() => {
             setResetState('done');
             returnToIdle(2500);
         } catch (error) {
-            // Surfaced rather than swallowed: a failed top-up that looks like a
-            // successful one is worse than an error label.
+            // Deriv's own words, on screen. "Reset failed" alone cannot
+            // distinguish the two things that actually go wrong here - a
+            // top-up Deriv refuses (the balance is too high to qualify) from a
+            // request this socket does not implement - and those need opposite
+            // responses from whoever is reading it.
             const detail = (error as { code?: string; message?: string }) ?? {};
+            const code = detail.code ?? 'unknown';
+            const message = detail.message ?? String(error);
             // eslint-disable-next-line no-console
-            console.warn('Demo balance reset failed:', detail.code ?? 'unknown', detail.message ?? error);
+            console.warn('Demo balance reset failed:', code, message);
+            setResetError(`${message} (${code})`);
             setResetState('error');
-            returnToIdle(3500);
+            returnToIdle(8000);
         }
     };
 
@@ -359,6 +370,11 @@ const OAuthFlatNav = observer(() => {
                                             </div>
                                         );
                                     })}
+                                    {reset_error && (
+                                        <p className='mw-premium-nav__panel-reset-error' role='alert'>
+                                            {reset_error}
+                                        </p>
+                                    )}
                                 </div>
                             )}
 
