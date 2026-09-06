@@ -8,8 +8,9 @@ import { CONNECTION_STATUS } from '@/external/bot-skeleton/services/api/observab
 import { useApiBase } from '@/hooks/useApiBase';
 import useLiveBalance from '@/hooks/useLiveBalance';
 import { useStore } from '@/hooks/useStore';
-import { clearStoredSession } from '@/utils/auth/deriv-oauth';
+import { clearStoredSession, getStoredAccessToken } from '@/utils/auth/deriv-oauth';
 import { convertFromUsd, useExchangeRates } from '@/utils/currency/exchange-rate';
+import { OptionsApiError, resetDemoAccountBalance } from '@/utils/options-trading/options-trading-api';
 import {
     StandaloneBarsRegularIcon,
     StandaloneCashRegisterRegularIcon,
@@ -132,17 +133,26 @@ const OAuthFlatNav = observer(() => {
     };
 
     /**
-     * Deriv's own demo top-up, over the socket that is already authorised for
-     * this account - no second connection, and nothing invented locally.
+     * Deriv's own reset for an Options demo account:
+     * POST /trading/v1/options/accounts/{id}/reset-demo-balance.
      *
-     * topup_virtual applies to whichever account the socket is authorised for,
-     * which is the selected one. That is why the button is only ever offered on
-     * the selected demo row: offered anywhere else it would silently top up a
-     * different account from the one it sits next to.
+     * This replaced a topup_virtual sent over the OTP WebSocket, which is what
+     * "Reset failed" was. topup_virtual is a classic v3 call and acts on the
+     * classic virtual account (VRTC...); the account in this header is an
+     * Options account (DOT...), a different entity on a different product
+     * surface. The socket was fine - the call was for the wrong API.
+     *
+     * Addressed by account_id rather than by "whichever account the socket is
+     * on", but still only offered on the selected demo row: that is the
+     * account whose balance the header shows, so it is the only one whose
+     * reset is visibly reflected here.
      */
     const resetDemoBalance = async () => {
         // One request at a time, and never on a real account.
         if (reset_state === 'working' || !is_demo) return;
+        const account_id = selected?.account_id;
+        const access_token = getStoredAccessToken();
+        if (!account_id || !access_token) return;
 
         clearTimeout(reset_timer.current ?? undefined);
         setResetError(null);
@@ -156,13 +166,12 @@ const OAuthFlatNav = observer(() => {
         };
 
         try {
-            const response = await api_base.api?.send({ topup_virtual: 1 });
-            if (response?.error) throw response.error;
+            await resetDemoAccountBalance(access_token, account_id);
 
-            // The reply carries `amount` - how much was credited - not the new
-            // balance, so the balance is read rather than inferred from it.
-            // A read moves nothing, and it lands on the same socket the header
-            // already listens to (see useLiveBalance).
+            // The reset answers 200 with no body, so the new figure has to be
+            // read rather than taken from the reply. This lands on the same
+            // socket the header already listens to (see useLiveBalance), and a
+            // balance read moves nothing.
             const balance_response = await api_base.api?.send({ balance: 1 });
             const next = balance_response?.balance;
             if (next && typeof next === 'object') {
@@ -177,20 +186,27 @@ const OAuthFlatNav = observer(() => {
             // top-up Deriv refuses (the balance is too high to qualify) from a
             // request this socket does not implement - and those need opposite
             // responses from whoever is reading it.
-            // A rejected send() hands back the whole response envelope, so the
-            // useful fields are one level down in `.error` - reading code and
-            // message off the top of it is what produced "unknown [object
-            // Object]". A thrown response.error is already unwrapped, hence
-            // both shapes. Anything else is stringified rather than left to
-            // print as [object Object] again.
-            const raw = (error ?? {}) as {
-                code?: string;
-                message?: string;
-                error?: { code?: string; message?: string };
-            };
-            const detail = raw.error ?? raw;
-            const code = detail.code ?? 'unknown';
-            let message = detail.message ?? '';
+            // OptionsApiError from the reset itself; the WebSocket envelope
+            // shape ({error: {code, message}}) from the balance read that
+            // follows it. Reading code and message off the top of that
+            // envelope, rather than out of its nested `.error`, is what once
+            // reported "unknown [object Object]". Anything else is
+            // stringified rather than left to print as [object Object] again.
+            let code = 'unknown';
+            let message = '';
+            if (error instanceof OptionsApiError) {
+                code = error.kind;
+                message = [error.message, error.detail].filter(Boolean).join(' ');
+            } else {
+                const raw = (error ?? {}) as {
+                    code?: string;
+                    message?: string;
+                    error?: { code?: string; message?: string };
+                };
+                const detail = raw.error ?? raw;
+                code = detail.code ?? 'unknown';
+                message = detail.message ?? '';
+            }
             if (!message) {
                 try {
                     message = JSON.stringify(error);

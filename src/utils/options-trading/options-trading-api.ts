@@ -28,7 +28,8 @@ export type TOptionsApiErrorKind =
     | 'websocket_connect_failed'
     | 'network_failure'
     | 'invalid_response'
-    | 'no_options_account';
+    | 'no_options_account'
+    | 'demo_reset_failed';
 
 export class OptionsApiError extends Error {
     kind: TOptionsApiErrorKind;
@@ -162,6 +163,56 @@ export const createOptionsAccount = async (
         logError('create account invalid response', raw);
         throw new OptionsApiError('invalid_response', 'Options API returned an unreadable response.', raw);
     }
+};
+
+/**
+ * POST /trading/v1/options/accounts/{account_id}/reset-demo-balance - puts a
+ * demo account's balance back to its default starting amount.
+ *
+ * This is the Options-surface equivalent of the classic API's topup_virtual,
+ * and it is not interchangeable with it: topup_virtual acts on the classic
+ * virtual account (VRTC...), while an Options demo account (DOT...) is a
+ * different account entity on a different product surface. Sending
+ * topup_virtual over the OTP WebSocket is what produced "Reset failed".
+ *
+ * Succeeds with HTTP 200 and no body, so there is nothing to parse and
+ * nothing to return - callers that want the new figure should re-read the
+ * balance afterwards.
+ *
+ * Real accounts are rejected by the server, but the caller should not offer
+ * this for one in the first place.
+ */
+export const resetDemoAccountBalance = async (access_token: string, account_id: string): Promise<void> => {
+    log('reset demo balance started', { account_id });
+    let response: Response;
+    try {
+        response = await fetch(
+            `${OPTIONS_API_HOST}/trading/v1/options/accounts/${encodeURIComponent(account_id)}/reset-demo-balance`,
+            {
+                method: 'POST',
+                headers: buildHeaders(access_token, false),
+            }
+        );
+    } catch (network_error) {
+        logError('reset demo balance network failure', network_error);
+        throw new OptionsApiError(
+            'network_failure',
+            'Could not reach the Options Trading API.',
+            network_error instanceof Error ? network_error.message : String(network_error)
+        );
+    }
+
+    if (!response.ok) {
+        const raw = await response.text();
+        logError('reset demo balance rejected', { status: response.status, body: raw });
+        throw new OptionsApiError(
+            'demo_reset_failed',
+            extractErrorMessage(raw) || `Reset was refused (HTTP ${response.status}).`,
+            `HTTP ${response.status}`
+        );
+    }
+
+    log('reset demo balance completed', { account_id });
 };
 
 /**
