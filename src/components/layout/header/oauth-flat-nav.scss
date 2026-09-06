@@ -246,16 +246,16 @@
         color: var(--text-less-prominent);
     }
 
+    // A row, not a button: the demo row carries a Reset balance button, and a
+    // button inside a button is invalid markup that browsers resolve by
+    // dropping one of them. The selectable part is __panel-account-main.
     &__panel-account {
         display: flex;
         align-items: center;
         gap: 1rem;
         padding: 1rem;
         border-radius: 6px;
-        border: none;
         background: transparent;
-        cursor: pointer;
-        text-align: left;
 
         &:hover {
             background: var(--general-section-1);
@@ -264,6 +264,59 @@
         &--active {
             background: var(--general-section-1);
             box-shadow: inset 0 0 0 1px var(--general-section-5, rgb(0 0 0 / 12%));
+        }
+    }
+
+    &__panel-account-main {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        gap: 1rem;
+        min-width: 0;
+        padding: 0;
+        border: none;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+        text-align: left;
+    }
+
+    &__panel-account-reset {
+        flex: none;
+        min-height: 3.6rem;
+        padding: 0 1.4rem;
+        border: 1px solid var(--general-section-5, rgb(0 0 0 / 16%));
+        border-radius: 999px;
+        background: var(--general-main-1, #fff);
+        color: var(--text-prominent);
+        font-size: 1.2rem;
+        font-weight: 600;
+        white-space: nowrap;
+        cursor: pointer;
+        transition:
+            background 0.15s ease,
+            color 0.15s ease,
+            border-color 0.15s ease;
+
+        &:hover:not(:disabled) {
+            background: var(--general-section-1);
+        }
+
+        &:disabled {
+            cursor: default;
+            opacity: 0.7;
+        }
+
+        // The outcome states read as themselves rather than as a new button.
+        &--done {
+            color: var(--text-profit-success);
+            border-color: currentcolor;
+        }
+
+        &--error {
+            color: var(--text-loss-danger);
+            border-color: currentcolor;
         }
     }
 

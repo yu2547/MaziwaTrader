@@ -24,6 +24,9 @@ import './oauth-flat-nav.scss';
 const CURRENCY_OPTIONS = ['KSH', 'USD'] as const;
 type TDisplayCurrency = (typeof CURRENCY_OPTIONS)[number];
 
+/** Idle -> working -> done|error -> idle. Drives the button's label and colour. */
+type TResetState = 'idle' | 'working' | 'done' | 'error';
+
 /**
  * The account only ever has one real currency (oauth_session.currency) -
  * KSh here is a live-converted reference figure (real rate from
@@ -51,6 +54,8 @@ const OAuthFlatNav = observer(() => {
     const [is_list_open, setIsListOpen] = useState(true);
     const { rates } = useExchangeRates();
     const panel_ref = useRef<HTMLDivElement | null>(null);
+    const [reset_state, setResetState] = useState<TResetState>('idle');
+    const reset_timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const active_type = oauth_session?.account_type === 'demo' ? 'demo' : 'real';
 
@@ -76,6 +81,8 @@ const OAuthFlatNav = observer(() => {
     useEffect(() => {
         if (is_panel_open) setPanelType(active_type);
     }, [is_panel_open, active_type]);
+
+    useEffect(() => () => clearTimeout(reset_timer.current ?? undefined), []);
 
     if (!oauth_session?.is_authenticated) return null;
 
@@ -122,6 +129,60 @@ const OAuthFlatNav = observer(() => {
         api_base.switchOtpAccount(account_id);
         setIsPanelOpen(false);
     };
+
+    /**
+     * Deriv's own demo top-up, over the socket that is already authorised for
+     * this account - no second connection, and nothing invented locally.
+     *
+     * topup_virtual applies to whichever account the socket is authorised for,
+     * which is the selected one. That is why the button is only ever offered on
+     * the selected demo row: offered anywhere else it would silently top up a
+     * different account from the one it sits next to.
+     */
+    const resetDemoBalance = async () => {
+        // One request at a time, and never on a real account.
+        if (reset_state === 'working' || !is_demo) return;
+
+        clearTimeout(reset_timer.current ?? undefined);
+        setResetState('working');
+
+        const returnToIdle = (delay: number) => {
+            reset_timer.current = setTimeout(() => setResetState('idle'), delay);
+        };
+
+        try {
+            const response = await api_base.api?.send({ topup_virtual: 1 });
+            if (response?.error) throw response.error;
+
+            // The reply carries `amount` - how much was credited - not the new
+            // balance, so the balance is read rather than inferred from it.
+            // A read moves nothing, and it lands on the same socket the header
+            // already listens to (see useLiveBalance).
+            const balance_response = await api_base.api?.send({ balance: 1 });
+            const next = balance_response?.balance;
+            if (next && typeof next === 'object') {
+                oauth_session.setLiveBalance(next.balance, next.currency);
+            }
+
+            setResetState('done');
+            returnToIdle(2500);
+        } catch (error) {
+            // Surfaced rather than swallowed: a failed top-up that looks like a
+            // successful one is worse than an error label.
+            const detail = (error as { code?: string; message?: string }) ?? {};
+            // eslint-disable-next-line no-console
+            console.warn('Demo balance reset failed:', detail.code ?? 'unknown', detail.message ?? error);
+            setResetState('error');
+            returnToIdle(3500);
+        }
+    };
+
+    const reset_label = {
+        idle: localize('Reset balance'),
+        working: localize('Resetting…'),
+        done: localize('Balance updated'),
+        error: localize('Reset failed'),
+    }[reset_state];
 
     const handleLogout = () => {
         clearStoredSession();
@@ -246,33 +307,58 @@ const OAuthFlatNav = observer(() => {
                                                 : localize('This login has no real account.')}
                                         </p>
                                     )}
-                                    {listed_accounts.map(account => (
-                                        <button
-                                            key={account.account_id}
-                                            type='button'
-                                            className={`mw-premium-nav__panel-account ${account.account_id === selected?.account_id ? 'mw-premium-nav__panel-account--active' : ''}`}
-                                            onClick={() => selectAccount(account.account_id)}
-                                        >
-                                            <CurrencyIcon
-                                                currency={account.currency}
-                                                isVirtual={account.account_type === 'demo'}
-                                            />
-                                            <span className='mw-premium-nav__panel-account-info'>
-                                                <span>{account.currency}</span>
-                                                <span className='mw-premium-nav__panel-account-id'>
-                                                    {account.account_id}
-                                                </span>
-                                            </span>
-                                            <span className='mw-premium-nav__panel-account-balance'>
-                                                {addComma(
-                                                    Number(account.balance || 0).toFixed(
-                                                        getDecimalPlaces(account.currency)
-                                                    )
-                                                )}{' '}
-                                                {account.currency}
-                                            </span>
-                                        </button>
-                                    ))}
+                                    {listed_accounts.map(account => {
+                                        const is_selected = account.account_id === selected?.account_id;
+                                        // Only the selected demo row, because that is the
+                                        // account topup_virtual would actually credit.
+                                        const can_reset = account.account_type === 'demo' && is_selected;
+                                        return (
+                                            <div
+                                                key={account.account_id}
+                                                className={`mw-premium-nav__panel-account ${is_selected ? 'mw-premium-nav__panel-account--active' : ''}`}
+                                            >
+                                                <button
+                                                    type='button'
+                                                    className='mw-premium-nav__panel-account-main'
+                                                    onClick={() => selectAccount(account.account_id)}
+                                                >
+                                                    <CurrencyIcon
+                                                        currency={account.currency}
+                                                        isVirtual={account.account_type === 'demo'}
+                                                    />
+                                                    <span className='mw-premium-nav__panel-account-info'>
+                                                        <span>{account.currency}</span>
+                                                        <span className='mw-premium-nav__panel-account-id'>
+                                                            {account.account_id}
+                                                        </span>
+                                                    </span>
+                                                    {/* The reset button stands where the figure
+                                                        would be, as Deriv's own switcher does. */}
+                                                    {!can_reset && (
+                                                        <span className='mw-premium-nav__panel-account-balance'>
+                                                            {addComma(
+                                                                Number(account.balance || 0).toFixed(
+                                                                    getDecimalPlaces(account.currency)
+                                                                )
+                                                            )}{' '}
+                                                            {account.currency}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                                {can_reset && (
+                                                    <button
+                                                        type='button'
+                                                        className={`mw-premium-nav__panel-account-reset mw-premium-nav__panel-account-reset--${reset_state}`}
+                                                        onClick={resetDemoBalance}
+                                                        disabled={reset_state === 'working'}
+                                                        aria-live='polite'
+                                                    >
+                                                        {reset_label}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
 
