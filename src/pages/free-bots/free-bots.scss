@@ -361,7 +361,13 @@
         &__card {
             // Sized by its content and nothing else: no floor to hold a short
             // card open, no ceiling to crop a long one.
-            width: 100%;
+
+            // Inset a further 20px each side on top of the page's own 22px
+            // gutter, for ~42px of clear space between card and screen edge.
+            // The inset belongs on the card rather than on the gutter because
+            // the tab strip above the list uses that same gutter and, in the
+            // reference, sits visibly wider than the cards do.
+            width: calc(100% - 40px);
             max-width: 580px;
             min-height: 0;
             height: auto;
@@ -430,7 +436,9 @@
     // Narrow phones: the same layout, a little less of everything, so a long
     // bot name still fits on two lines rather than three.
     @media (width <= 380px) {
-        padding-inline: 18px;
+        // 20px + the card's own 20px inset keeps the ~40px of clear space the
+        // reference has at 375px, where 18px would have left only 38px.
+        padding-inline: 20px;
 
         &__card {
             padding: 20px 16px 18px;
