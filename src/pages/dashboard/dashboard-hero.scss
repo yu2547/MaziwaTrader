@@ -87,7 +87,11 @@
     appearance: none;
     position: relative;
     display: flex;
-    gap: 1rem;
+
+    // Stacked, not side by side: the mark sits above the title, both flush to
+    // the card's left edge.
+    flex-direction: column;
+    gap: 0.55rem;
     min-height: 15.4rem;
     padding: 1.35rem 1.2rem 1.1rem;
     border: 1px solid rgb(255 255 255 / 8%);
@@ -139,23 +143,23 @@
             0 0 0 1px rgb(212 175 55 / 22%) inset;
     }
 
+    // A glyph now, so it is sized with font-size rather than a box. The
+    // emoji stack is named explicitly: without it the glyph falls back to the
+    // body font, which on some systems draws these monochrome.
     &__icon {
-        display: inline-flex;
-        align-items: flex-start;
-        justify-content: flex-start;
         flex: none;
-        width: 3.3rem;
-        height: 3.3rem;
-        color: #dfe8ff;
-
-        svg {
-            width: 3.3rem;
-            height: 3.3rem;
-        }
+        font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Segoe UI Symbol', sans-serif;
+        font-size: 2.2rem;
+        line-height: 1;
     }
 
     &__body {
         display: flex;
+
+        // Takes the leftover height so __footer's margin-top: auto still
+        // pins "Open →" to the bottom of the card now that the icon is a
+        // sibling above rather than beside it.
+        flex: 1;
         flex-direction: column;
         min-width: 0;
         gap: 0.45rem;

@@ -2,19 +2,20 @@ import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { DBOT_TABS } from '@/constants/bot-contents';
 import { useStore } from '@/hooks/useStore';
-import {
-    DerivLightBotBuilderIcon,
-    DerivLightDerivBotIcon,
-    DerivLightLocalDeviceIcon,
-    DerivLightQuickStrategyIcon,
-} from '@deriv/quill-icons/Illustration';
 import { Localize, useTranslations } from '@deriv-com/translations';
 import './dashboard-hero.scss';
 
 type THeroAction = {
     accent: 'blue' | 'green' | 'violet' | 'gold';
     description: string;
-    icon: React.ReactElement;
+    /**
+     * A glyph, not a component. These were quill's DerivLight* illustrations -
+     * 36px line-art drawings in a single muted tint, sat beside the title. The
+     * design calls for a small flat colour mark above it, which is what these
+     * are. Decorative: the label underneath already names the action, so they
+     * are hidden from assistive tech rather than described twice.
+     */
+    icon: string;
     label: string;
     onClick: () => void;
 };
@@ -84,14 +85,14 @@ const DashboardHero = observer(() => {
         {
             accent: 'blue',
             description: localize('Import an XML bot from your computer.'),
-            icon: <DerivLightLocalDeviceIcon height='36px' width='36px' />,
+            icon: '📁',
             label: localize('Upload Bot'),
             onClick: () => openLoadModal(0),
         },
         {
             accent: 'green',
             description: localize('Browse ready-made trading strategies.'),
-            icon: <DerivLightDerivBotIcon height='36px' width='36px' />,
+            icon: '🤖',
             label: localize('Free Bots'),
             // The Free Bots marketplace is its own tab - this used to open the
             // load-strategy modal on its Google Drive tab instead, which is a
@@ -101,14 +102,14 @@ const DashboardHero = observer(() => {
         {
             accent: 'violet',
             description: localize('Build a custom bot with the visual editor.'),
-            icon: <DerivLightBotBuilderIcon height='36px' width='36px' />,
+            icon: '🧩',
             label: localize('Bot Editor'),
             onClick: () => dashboard.setActiveTab(DBOT_TABS.BOT_BUILDER),
         },
         {
             accent: 'gold',
             description: localize('Start fast with a pre-built strategy template.'),
-            icon: <DerivLightQuickStrategyIcon height='36px' width='36px' />,
+            icon: '⚡',
             label: localize('Quick Strategy'),
             onClick: () => {
                 dashboard.setActiveTab(DBOT_TABS.BOT_BUILDER);
@@ -143,7 +144,9 @@ const DashboardHero = observer(() => {
                             className={`mw-dashboard-hero-card mw-dashboard-hero-card--${action.accent}`}
                             onClick={action.onClick}
                         >
-                            <span className='mw-dashboard-hero-card__icon'>{action.icon}</span>
+                            <span className='mw-dashboard-hero-card__icon' aria-hidden='true'>
+                                {action.icon}
+                            </span>
                             <span className='mw-dashboard-hero-card__body'>
                                 <span className='mw-dashboard-hero-card__title'>{action.label}</span>
                                 <span className='mw-dashboard-hero-card__description'>{action.description}</span>
