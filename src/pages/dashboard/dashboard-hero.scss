@@ -1,13 +1,38 @@
 @use 'components/shared/styles/mixins' as *;
 
-.mw-hero {
+// Named for this page rather than .mw-hero, which the landing page's hero
+// (pages/landing/components/hero-section.scss) also defines. Both stylesheets
+// load into the same document, so this block used to inherit that one's
+// background, min-height: 88vh and overflow: hidden - along with its
+// __copy and __actions rules - without ever asking for them.
+
+// The dark ground is kept, because every colour below is written for it: the
+// greeting and section title are #f4f7fb on a shell whose own background is a
+// near-white gradient. It is now declared here, deliberately, instead of being
+// borrowed. What is deliberately NOT kept: the 88vh floor, which padded the
+// panel out with empty dark space and pushed the bot list down the page, and
+// overflow: hidden, which clipped the cards' lift-and-shadow on hover.
+.mw-dashboard-hero {
     display: flex;
     justify-content: center;
     width: 100%;
+    background: radial-gradient(ellipse at 50% 20%, #0b1530 0%, #060b18 70%);
+
+    // Reads as a panel sitting on the shell's light ground rather than a dark
+    // band bleeding across it. The rounded, hairline-bordered treatment is the
+    // one this hero had before 1fc9da0e replaced it (border-radius: 16px over
+    // --glass-bg with a --glass-border edge); the rewrite dropped it and, with
+    // the landing page's square background standing in, nobody noticed.
+    border: 1px solid rgb(255 255 255 / 8%);
+    border-radius: 1.6rem;
 
     &__panel {
         width: min(100%, 138rem);
-        padding: 1.2rem 1rem 0;
+
+        // Bottom padding is load-bearing now. It was 0 while the 88vh floor
+        // left a wide dark margin under the cards; without it the last row
+        // would sit flush against the panel's edge.
+        padding: 1.2rem 1rem 1.8rem;
     }
 
     &__copy {
@@ -58,7 +83,7 @@
     }
 }
 
-.mw-hero-card {
+.mw-dashboard-hero-card {
     appearance: none;
     position: relative;
     display: flex;
@@ -159,7 +184,7 @@
 }
 
 @media (width <= 1200px) {
-    .mw-hero {
+    .mw-dashboard-hero {
         &__actions {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
@@ -167,7 +192,7 @@
 }
 
 @media (width <= 768px) {
-    .mw-hero {
+    .mw-dashboard-hero {
         &__panel {
             padding: 0.8rem 0.25rem 0;
         }
@@ -182,13 +207,13 @@
         }
     }
 
-    .mw-hero-card {
+    .mw-dashboard-hero-card {
         min-height: 13rem;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .mw-hero * {
+    .mw-dashboard-hero * {
         transition: none !important;
     }
 }

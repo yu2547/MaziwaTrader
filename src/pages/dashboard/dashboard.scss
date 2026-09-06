@@ -19,13 +19,12 @@
     background: radial-gradient(circle at top, rgb(255 255 255 / 92%) 0%, rgb(245 248 252 / 98%) 46%, #eef3fa 100%);
 }
 
-.mw-dashboard-shell .mw-hero {
+.mw-dashboard-shell .mw-dashboard-hero {
     width: min(100%, 136rem);
 }
 
-// The list is its own block on the shell's own background - deliberately not
-// inside .mw-hero, which the landing page's hero shares a class name with and
-// gives an overflow:hidden dark panel.
+// The list is its own block on the shell's light background, outside the
+// hero's dark panel.
 .mw-dashboard-shell .bot-list__container {
     flex: none;
 }

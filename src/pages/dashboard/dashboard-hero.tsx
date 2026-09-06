@@ -118,36 +118,36 @@ const DashboardHero = observer(() => {
     ];
 
     return (
-        <section className='mw-hero' aria-label={localize('Dashboard hero')}>
-            <div className='mw-hero__panel'>
-                <div className='mw-hero__copy'>
-                    <h1 className='mw-hero__greeting'>
+        <section className='mw-dashboard-hero' aria-label={localize('Dashboard hero')}>
+            <div className='mw-dashboard-hero__panel'>
+                <div className='mw-dashboard-hero__copy'>
+                    <h1 className='mw-dashboard-hero__greeting'>
                         <Greeting day_part={day_part} login_id={login_id || '—'} />
                     </h1>
-                    <p className='mw-hero__subtitle'>
+                    <p className='mw-dashboard-hero__subtitle'>
                         <Localize i18n_default_text='The trend is your friend — until it ends.' />
                     </p>
-                    <p className='mw-hero__eyebrow'>
+                    <p className='mw-dashboard-hero__eyebrow'>
                         <Localize i18n_default_text='Taking you to Bot Builder...' />
                     </p>
-                    <h2 className='mw-hero__section-title'>
+                    <h2 className='mw-dashboard-hero__section-title'>
                         <Localize i18n_default_text='Quick Actions' />
                     </h2>
                 </div>
 
-                <div className='mw-hero__actions'>
+                <div className='mw-dashboard-hero__actions'>
                     {actions.map(action => (
                         <button
                             type='button'
                             key={action.label}
-                            className={`mw-hero-card mw-hero-card--${action.accent}`}
+                            className={`mw-dashboard-hero-card mw-dashboard-hero-card--${action.accent}`}
                             onClick={action.onClick}
                         >
-                            <span className='mw-hero-card__icon'>{action.icon}</span>
-                            <span className='mw-hero-card__body'>
-                                <span className='mw-hero-card__title'>{action.label}</span>
-                                <span className='mw-hero-card__description'>{action.description}</span>
-                                <span className='mw-hero-card__footer'>
+                            <span className='mw-dashboard-hero-card__icon'>{action.icon}</span>
+                            <span className='mw-dashboard-hero-card__body'>
+                                <span className='mw-dashboard-hero-card__title'>{action.label}</span>
+                                <span className='mw-dashboard-hero-card__description'>{action.description}</span>
+                                <span className='mw-dashboard-hero-card__footer'>
                                     <Localize i18n_default_text='Open' />
                                     {' →'}
                                 </span>
