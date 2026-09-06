@@ -48,7 +48,6 @@ export const CONTEXT_MENU = [
 type TRecentWorkspace = {
     index: number;
     workspace: { [key: string]: string };
-    updateBotName: (name: string) => void;
 };
 
 const RecentWorkspace = observer(({ workspace, index }: TRecentWorkspace) => {

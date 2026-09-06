@@ -79,8 +79,8 @@ const DashboardBotList = observer(() => {
                     })}
                 </div>
                 <div className='bot-list__table'>
-                    {dashboard_strategies.map(workspace => (
-                        <RecentWorkspace key={workspace.id} workspace={workspace} />
+                    {dashboard_strategies.map((workspace, index) => (
+                        <RecentWorkspace key={workspace.id} workspace={workspace} index={index} />
                     ))}
                 </div>
             </div>

@@ -381,12 +381,12 @@
     }
 
     &__table {
-        height: calc(100vh - 57rem);
+        // A cap, not a fixed height. This used to be calc(100vh - 57rem),
+        // sized for the old dashboard where the list sat below a full-height
+        // cards panel; under the hero that reserves empty space when there is
+        // one bot and can resolve to nothing at all on a short window.
+        max-height: 32rem;
         overflow: auto;
-
-        @include mobile-screen {
-            height: calc(100vh - 55rem);
-        }
     }
 
     &__title {

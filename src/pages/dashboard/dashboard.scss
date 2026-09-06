@@ -1,14 +1,18 @@
 @use 'components/shared/styles/mixins' as *;
 
-// The dashboard tab now renders only the hero, so its shell centres that
-// panel. Everything below this block (.bot-dashboard, .db, .tab,
-// .user-guide) is shared layout used by Bot Builder, the run panel and the
-// tutorials tab - it lives in this file and must stay here.
+// The dashboard tab renders the hero and, underneath it, the list of bots
+// that have been loaded. Everything below this block (.bot-dashboard, .db,
+// .tab, .user-guide) is shared layout used by Bot Builder, the run panel and
+// the tutorials tab - it lives in this file and must stay here.
 .mw-dashboard-shell {
     position: relative;
     display: flex;
+
+    // A column, so the bot list stacks under the hero rather than beside it.
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 2.4rem;
     width: 100%;
     min-height: calc(100vh - 10.6rem);
     padding: 2.2rem 1.8rem 5.8rem;
@@ -17,6 +21,13 @@
 
 .mw-dashboard-shell .mw-hero {
     width: min(100%, 136rem);
+}
+
+// The list is its own block on the shell's own background - deliberately not
+// inside .mw-hero, which the landing page's hero shares a class name with and
+// gives an overflow:hidden dark panel.
+.mw-dashboard-shell .bot-list__container {
+    flex: none;
 }
 
 @media (width <= 768px) {
