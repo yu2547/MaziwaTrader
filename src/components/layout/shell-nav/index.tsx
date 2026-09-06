@@ -1,7 +1,6 @@
 import { startTransition } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { standalone_routes } from '@/components/shared';
 import { DBOT_TABS, TAB_IDS } from '@/constants/bot-contents';
 import { useStore } from '@/hooks/useStore';
 import {
@@ -14,7 +13,6 @@ import {
     LabelPairedPuzzlePieceTwoCaptionRegularIcon,
     LabelPairedShieldCheckCaptionRegularIcon,
 } from '@deriv/quill-icons/LabelPaired';
-import { LegacyReportsIcon } from '@deriv/quill-icons/Legacy';
 import { Localize } from '@deriv-com/translations';
 import './shell-nav.scss';
 
@@ -191,20 +189,6 @@ const ShellNav = observer(() => {
                         </button>
                     );
                 })}
-
-                <span className='shell-nav__divider' aria-hidden='true' />
-
-                <a
-                    className='shell-nav__item'
-                    href={standalone_routes.reports}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                >
-                    <LegacyReportsIcon {...ICON_PROPS} />
-                    <span className='shell-nav__label'>
-                        <Localize i18n_default_text='Reports' />
-                    </span>
-                </a>
             </div>
         </nav>
     );
