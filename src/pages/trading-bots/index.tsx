@@ -7,6 +7,7 @@ import './trading-bots.scss';
 
 const RiskCalculator = lazy(() => import('../risk-calculator'));
 const BotsStore = lazy(() => import('../bots-store'));
+const ScalperBots = lazy(() => import('../scalper-bots'));
 
 /**
  * Trading Bots is a shell around several scoped views of the same bot
@@ -40,7 +41,8 @@ const TABS: Array<{ icon: string; id: TTabId; label: string }> = [
 ];
 
 // Category names as they appear in the catalogue in ../free-bots.
-const SCALPER_CATEGORIES = ['Even/Odd', 'Differ'];
+// Scalper Bots owns its own scoping now (see ../scalper-bots). The list here
+// was ['Even/Odd', 'Differ'], and 'Differ' matched no bot in the catalogue.
 const SPEED_CATEGORIES = ['Speed Trading'];
 const STRATEGY_CATEGORIES = ['AI Trading', 'Pattern Analysis', 'Accumulators', 'Premium'];
 
@@ -57,13 +59,9 @@ const TradingBots = observer(() => {
                 );
             case TAB_IDS.SCALPER:
                 return (
-                    <FreeBots
-                        allowed_categories={SCALPER_CATEGORIES}
-                        title={localize('Scalper Bots')}
-                        subtitle={localize(
-                            'Tick-level bots built for fast in-and-out trades on digit markets. Load one into Bot Builder to review its blocks before running it.'
-                        )}
-                    />
+                    <Suspense fallback={<ChunkLoader message={localize('Loading scalper bots...')} />}>
+                        <ScalperBots />
+                    </Suspense>
                 );
             case TAB_IDS.SPEED:
                 return (
