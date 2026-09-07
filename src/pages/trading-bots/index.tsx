@@ -8,6 +8,7 @@ import './trading-bots.scss';
 const RiskCalculator = lazy(() => import('../risk-calculator'));
 const BotsStore = lazy(() => import('../bots-store'));
 const ScalperBots = lazy(() => import('../scalper-bots'));
+const SpeedBots = lazy(() => import('../speed-bots'));
 
 /**
  * Trading Bots is a shell around several scoped views of the same bot
@@ -40,10 +41,9 @@ const TABS: Array<{ icon: string; id: TTabId; label: string }> = [
     { icon: '📊', id: TAB_IDS.STRATEGIES, label: localize('Strategies') },
 ];
 
-// Category names as they appear in the catalogue in ../free-bots.
-// Scalper Bots owns its own scoping now (see ../scalper-bots). The list here
-// was ['Even/Odd', 'Differ'], and 'Differ' matched no bot in the catalogue.
-const SPEED_CATEGORIES = ['Speed Trading'];
+// Category names as they appear in the catalogue in ../free-bots. Scalper Bots
+// and SpeedBots are their own pages now and scope themselves; only Strategies
+// is still a filtered view of the catalogue.
 const STRATEGY_CATEGORIES = ['AI Trading', 'Pattern Analysis', 'Accumulators', 'Premium'];
 
 const TradingBots = observer(() => {
@@ -65,13 +65,9 @@ const TradingBots = observer(() => {
                 );
             case TAB_IDS.SPEED:
                 return (
-                    <FreeBots
-                        allowed_categories={SPEED_CATEGORIES}
-                        title={localize('SpeedBots')}
-                        subtitle={localize(
-                            'Bots tuned for rapid execution with optimised entry and exit points. Load one into Bot Builder to review its blocks before running it.'
-                        )}
-                    />
+                    <Suspense fallback={<ChunkLoader message={localize('Loading speed bots...')} />}>
+                        <SpeedBots />
+                    </Suspense>
                 );
             case TAB_IDS.STRATEGIES:
                 return (
