@@ -32,6 +32,27 @@ type TParams = {
     trade_type?: string;
     contract_type?: string;
     candle_interval?: string;
+    /** Variable name -> its first assigned number, from the strategy's own blocks. */
+    settings?: Array<[string, string]>;
+};
+
+/**
+ * The numbers a strategy sets once at start - Stake, Stop Loss, max losses and
+ * so on. Read from the first `variables_set` holding a plain number for each
+ * name, which is the "Run once at start" block; later assignments are the
+ * strategy moving them around at runtime and are not settings.
+ */
+const SETTING_ORDER = ['Stake', 'Win Stake', 'Expected Profit', 'Stop Loss', 'maxLosses', 'tradesNo'];
+
+const parseSettings = (xml: string): Array<[string, string]> => {
+    const found = new Map<string, string>();
+    const pattern =
+        /<block type="variables_set"[^>]*>\s*<field name="VAR"[^>]*>([^<]*)<\/field>\s*<value name="VALUE">\s*<block type="math_number"[^>]*>\s*<field name="NUM">([^<]*)<\/field>/g;
+    for (const match of xml.matchAll(pattern)) {
+        const name = match[1].trim();
+        if (!found.has(name)) found.set(name, match[2].trim());
+    }
+    return SETTING_ORDER.filter(name => found.has(name)).map(name => [name, found.get(name) as string]);
 };
 
 /** Reads the first value of each trade-definition field out of a strategy's XML. */
@@ -47,6 +68,7 @@ const parseParams = (xml: string): TParams => {
         trade_type: field('TRADETYPE_LIST'),
         contract_type: field('TYPE_LIST'),
         candle_interval: field('CANDLEINTERVAL_LIST'),
+        settings: parseSettings(xml),
     };
 };
 
@@ -69,7 +91,7 @@ const ScalperBots = observer(() => {
     const [params, setParams] = useState<Record<string, TParams>>({});
     const [busy_id, setBusyId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [panel_open, setPanelOpen] = useState<Record<string, boolean>>({ shared: true });
+    const [panel_open, setPanelOpen] = useState<Record<string, boolean>>({ shared: true, settings: true });
 
     const bots = useMemo(() => BOTS.filter(bot => SCALPER_CATEGORIES.includes(bot.category)), []);
     const filters = useMemo(() => [...new Set(bots.map(bot => bot.category))], [bots]);
@@ -165,8 +187,9 @@ const ScalperBots = observer(() => {
 
     if (open_bot) {
         const detail = params[open_bot.id] ?? {};
-        const has_params = Object.values(detail).some(Boolean);
-        const rows: Array<[string, string]> = [
+        const settings = detail.settings ?? [];
+        const has_params = Boolean(detail.market || detail.symbol || detail.trade_type);
+        const all_rows: Array<[string, string]> = [
             [localize('Market'), [prettify(detail.market), prettify(detail.submarket)].filter(Boolean).join(' › ')],
             [localize('Symbol'), detail.symbol ?? ''],
             [
@@ -175,7 +198,10 @@ const ScalperBots = observer(() => {
             ],
             [localize('Contract type'), detail.contract_type ?? ''],
             [localize('Candle interval'), candleLabel(detail.candle_interval)],
-        ].filter(([, value]) => Boolean(value));
+        ];
+        // A row the file has nothing to say about is dropped rather than shown
+        // empty.
+        const rows = all_rows.filter(([, value]) => Boolean(value));
 
         return (
             <div className='mw-scalp mw-scalp--detail'>
@@ -253,6 +279,32 @@ const ScalperBots = observer(() => {
                         </div>
                     )}
                 </section>
+
+                {settings.length > 0 && (
+                    <section className='mw-scalp__panel'>
+                        <button
+                            type='button'
+                            className='mw-scalp__panel-head'
+                            onClick={() => togglePanel('settings')}
+                            aria-expanded={!!panel_open.settings}
+                        >
+                            {localize('Strategy settings')}
+                            <span aria-hidden='true'>{panel_open.settings ? '−' : '+'}</span>
+                        </button>
+                        {panel_open.settings && (
+                            <div className='mw-scalp__panel-body'>
+                                {/* The values the strategy assigns once at
+                                    start, under the names it uses for them. */}
+                                {settings.map(([name, value]) => (
+                                    <div className='mw-scalp__row' key={name}>
+                                        <span>{name}</span>
+                                        <strong>{value}</strong>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                )}
 
                 <p className='mw-scalp__note'>{open_bot.description}</p>
             </div>

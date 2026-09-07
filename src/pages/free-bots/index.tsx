@@ -106,6 +106,47 @@ export const BOTS: Bot[] = [
         is_premium: true,
         rating: 5,
     },
+    // The four scalpers. Each points at its own file so any one of them can be
+    // replaced on its own.
+    //
+    // As supplied, all four XMLs are byte-identical - a single MD5 across the
+    // set - so today every one of these loads the same strategy: an entry-point
+    // prompt, then digits > over/under on 1HZ10V, contract type "both", with
+    // Stake 5, Win Stake 5, Expected Profit 20, Stop Loss 100 and max losses 6.
+    // Drop a real ODD_SCALPER.xml over public/bots/ODD_SCALPER.xml and only
+    // that card changes.
+    {
+        id: 'even-scalper',
+        name: 'Even Scalper',
+        description: 'High-speed even-digit scalper. Trades every tick on volatility indices with martingale recovery.',
+        fileName: 'EVEN_SCALPER.xml',
+        category: 'Over/Under',
+        icon: '⚡',
+    },
+    {
+        id: 'odd-scalper',
+        name: 'Odd Scalper',
+        description: 'High-speed odd-digit scalper. Trades every tick on volatility indices with martingale recovery.',
+        fileName: 'ODD_SCALPER.xml',
+        category: 'Over/Under',
+        icon: '⚡',
+    },
+    {
+        id: 'even-multiple-scalper',
+        name: 'Even Multiple Scalper',
+        description: 'Multi-market even scalper with volatility switching and 1-tick execution speed.',
+        fileName: 'EVEN_MULTIPLE_SCALPER.xml',
+        category: 'Over/Under',
+        icon: '⚡',
+    },
+    {
+        id: 'odd-multiple-scalper',
+        name: 'Odd Multiple Scalper',
+        description: 'Multi-market odd scalper with volatility switching and 1-tick execution speed.',
+        fileName: 'ODD_MULTIPLE_SCALPER.xml',
+        category: 'Over/Under',
+        icon: '⚡',
+    },
     {
         id: 'signalsniper-autobot',
         name: 'SignalSniper AutoBot (1)',
