@@ -22,7 +22,7 @@ import './scalper-bots.scss';
  */
 
 /** Categories that are digit scalping. 'Differ' used to be listed here and matches no bot. */
-const SCALPER_CATEGORIES = ['Even/Odd', 'Over/Under'];
+const SCALPER_CATEGORIES = ['Even/Odd', 'Over/Under', 'Rise/Fall'];
 
 type TParams = {
     market?: string;
@@ -365,10 +365,17 @@ const ScalperBots = observer(() => {
                     const detail = params[bot.id] ?? {};
                     return (
                         <article className='mw-scalp__card' key={bot.id}>
+                            {/* Duration and contract, as declared on the bot.
+                                Falls back to the category and the symbol read
+                                from the file for anything without them. */}
                             <div className='mw-scalp__badges'>
-                                <span className='mw-scalp__badge mw-scalp__badge--a'>{bot.category}</span>
-                                {detail.symbol && (
-                                    <span className='mw-scalp__badge mw-scalp__badge--b'>{detail.symbol}</span>
+                                <span className='mw-scalp__badge mw-scalp__badge--a'>
+                                    {bot.duration ?? bot.category}
+                                </span>
+                                {(bot.contract || detail.symbol) && (
+                                    <span className='mw-scalp__badge mw-scalp__badge--b'>
+                                        {bot.contract ?? detail.symbol}
+                                    </span>
                                 )}
                             </div>
                             <h3 className='mw-scalp__card-title'>{bot.name}</h3>

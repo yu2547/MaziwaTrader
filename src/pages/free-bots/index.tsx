@@ -20,6 +20,17 @@ export interface Bot {
     is_premium?: boolean;
     /** 0-5, shown as stars on premium cards. */
     rating?: number;
+    /**
+     * The two badges a Scalper Bots card carries - contract duration and the
+     * contract it takes, e.g. '1 tick' and 'Digit odd'.
+     *
+     * Declared here rather than parsed out of the strategy because the nine
+     * scalper XMLs are byte-identical: reading them would put the same badge
+     * on all nine. They describe what each bot is meant to take, so they will
+     * only match the file once the files themselves differ.
+     */
+    duration?: string;
+    contract?: string;
 }
 
 /**
@@ -106,46 +117,105 @@ export const BOTS: Bot[] = [
         is_premium: true,
         rating: 5,
     },
-    // The four scalpers. Each points at its own file so any one of them can be
-    // replaced on its own.
+    // The scalpers. Each points at its own file so any one can be replaced on
+    // its own.
     //
-    // As supplied, all four XMLs are byte-identical - a single MD5 across the
+    // All nine XMLs as supplied are byte-identical - one MD5 across the whole
     // set - so today every one of these loads the same strategy: an entry-point
     // prompt, then digits > over/under on 1HZ10V, contract type "both", with
     // Stake 5, Win Stake 5, Expected Profit 20, Stop Loss 100 and max losses 6.
-    // Drop a real ODD_SCALPER.xml over public/bots/ODD_SCALPER.xml and only
-    // that card changes.
+    // The duration/contract badges below therefore say what each bot is meant
+    // to take, not what its current file does. Drop a real ODD_SCALPER.xml over
+    // public/bots/ODD_SCALPER.xml and only that card changes.
     {
         id: 'even-scalper',
         name: 'Even Scalper',
         description: 'High-speed even-digit scalper. Trades every tick on volatility indices with martingale recovery.',
         fileName: 'EVEN_SCALPER.xml',
-        category: 'Over/Under',
+        category: 'Even/Odd',
         icon: '⚡',
+        duration: '1 tick',
+        contract: 'Digit even',
     },
     {
         id: 'odd-scalper',
         name: 'Odd Scalper',
         description: 'High-speed odd-digit scalper. Trades every tick on volatility indices with martingale recovery.',
         fileName: 'ODD_SCALPER.xml',
-        category: 'Over/Under',
+        category: 'Even/Odd',
         icon: '⚡',
+        duration: '1 tick',
+        contract: 'Digit odd',
     },
     {
         id: 'even-multiple-scalper',
         name: 'Even Multiple Scalper',
         description: 'Multi-market even scalper with volatility switching and 1-tick execution speed.',
         fileName: 'EVEN_MULTIPLE_SCALPER.xml',
-        category: 'Over/Under',
+        category: 'Even/Odd',
         icon: '⚡',
+        duration: '1 tick',
+        contract: 'Digit even',
     },
     {
         id: 'odd-multiple-scalper',
         name: 'Odd Multiple Scalper',
         description: 'Multi-market odd scalper with volatility switching and 1-tick execution speed.',
         fileName: 'ODD_MULTIPLE_SCALPER.xml',
+        category: 'Even/Odd',
+        icon: '⚡',
+        duration: '1 tick',
+        contract: 'Digit odd',
+    },
+    {
+        id: 'over-2-scalper',
+        name: 'Over 2 Scalper',
+        description: 'Digits-over-2 scalper. Trades every tick on volatility indices with martingale recovery.',
+        fileName: 'OVER_2_SCALPER.xml',
         category: 'Over/Under',
         icon: '⚡',
+        duration: '1 tick',
+        contract: 'Digits over 2',
+    },
+    {
+        id: 'under-5-scalper',
+        name: 'Under 5 Scalper',
+        description: 'Digits-under-5 scalper. Trades every tick on volatility indices with martingale recovery.',
+        fileName: 'UNDER_5_SCALPER.xml',
+        category: 'Over/Under',
+        icon: '⚡',
+        duration: '1 tick',
+        contract: 'Digits under 5',
+    },
+    {
+        id: 'under-7-scalper',
+        name: 'Under 7 Scalper',
+        description: 'Digits-under-7 scalper. Trades every tick on volatility indices with martingale recovery.',
+        fileName: 'UNDER_7_SCALPER.xml',
+        category: 'Over/Under',
+        icon: '⚡',
+        duration: '1 tick',
+        contract: 'Digits under 7',
+    },
+    {
+        id: 'rise-scalper',
+        name: 'Rise Scalper',
+        description: 'Rise scalper. Trades every tick on volatility indices with martingale recovery.',
+        fileName: 'RISE_SCALPER.xml',
+        category: 'Rise/Fall',
+        icon: '⚡',
+        duration: '1 tick',
+        contract: 'Rise',
+    },
+    {
+        id: 'fall-scalper',
+        name: 'Fall Scalper',
+        description: 'Fall scalper. Trades every tick on volatility indices with martingale recovery.',
+        fileName: 'FALL_SCALPER.xml',
+        category: 'Rise/Fall',
+        icon: '⚡',
+        duration: '1 tick',
+        contract: 'Fall',
     },
     {
         id: 'signalsniper-autobot',
