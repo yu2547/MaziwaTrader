@@ -6,6 +6,7 @@ import FreeBots from '../free-bots';
 import './trading-bots.scss';
 
 const RiskCalculator = lazy(() => import('../risk-calculator'));
+const BotsStore = lazy(() => import('../bots-store'));
 
 /**
  * Trading Bots is a shell around several scoped views of the same bot
@@ -20,6 +21,7 @@ const RiskCalculator = lazy(() => import('../risk-calculator'));
 
 const TAB_IDS = {
     FREE: 'free',
+    STORE: 'store',
     SCALPER: 'scalper',
     SPEED: 'speed',
     CALCULATOR: 'calculator',
@@ -30,6 +32,7 @@ type TTabId = (typeof TAB_IDS)[keyof typeof TAB_IDS];
 
 const TABS: Array<{ icon: string; id: TTabId; label: string }> = [
     { icon: '🤖', id: TAB_IDS.FREE, label: localize('Free Bots') },
+    { icon: '🛍️', id: TAB_IDS.STORE, label: localize('Bots Store') },
     { icon: '⚡', id: TAB_IDS.SCALPER, label: localize('Scalper Bots') },
     { icon: '🚀', id: TAB_IDS.SPEED, label: localize('SpeedBots') },
     { icon: '🧮', id: TAB_IDS.CALCULATOR, label: localize('Calculator') },
@@ -46,6 +49,12 @@ const TradingBots = observer(() => {
 
     const renderPanel = () => {
         switch (active_tab) {
+            case TAB_IDS.STORE:
+                return (
+                    <Suspense fallback={<ChunkLoader message={localize('Loading bots store...')} />}>
+                        <BotsStore />
+                    </Suspense>
+                );
             case TAB_IDS.SCALPER:
                 return (
                     <FreeBots

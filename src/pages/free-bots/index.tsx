@@ -4,7 +4,7 @@ import { load, save_types } from '@/external/bot-skeleton';
 import { useStore } from '@/hooks/useStore';
 import './free-bots.scss';
 
-interface Bot {
+export interface Bot {
     id: string;
     name: string;
     description: string;
@@ -22,7 +22,13 @@ interface Bot {
     rating?: number;
 }
 
-const BOTS: Bot[] = [
+/**
+ * The one catalogue. Free Bots, its scoped views (Scalper/Speed/Strategies)
+ * and the Bots Store all read this array rather than keeping lists of their
+ * own, so a bot added here shows up in each of them and every card in the app
+ * points at a file that actually exists in public/bots.
+ */
+export const BOTS: Bot[] = [
     {
         id: '1',
         name: 'Expert Speed Bot V1 2026',
