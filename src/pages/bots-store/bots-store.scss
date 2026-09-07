@@ -44,11 +44,28 @@
         line-height: 1;
     }
 
+    &__search-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 40px;
+        height: 40px;
+        border: none;
+        border-radius: 50%;
+        background: #4a5ce0;
+        color: #fff;
+        cursor: pointer;
+    }
+
     &__chips {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
-        margin: 18px 0 22px;
+        padding: 12px 14px;
+        margin: 16px 0 20px;
+        border-radius: 14px;
+        background: var(--general-main-1);
     }
 
     &__chip {
@@ -155,9 +172,13 @@
         font-weight: 700;
     }
 
+    // auto-FIT, not auto-fill: empty tracks collapse, so a shelf holding a
+    // single bot gives that card the whole row rather than leaving it stranded
+    // at column width with blank space beside it. A shelf of six still lays
+    // out five or so across.
     &__grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 18px;
     }
 
@@ -192,8 +213,38 @@
         text-overflow: ellipsis;
     }
 
+    // Tile on the left, eyebrow stacked over title to its right.
+    &__card-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+
+        // Clears the ribbon, which is pinned to the same corner.
+        padding-right: 64px;
+        margin-bottom: 12px;
+    }
+
+    // A filled tile in the shelf's colour rather than a bare glyph, which is
+    // what carries the shelf's identity down onto each card.
+    &__card-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: none;
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        background: var(--shelf);
+        font-size: 20px;
+        line-height: 1;
+    }
+
+    &__card-heading {
+        min-width: 0;
+    }
+
     &__card-eyebrow {
-        margin: 0 0 4px;
+        margin: 2px 0 4px;
         font-size: 10px;
         font-weight: 800;
         letter-spacing: 0.12em;
@@ -202,24 +253,12 @@
     }
 
     &__card-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-
-        // Clears the ribbon, which is pinned to the same corner.
-        padding-right: 56px;
-        margin: 0 0 8px;
-        font-size: 15px;
+        margin: 0;
+        font-size: 17px;
         font-weight: 800;
         line-height: 1.25;
         color: var(--shelf);
         overflow-wrap: anywhere;
-    }
-
-    &__card-icon {
-        flex: none;
-        font-size: 18px;
-        line-height: 1;
     }
 
     &__card-description {
@@ -232,9 +271,9 @@
 
     &__card-btn {
         width: 100%;
-        min-height: 42px;
+        min-height: 50px;
         border: none;
-        border-radius: 10px;
+        border-radius: 12px;
         background: var(--shelf);
         color: #fff;
         font-size: 13px;

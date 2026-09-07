@@ -140,6 +140,25 @@ const BotsStore = observer(() => {
                         ✕
                     </button>
                 )}
+                {/* The filtering is live, so this puts the cursor back in the
+                    field rather than pretending to run a search that has
+                    already run. */}
+                <button
+                    type='button'
+                    className='mw-store__search-btn'
+                    onClick={event =>
+                        (event.currentTarget.previousElementSibling as HTMLElement)
+                            ?.closest('.mw-store__search')
+                            ?.querySelector<HTMLInputElement>('.mw-store__search-input')
+                            ?.focus()
+                    }
+                    aria-label={localize('Search')}
+                >
+                    <svg viewBox='0 0 24 24' width='18' height='18' aria-hidden='true'>
+                        <circle cx='11' cy='11' r='7' fill='none' stroke='currentColor' strokeWidth='2' />
+                        <line x1='16.5' y1='16.5' x2='21' y2='21' stroke='currentColor' strokeWidth='2' />
+                    </svg>
+                </button>
             </div>
 
             <div className='mw-store__chips' role='tablist' aria-label={localize('Stores')}>
@@ -193,13 +212,15 @@ const BotsStore = observer(() => {
                                 style={{ '--shelf': group.colour } as React.CSSProperties}
                             >
                                 <span className='mw-store__card-ribbon'>{group.name}</span>
-                                <p className='mw-store__card-eyebrow'>{localize('Library bot')}</p>
-                                <h3 className='mw-store__card-title'>
+                                <div className='mw-store__card-head'>
                                     <span className='mw-store__card-icon' aria-hidden='true'>
                                         {bot.icon}
                                     </span>
-                                    {bot.name}
-                                </h3>
+                                    <div className='mw-store__card-heading'>
+                                        <p className='mw-store__card-eyebrow'>{localize('Library bot')}</p>
+                                        <h3 className='mw-store__card-title'>{bot.name}</h3>
+                                    </div>
+                                </div>
                                 <p className='mw-store__card-description'>
                                     {localize('Ready to load from {{store}} into your workspace in one click.', {
                                         store: group.name,
