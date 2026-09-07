@@ -187,8 +187,11 @@
         font-weight: 500;
     }
 
+    // Laptop sizes come down too, though less far than the phone's - the
+    // desktop card is only a little wider than the phone one, so the same
+    // ratio would shrink it past readability.
     &__card-title {
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 600;
         color: var(--text-general);
         margin-bottom: 8px;
@@ -196,7 +199,7 @@
     }
 
     &__card-description {
-        font-size: 14px;
+        font-size: 13px;
         color: var(--text-less-prominent);
         line-height: 1.6;
         margin-bottom: 20px;
@@ -371,9 +374,23 @@
             max-width: 580px;
             min-height: 0;
             height: auto;
-            padding: 20px 18px 18px;
+
+            // Top padding clears the ribbon, which is absolutely positioned at
+            // top:0 and would otherwise sit across the title now that the
+            // title shares row 1 with the icon.
+            padding: 32px 16px 14px;
             border-radius: 20px;
             box-shadow: 0 8px 24px rgb(20 50 120 / 12%);
+
+            // A two-column grid so the icon sits beside the title on one row
+            // rather than stacked above it, which is a whole line of card
+            // height for an emoji. Everything under it spans both columns and
+            // stays centred. The markup is untouched: the header and the title
+            // are already siblings, they are just placed rather than stacked.
+            display: grid;
+            grid-template-columns: auto 1fr;
+            column-gap: 8px;
+            align-items: center;
 
             &--premium {
                 border: 2px solid #1f438f;
@@ -381,54 +398,75 @@
             }
         }
 
+        &__card-header {
+            grid-column: 1;
+            grid-row: 1;
+            margin: 0;
+        }
+
+        &__rating,
+        &__card-description,
+        &__card-btn,
+        &__card-btn-loading {
+            grid-column: 1 / -1;
+        }
+
         // Stays pinned in the corner and out of the flow, so it cannot widen
         // the card it is sitting on.
         &__ribbon {
-            padding: 10px 18px;
+            padding: 6px 14px;
             border-radius: 0 18px 0 14px;
-            font-size: 13px;
-        }
-
-        &__card-header {
-            justify-content: center;
-            margin-bottom: 8px;
+            font-size: 12px;
         }
 
         &__rating {
             justify-content: center;
             gap: 3px;
-            margin: 6px 0 10px;
-            font-size: 18px;
+            margin: 8px 0;
+            font-size: 15px;
         }
 
+        // Type sizes come from the reference, measured as a fraction of card
+        // width so the comparison survives the screenshots being at different
+        // scales: there the title is 0.041 of the card's width and the body
+        // 0.033, against 0.050 and 0.048 here. These sit just above the
+        // reference's own ratios - matching them exactly would put the body
+        // text near 10px, which is too small to read on a phone.
         &__card-title {
-            margin-bottom: 8px;
-            font-size: 20px;
+            grid-column: 2;
+            grid-row: 1;
+            margin: 0;
+            font-size: 15px;
             font-weight: 700;
             line-height: 1.25;
-            text-align: center;
+            text-align: left;
             overflow-wrap: anywhere;
         }
 
-        // No fixed height and no growing to fill: the description takes the
-        // room its own lines need, which is what keeps the card from opening
-        // up around a short one.
+        // Three lines, then an ellipsis - the reference card does exactly
+        // this, and it is what stops one wordy bot from making its card half
+        // again as tall as the one beside it. Not a fixed height: a short
+        // description still takes only the lines it needs.
         &__card-description {
+            display: -webkit-box;
             flex-grow: 0;
             max-width: 500px;
             height: auto;
-            max-height: none;
-            margin: 0 auto;
-            font-size: 16px;
+            margin: 0 auto 12px;
+            overflow: hidden;
+            font-size: 12px;
             line-height: 1.45;
             text-align: center;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
         }
 
         &__card-btn {
-            min-height: 48px;
-            margin-top: 14px;
-            border-radius: 18px;
-            font-size: 17px;
+            // 44px is the touch floor, and the reference button is no taller.
+            min-height: 44px;
+            margin-top: 0;
+            border-radius: 16px;
+            font-size: 13px;
             font-weight: 700;
         }
     }
@@ -441,15 +479,17 @@
         padding-inline: 20px;
 
         &__card {
-            padding: 20px 16px 18px;
+            // Keeps the 32px of top clearance the ribbon needs - this rule
+            // used to reset it to 20px and pull the badge back over the title.
+            padding: 32px 14px 14px;
         }
 
         &__card-title {
-            font-size: 18px;
+            font-size: 14px;
         }
 
         &__card-description {
-            font-size: 15px;
+            font-size: 12px;
         }
     }
 }
