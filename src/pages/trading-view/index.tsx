@@ -1,4 +1,8 @@
+import { observer } from 'mobx-react-lite';
 import TradingViewComponent from '@/components/trading-view-chart/trading-view';
+import useThemeSwitcher from '@/hooks/useThemeSwitcher';
+import { LegacyThemeDarkIcon, LegacyThemeLightIcon } from '@deriv/quill-icons/Legacy';
+import { useTranslations } from '@deriv-com/translations';
 import './trading-view-page.scss';
 
 /**
@@ -20,10 +24,32 @@ import './trading-view-page.scss';
  * belongs to charts.deriv.com, which opens the same way on its own page and
  * ignores an interval passed in the URL.
  */
-const TradingViewPage = () => (
-    <div className='mw-tradingview'>
-        <TradingViewComponent />
-    </div>
-);
+const TradingViewPage = observer(() => {
+    const { is_dark_mode_on, toggleTheme } = useThemeSwitcher();
+    const { localize } = useTranslations();
+
+    return (
+        <div className='mw-tradingview'>
+            {/*
+                The app's own theme switch, not a second one: it calls the same
+                useThemeSwitcher the footer control uses, so the page, the
+                chart and the rest of the app move together. The chart is
+                cross-origin and reloads on the change - see trading-view.tsx.
+            */}
+            <button
+                type='button'
+                className='mw-tradingview__theme'
+                onClick={toggleTheme}
+                aria-label={localize('Change theme')}
+                aria-pressed={is_dark_mode_on}
+                title={localize('Change theme')}
+            >
+                {is_dark_mode_on ? <LegacyThemeDarkIcon iconSize='xs' /> : <LegacyThemeLightIcon iconSize='xs' />}
+            </button>
+
+            <TradingViewComponent />
+        </div>
+    );
+});
 
 export default TradingViewPage;
