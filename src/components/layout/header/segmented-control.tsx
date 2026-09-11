@@ -15,12 +15,13 @@ type TSegmentedControlProps = {
 };
 
 /**
- * A compact currency switcher: one joined pill track with the active option
- * sitting on a filled segment that slides between them (shared via framer's
- * layoutId, so it animates across rather than reappearing).
+ * The currency switcher, drawn as a small rocker: the selected currency is the
+ * face pressed flat, the other is the raised face tipped toward the viewer, so
+ * choosing the other one rocks the switch across. The shape lives entirely in
+ * segmented-control.scss - this component only marks which face is active.
  *
  * It reads as a single control on purpose. Two bare labels with a hairline
- * under the active one was the previous shape, and on the light theme the
+ * under the active one was an earlier shape, and on the light theme the
  * active label was near-white on near-white - one label visible, one not,
  * which made the pair look like two unrelated words instead of a switch.
  */
