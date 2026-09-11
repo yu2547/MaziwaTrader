@@ -37,10 +37,10 @@ const SUB_TABS = ['Matches', 'Diffbot', 'Hyperbot', 'SpeedBot'] as const;
 type TSubTab = (typeof SUB_TABS)[number];
 
 /** Digits sharing the highest (or lowest) count in the window. */
-const extremeDigits = (counts: number[], want: 'most' | 'least'): number[] => {
-    if (!counts.length) return [];
-    const target = want === 'most' ? Math.max(...counts) : Math.min(...counts);
-    return DIGITS.filter(digit => counts[digit] === target);
+const extremeDigits = (shares: number[], want: 'most' | 'least'): number[] => {
+    if (!shares.length) return [];
+    const target = want === 'most' ? Math.max(...shares) : Math.min(...shares);
+    return DIGITS.filter(digit => shares[digit] === target);
 };
 
 const MatchesPanel = observer(() => {
@@ -124,10 +124,13 @@ const MatchesPanel = observer(() => {
         };
     }, [symbol, tick_count]);
 
-    const counts = useMemo(() => getDigitDistribution(digits), [digits]);
+    // getDigitDistribution returns each digit's share as a percentage, not a
+    // tally - reading it as one and dividing by the window again put every
+    // figure and every bar about ten times too low at a 1000-tick window.
+    const shares = useMemo(() => getDigitDistribution(digits), [digits]);
     const total = digits.length;
-    const most = useMemo(() => extremeDigits(counts, 'most'), [counts]);
-    const least = useMemo(() => extremeDigits(counts, 'least'), [counts]);
+    const most = useMemo(() => extremeDigits(shares, 'most'), [shares]);
+    const least = useMemo(() => extremeDigits(shares, 'least'), [shares]);
     const last_digits = useMemo(() => digits.slice(-last_n), [digits, last_n]);
 
     // The entry condition, evaluated against the live window: every one of the
@@ -224,7 +227,7 @@ const MatchesPanel = observer(() => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [auto_trading]);
 
-    const percent = (digit: number) => (total ? ((counts[digit] / total) * 100).toFixed(1) : '0.0');
+    const percent = (digit: number) => (total ? shares[digit].toFixed(1) : '0.0');
 
     return (
         <div className='mw-speed__panel'>
@@ -266,7 +269,7 @@ const MatchesPanel = observer(() => {
                                 className={`mw-speed__bar-fill${most.includes(digit) ? ' mw-speed__bar-fill--most' : ''}${
                                     least.includes(digit) ? ' mw-speed__bar-fill--least' : ''
                                 }`}
-                                style={{ height: `${total ? (counts[digit] / total) * 700 : 0}%` }}
+                                style={{ height: `${total ? Math.min(100, shares[digit] * 7) : 0}%` }}
                             />
                             <span className='mw-speed__bar-digit'>{digit}</span>
                         </div>
