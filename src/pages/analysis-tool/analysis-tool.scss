@@ -402,8 +402,14 @@ $mw-grey: #7d8fa3;
         line-height: 1;
         color: transparent;
 
+        // Only the marker sitting on the current digit animates: it cycles
+        // blue into purple and back, with a glow of the same colour under it
+        // so each end reads as lit rather than just tinted. The colour is on
+        // the glyph and the shadow together, which is what keeps the two in
+        // step through the fade.
         &--on {
             color: $mw-blue;
+            animation: mw-dcircles-marker 2.4s ease-in-out infinite;
         }
     }
 
@@ -1390,6 +1396,13 @@ $mw-grey: #7d8fa3;
     .mw-signals__dots i {
         animation: none;
     }
+
+    // Stops the cycle but keeps the marker coloured, so the current digit is
+    // still marked for someone who has asked for less movement.
+    .mw-dcircles__marker--on {
+        animation: none;
+        text-shadow: 0 0 6px rgb(47 123 255 / 85%);
+    }
 }
 
 // The Analysis Dashboard: the scan window from the reference, floating over the
@@ -1468,6 +1481,28 @@ $mw-grey: #7d8fa3;
     height: 1rem;
     border-radius: 50%;
     background: #ef4444;
+}
+
+// The pointer on the current digit: a bright blue fading into a bright purple
+// and back, on a loop. Two stops each side rather than one at either end, so
+// each colour holds long enough to be read as a colour instead of the eye only
+// ever catching the blend between them.
+@keyframes mw-dcircles-marker {
+    0%,
+    100% {
+        color: #2f7bff;
+        text-shadow: 0 0 6px rgb(47 123 255 / 85%);
+    }
+
+    45% {
+        color: #6f46ff;
+        text-shadow: 0 0 9px rgb(111 70 255 / 90%);
+    }
+
+    55% {
+        color: #8b5cff;
+        text-shadow: 0 0 10px rgb(139 92 255 / 90%);
+    }
 }
 
 // The diamond on the Dcircles loading overlay - see &__loading-mark above.
