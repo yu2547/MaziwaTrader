@@ -397,16 +397,37 @@ $mw-grey: #7d8fa3;
         min-width: 0;
     }
 
+    // The pointer over the current digit: a third of the circle's width, as
+    // in the reference. 32% of the cell is a third of the circle wherever the
+    // circle fills its cell (phones), and 1.92rem caps it at a third of the
+    // circle's 6rem where the cell is wider than that (desktop). Every cell
+    // carries one, invisible on all but the current digit, so the row keeps
+    // one height and nothing shifts as the current digit moves.
     &__marker {
-        font-size: 1.1rem;
-        line-height: 1;
+        display: block;
+        width: min(1.92rem, 32%);
+        margin-block-end: 0.5rem;
+        line-height: 0;
         color: transparent;
 
+        svg {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 22 / 18;
+            overflow: visible;
+            fill: currentcolor;
+            stroke: currentcolor;
+            stroke-width: 1.5;
+            stroke-linejoin: round;
+        }
+
         // Only the marker sitting on the current digit animates: it cycles
-        // blue into purple and back, with a glow of the same colour under it
-        // so each end reads as lit rather than just tinted. The colour is on
-        // the glyph and the shadow together, which is what keeps the two in
-        // step through the fade.
+        // blue into purple and back, with a glow of the same colour around it
+        // so each end reads as lit rather than just tinted. The colour and the
+        // glow change together, which is what keeps the two in step through
+        // the fade. The glow is a drop-shadow because the marker is a drawn
+        // shape - a text-shadow only ever reached the old ▼ character.
         &--on {
             color: $mw-blue;
             animation: mw-dcircles-marker 2.4s ease-in-out infinite;
@@ -1401,7 +1422,7 @@ $mw-grey: #7d8fa3;
     // still marked for someone who has asked for less movement.
     .mw-dcircles__marker--on {
         animation: none;
-        text-shadow: 0 0 6px rgb(47 123 255 / 85%);
+        filter: drop-shadow(0 0 6px rgb(47 123 255 / 85%));
     }
 }
 
@@ -1491,17 +1512,17 @@ $mw-grey: #7d8fa3;
     0%,
     100% {
         color: #2f7bff;
-        text-shadow: 0 0 6px rgb(47 123 255 / 85%);
+        filter: drop-shadow(0 0 6px rgb(47 123 255 / 85%));
     }
 
     45% {
         color: #6f46ff;
-        text-shadow: 0 0 9px rgb(111 70 255 / 90%);
+        filter: drop-shadow(0 0 9px rgb(111 70 255 / 90%));
     }
 
     55% {
         color: #8b5cff;
-        text-shadow: 0 0 10px rgb(139 92 255 / 90%);
+        filter: drop-shadow(0 0 10px rgb(139 92 255 / 90%));
     }
 }
 

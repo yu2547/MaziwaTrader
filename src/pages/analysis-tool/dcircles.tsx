@@ -32,7 +32,13 @@ const DigitCircle = ({
     is_current: boolean;
 }) => (
     <div className='mw-dcircles__cell'>
-        <span className={`mw-dcircles__marker ${is_current ? 'mw-dcircles__marker--on' : ''}`}>▼</span>
+        {/* Drawn rather than a ▼ character, so it is the same size on every
+            device instead of whatever a fallback symbol font makes of it. */}
+        <span className={`mw-dcircles__marker ${is_current ? 'mw-dcircles__marker--on' : ''}`} aria-hidden='true'>
+            <svg viewBox='0 0 22 18' focusable='false'>
+                <path d='M1.5 1.5h19L11 16.5z' />
+            </svg>
+        </span>
         <div
             className={`mw-dcircles__circle mw-dcircles__circle--${standing} ${
                 is_current ? 'mw-dcircles__circle--current' : ''
