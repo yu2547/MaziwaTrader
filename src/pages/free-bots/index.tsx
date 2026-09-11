@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { load, save_types } from '@/external/bot-skeleton';
 import { useStore } from '@/hooks/useStore';
+import { waitForDerivWorkspace } from '@/utils/wait-for-workspace';
 import './free-bots.scss';
 
 export interface Bot {
@@ -296,18 +297,20 @@ const FreeBots = observer(({ allowed_categories, subtitle, title }: TFreeBotsPro
 
             const xmlContent = await response.text();
 
-            // Ensure we are on the bot builder tab and workspace is ready
+            // Ensure we are on the bot builder tab and the workspace is ready.
+            // Waits for the workspace to appear rather than sleeping a fixed
+            // 1500ms and hoping: that was too short on a cold start, which is
+            // what made loading a bot fail intermittently, and pure dead time
+            // once Bot Builder was already up.
             if (!(window as any).Blockly?.derivWorkspace) {
                 dashboard?.setActiveTab(1);
                 window.location.hash = 'bot_builder';
-                // Give it some time to initialize the workspace
-                await new Promise(resolve => setTimeout(resolve, 1500));
             }
 
-            const workspace = (window as any).Blockly?.derivWorkspace;
+            const workspace = await waitForDerivWorkspace();
 
             if (!workspace) {
-                throw new Error('Bot Builder workspace not found. Please try again.');
+                throw new Error('Bot Builder did not finish loading. Please try again.');
             }
 
             await load({

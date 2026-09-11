@@ -1,12 +1,23 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { observer } from 'mobx-react-lite';
+import ChunkLoader from '@/components/loader/chunk-loader';
 import { useTranslations } from '@deriv-com/translations';
-import Dcircles from './dcircles';
-import DualEdge from './dual-edge';
-import ProAi from './pro-ai';
-import Signals from './signals';
-import TickAnalyser from './tick-analyser';
 import './analysis-tool.scss';
+
+/**
+ * One view renders at a time, so only one is loaded.
+ *
+ * These five were plain imports, which put every one of them - roughly 160KB
+ * of source, the scan-sound engine included - into a single chunk that had to
+ * arrive and be parsed before the tab could show anything, even though the
+ * page opens on Dcircles alone. That is what made this tab slow to open.
+ * Splitting them means opening the tab fetches the view being opened.
+ */
+const Dcircles = lazy(() => import('./dcircles'));
+const DualEdge = lazy(() => import('./dual-edge'));
+const ProAi = lazy(() => import('./pro-ai'));
+const Signals = lazy(() => import('./signals'));
+const TickAnalyser = lazy(() => import('./tick-analyser'));
 
 type TAnalysisView =
     'dcircles' | 'signals' | 'analysis_tool' | 'sl_tools' | 'pro_ai' | 'tick_analyser' | 'dual_edge' | 'nexus_ai';
@@ -65,26 +76,28 @@ const AnalysisTool = observer(() => {
             </nav>
 
             <div className='analysis-tool__view'>
-                {view === 'dcircles' && <Dcircles />}
-                {view === 'analysis_tool' && (
-                    <div className='analysis-tool__iframe-container'>
-                        <iframe
-                            src='https://bot-analysis-tool-belex.web.app'
-                            className='analysis-tool__iframe'
-                            title='Bot Analysis Tool'
-                            allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-                            allowFullScreen
-                        />
-                    </div>
-                )}
-                {view === 'signals' && <Signals />}
-                {view === 'sl_tools' && <NotConnected title={localize('SL Tools')} />}
-                {view === 'pro_ai' && <ProAi />}
-                {view === 'tick_analyser' && <TickAnalyser />}
-                {/* One page, two rule sets. Each tab opens it on its own set,
+                <Suspense fallback={<ChunkLoader message={localize('Loading...')} />}>
+                    {view === 'dcircles' && <Dcircles />}
+                    {view === 'analysis_tool' && (
+                        <div className='analysis-tool__iframe-container'>
+                            <iframe
+                                src='https://bot-analysis-tool-belex.web.app'
+                                className='analysis-tool__iframe'
+                                title='Bot Analysis Tool'
+                                allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+                                allowFullScreen
+                            />
+                        </div>
+                    )}
+                    {view === 'signals' && <Signals />}
+                    {view === 'sl_tools' && <NotConnected title={localize('SL Tools')} />}
+                    {view === 'pro_ai' && <ProAi />}
+                    {view === 'tick_analyser' && <TickAnalyser />}
+                    {/* One page, two rule sets. Each tab opens it on its own set,
                     and the pills at the top switch between them from either. */}
-                {view === 'dual_edge' && <DualEdge key='dual_edge' initial_mode='recovery' />}
-                {view === 'nexus_ai' && <DualEdge key='nexus_ai' initial_mode='nexus' />}
+                    {view === 'dual_edge' && <DualEdge key='dual_edge' initial_mode='recovery' />}
+                    {view === 'nexus_ai' && <DualEdge key='nexus_ai' initial_mode='nexus' />}
+                </Suspense>
             </div>
         </div>
     );

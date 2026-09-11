@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { load, save_types } from '@/external/bot-skeleton';
 import { useStore } from '@/hooks/useStore';
+import { waitForDerivWorkspace } from '@/utils/wait-for-workspace';
 import { localize } from '@deriv-com/translations';
 import { type Bot, BOTS } from '../free-bots';
 import './bots-store.scss';
@@ -86,11 +87,10 @@ const BotsStore = observer(() => {
             if (!(window as any).Blockly?.derivWorkspace) {
                 dashboard?.setActiveTab(1);
                 window.location.hash = 'bot_builder';
-                await new Promise(resolve => setTimeout(resolve, 1500));
             }
 
-            const workspace = (window as any).Blockly?.derivWorkspace;
-            if (!workspace) throw new Error('Bot Builder workspace not found. Please try again.');
+            const workspace = await waitForDerivWorkspace();
+            if (!workspace) throw new Error('Bot Builder did not finish loading. Please try again.');
 
             await load({
                 block_string: xml_content,
