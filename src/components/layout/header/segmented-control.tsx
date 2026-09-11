@@ -34,7 +34,7 @@ const SegmentedControl = ({ id, options, value, onChange, ariaLabel }: TSegmente
     };
 
     // A two-way switch flips on any press, the way a physical one does:
-    // tapping the brick that is already down switches it too, instead of doing
+    // tapping the key that is already down switches it too, instead of doing
     // nothing. Only clicks and taps do this - the arrow, Home and End keys keep
     // their usual meaning of "go to that option" and never flip past it.
     const handleClick = (option: TSegmentOption, index: number) => {
@@ -97,9 +97,9 @@ const SegmentedControl = ({ id, options, value, onChange, ariaLabel }: TSegmente
                         onClick={() => handleClick(option, index)}
                         onKeyDown={event => handleKeyDown(event, index)}
                     >
-                        {/* The active face is the dark one; there is no sliding
-                            indicator to animate, so the previous framer-motion
-                            underline is gone. */}
+                        {/* The label is the key's face: on the key that is not
+                            selected it is what lifts and tips, uncovering the
+                            button under it as the key's front side. */}
                         <span className='mw-dial__label'>{option.label}</span>
                     </button>
                 );
