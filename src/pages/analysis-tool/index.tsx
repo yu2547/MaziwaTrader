@@ -18,14 +18,15 @@ const DualEdge = lazy(() => import('./dual-edge'));
 const ProAi = lazy(() => import('./pro-ai'));
 const Signals = lazy(() => import('./signals'));
 const TickAnalyser = lazy(() => import('./tick-analyser'));
+const DpTools = lazy(() => import('./dp-tools'));
 
 type TAnalysisView =
-    'dcircles' | 'signals' | 'analysis_tool' | 'sl_tools' | 'pro_ai' | 'tick_analyser' | 'dual_edge' | 'nexus_ai';
+    'dcircles' | 'signals' | 'dp_tools' | 'sl_tools' | 'pro_ai' | 'tick_analyser' | 'dual_edge' | 'nexus_ai';
 
 const VIEWS: { id: TAnalysisView; label: string }[] = [
     { id: 'dcircles', label: 'Dcircles' },
     { id: 'signals', label: 'Signals' },
-    { id: 'analysis_tool', label: 'Analysis Tool' },
+    { id: 'dp_tools', label: 'DP Tools' },
     { id: 'sl_tools', label: 'SL Tools' },
     { id: 'pro_ai', label: 'Pro AI' },
     { id: 'tick_analyser', label: 'Tick Analyser' },
@@ -34,8 +35,8 @@ const VIEWS: { id: TAnalysisView; label: string }[] = [
 ];
 
 /**
- * Dcircles, Signals, Tick Analyser and Pro AI read the app's live tick feed;
- * Analysis Tool is the hosted tool this page has always embedded. SL Tools has
+ * Dcircles, Signals, DP Tools, Tick Analyser and Pro AI read the app's live
+ * tick feed. DP Tools took the slot the embedded hosted tool used to hold. SL Tools has
  * no data source in this build, so it says so instead of rendering numbers
  * nobody measured.
  */
@@ -78,18 +79,8 @@ const AnalysisTool = observer(() => {
             <div className='analysis-tool__view'>
                 <Suspense fallback={<ChunkLoader message={localize('Loading...')} />}>
                     {view === 'dcircles' && <Dcircles />}
-                    {view === 'analysis_tool' && (
-                        <div className='analysis-tool__iframe-container'>
-                            <iframe
-                                src='https://bot-analysis-tool-belex.web.app'
-                                className='analysis-tool__iframe'
-                                title='Bot Analysis Tool'
-                                allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-                                allowFullScreen
-                            />
-                        </div>
-                    )}
                     {view === 'signals' && <Signals />}
+                    {view === 'dp_tools' && <DpTools />}
                     {view === 'sl_tools' && <NotConnected title={localize('SL Tools')} />}
                     {view === 'pro_ai' && <ProAi />}
                     {view === 'tick_analyser' && <TickAnalyser />}
