@@ -1,0 +1,95 @@
+// Sits under the hero on the dashboard's own ground rather than over it: this
+// is something to read once, not a dialog to dismiss before the page can be
+// used, so it never covers the Quick Actions above it.
+.mw-welcome {
+    position: relative;
+    width: min(100%, 136rem);
+    padding: 26px 56px 30px 28px;
+    border: 1px solid var(--border-normal);
+    border-radius: 16px;
+    background: var(--general-main-1);
+    color: var(--text-general);
+
+    &__close {
+        position: absolute;
+        top: 14px;
+        inset-inline-end: 14px;
+
+        // A real touch target, not a bare glyph.
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border: none;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--text-less-prominent);
+        font-size: 15px;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--general-section-1);
+            color: var(--text-general);
+        }
+    }
+
+    &__title {
+        margin: 0 0 16px;
+        font-size: 24px;
+        font-weight: 700;
+    }
+
+    &__lead {
+        margin: 0 0 12px;
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--text-general);
+    }
+
+    &__heading {
+        margin: 24px 0 10px;
+        font-size: 20px;
+        font-weight: 700;
+    }
+
+    &__list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+
+        li + li {
+            margin-top: 8px;
+        }
+    }
+
+    // Buttons rather than anchors: they move a tab in this app, they do not
+    // navigate anywhere, so there is no href to give them.
+    &__link {
+        padding: 2px 0;
+        border: none;
+        background: none;
+        color: var(--text-general);
+        font-size: 14px;
+        line-height: 1.6;
+        text-align: left;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--brand-red-coral);
+            text-decoration: underline;
+        }
+    }
+
+    @media (width <= 600px) {
+        padding: 22px 52px 24px 20px;
+
+        &__title {
+            font-size: 20px;
+        }
+
+        &__heading {
+            font-size: 17px;
+        }
+    }
+}
