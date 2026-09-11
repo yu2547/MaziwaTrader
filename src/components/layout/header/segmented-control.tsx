@@ -33,6 +33,20 @@ const SegmentedControl = ({ id, options, value, onChange, ariaLabel }: TSegmente
         onChange(option.value);
     };
 
+    // A two-way switch flips on any press, the way a physical one does:
+    // tapping the brick that is already down switches it too, instead of doing
+    // nothing. Only clicks and taps do this - the arrow, Home and End keys keep
+    // their usual meaning of "go to that option" and never flip past it.
+    const handleClick = (option: TSegmentOption, index: number) => {
+        if (option.value === value && options.length === 2) {
+            const other_index = index === 0 ? 1 : 0;
+            button_refs.current[other_index]?.focus();
+            onChange(options[other_index].value);
+            return;
+        }
+        selectOption(option);
+    };
+
     const focusAndSelect = (index: number) => {
         const option = options[index];
         if (!option) return;
@@ -80,7 +94,7 @@ const SegmentedControl = ({ id, options, value, onChange, ariaLabel }: TSegmente
                         aria-selected={is_active}
                         tabIndex={is_active ? 0 : -1}
                         className={`mw-dial__option ${is_active ? 'mw-dial__option--active' : ''}`}
-                        onClick={() => selectOption(option)}
+                        onClick={() => handleClick(option, index)}
                         onKeyDown={event => handleKeyDown(event, index)}
                     >
                         {/* The active face is the dark one; there is no sliding

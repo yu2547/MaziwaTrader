@@ -1,31 +1,39 @@
-// The currency switch, drawn as a small rocker: a dark housing holding two
-// faces side by side. The selected currency is the face pressed flat into the
-// housing; the other is the raised face, tipped up toward the viewer on its
-// outer edge and hinged at the seam. Choosing the other currency rocks the
-// switch across - the raised side moves with the selection rather than being
-// pinned to one side.
+// The currency switch, drawn as a small rocker of two bricks set in a housing.
+// Each face is a block with real thickness: its side is a hard band of a darker
+// shade under the face, not a blurred shadow, so it reads as a solid brick.
+// The unselected brick stands up - side showing, tipped toward the viewer on
+// its outer edge and hinged at the seam. The selected brick is pushed down
+// into the housing, its side all but gone. Choosing the other currency rocks
+// the switch across; the standing brick moves with the selection.
 
-// The face colours are the ones this control already had, and they stay
-// literal rather than themed: a light grey face and a near-black face that
-// must look the same in light and dark. The one addition is the housing, a
-// neutral dark grey between the two with no hue of its own.
+// Colours are the ones this control has always used, literal rather than
+// themed, so it looks the same in light and dark: a light grey face and a
+// near-black face, each with the darker edge shade it had before. The housing
+// is a neutral dark grey between the two, with no hue of its own.
 $mw-dial-dark: #17181a;
+$mw-dial-dark-edge: #000;
 $mw-dial-grey: #d3d4d6;
+$mw-dial-grey-edge: #a9abae;
 $mw-dial-ink: #16171a;
 $mw-dial-housing: #3a3c40;
 
-// How far the raised face tips: enough to read as a rocker at header size,
-// not so far that its lettering foreshortens out of legibility.
-$mw-dial-tilt: 20deg;
+// How tall a brick's side is when it stands, and how far the standing brick
+// tips. The side now carries most of the depth, so the tilt is gentler than a
+// flat card would need.
+$mw-dial-depth: 3px;
+$mw-dial-tilt: 16deg;
 
 .mw-dial {
     display: inline-flex;
     align-items: stretch;
 
-    // The seam is the housing showing between the two faces.
+    // The seam is the housing showing between the two bricks.
     gap: 0.1rem;
     height: 2.8rem;
-    padding: 0.2rem;
+
+    // More room below than above: that is where a standing brick's side sits
+    // and where a pressed one sinks.
+    padding: 0.3rem 0.2rem 0.4rem;
     border-radius: 4px;
     background: $mw-dial-housing;
     box-shadow:
@@ -33,8 +41,8 @@ $mw-dial-tilt: 20deg;
         0 0 0 1px rgb(255 255 255 / 8%),
         0 1px 2px rgb(0 0 0 / 35%);
 
-    // One perspective shared by both faces, so the raised face foreshortens as
-    // part of a single object seen from the front, not as a card on its own.
+    // One perspective shared by both bricks, so the standing one foreshortens
+    // as part of a single object seen from the front.
     perspective: 12rem;
 
     &__option {
@@ -49,34 +57,41 @@ $mw-dial-tilt: 20deg;
         cursor: pointer;
         background: $mw-dial-grey;
         color: $mw-dial-ink;
+
+        // Lettering pressed into the face.
+        text-shadow: 0 1px 0 rgb(255 255 255 / 45%);
         transition:
-            transform 180ms ease,
+            transform 160ms ease,
+            box-shadow 160ms ease,
             background 140ms ease,
-            color 140ms ease,
-            box-shadow 140ms ease;
+            color 140ms ease;
 
         &:focus-visible {
             outline: 2px solid #4fd8ff;
             outline-offset: 2px;
         }
 
-        // The selected face: pressed flat, so its shading is all inward.
+        // The selected brick: pushed down into the housing, so its side has
+        // nearly vanished and its shading all points inward.
         &--active {
             background: $mw-dial-dark;
             color: #fff;
+            text-shadow: 0 -1px 0 rgb(0 0 0 / 70%);
             box-shadow:
+                0 1px 0 $mw-dial-dark-edge,
                 inset 0 1px 2px rgb(0 0 0 / 60%),
                 inset 0 -1px 0 rgb(255 255 255 / 8%);
+            transform: translateY(2px);
         }
 
-        // The raised face: lit along its top, darker at its foot, and casting
-        // a little shadow onto the housing where it lifts away from it.
+        // The standing brick: its side a solid band of the darker grey, a soft
+        // shadow on the housing beneath that, and light along its top edge.
         &:not(.mw-dial__option--active) {
             z-index: 1;
             box-shadow:
-                inset 0 1px 0 rgb(255 255 255 / 55%),
-                inset 0 -2px 0 rgb(0 0 0 / 22%),
-                0 2px 3px rgb(0 0 0 / 35%);
+                0 $mw-dial-depth 0 $mw-dial-grey-edge,
+                0 ($mw-dial-depth + 2px) 3px rgb(0 0 0 / 35%),
+                inset 0 1px 0 rgb(255 255 255 / 60%);
         }
 
         // Hinged at the seam on whichever side it is, so its outer edge is the
@@ -101,8 +116,8 @@ $mw-dial-tilt: 20deg;
     }
 
     // Slightly larger where there is room. Same component, same proportions -
-    // only the scale changes: the faces stay close to square, as a rocker's
-    // are, rather than widening into buttons.
+    // only the scale changes: the bricks stay close to square rather than
+    // widening into buttons.
     @media (width >= 1024px) {
         height: 3rem;
 
