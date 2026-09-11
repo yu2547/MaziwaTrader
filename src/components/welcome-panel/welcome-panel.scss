@@ -1,12 +1,24 @@
-// Sits under the hero on the dashboard's own ground rather than over it: this
-// is something to read once, not a dialog to dismiss before the page can be
-// used, so it never covers the Quick Actions above it.
+// A full-width sheet closing the dashboard, under the hero rather than over
+// it: this is something to read once, not a dialog to dismiss before the page
+// can be used, so it never covers the Quick Actions above it.
+
+// The negative inline margins cancel .mw-dashboard-shell's own gutter so the
+// sheet reaches both edges, and the negative bottom margin takes it to the
+// foot of the shell instead of leaving a strip of background beneath it.
 .mw-welcome {
     position: relative;
-    width: min(100%, 136rem);
+    align-self: stretch;
+
+    // Takes the column's spare height, which pushes the sheet to the foot of
+    // the dashboard rather than leaving it floating in the middle of a short
+    // page - the shell centres its children.
+    margin-block-start: auto;
+    margin-block-end: -5.8rem;
+    margin-inline: -1.8rem;
     padding: 26px 56px 30px 28px;
-    border: 1px solid var(--border-normal);
-    border-radius: 16px;
+    border: none;
+    border-top: 1px solid var(--border-normal);
+    border-radius: 0;
     background: var(--general-main-1);
     color: var(--text-general);
 
@@ -79,6 +91,13 @@
             color: var(--brand-red-coral);
             text-decoration: underline;
         }
+    }
+
+    // The shell's gutter is 0.9rem below 768px and its bottom padding 5.4rem,
+    // so the offsets that reach its edges change with it.
+    @media (width <= 768px) {
+        margin-block-end: -5.4rem;
+        margin-inline: -0.9rem;
     }
 
     @media (width <= 600px) {

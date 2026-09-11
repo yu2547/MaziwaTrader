@@ -7,11 +7,11 @@ import './welcome-panel.scss';
 
 /**
  * The welcome sheet: shown to an account on its first visit, and again when
- * one comes back after a long time away.
+ * one comes back after a few days away.
  *
- * "A long time" is 30 days. The point is that someone returning after months
- * has forgotten where things are, while someone who was here yesterday has
- * not - so this greets the first and stays out of the second's way.
+ * "A while" is 3 days. Short enough that someone who drops in once a week is
+ * greeted each time, long enough that closing it and coming back after lunch -
+ * or the next morning - does not put it straight back on screen.
  *
  * Per account, not per browser: switching to an account that has not seen it
  * shows it for that account, which is what "first time logging in" means when
@@ -23,7 +23,7 @@ import './welcome-panel.scss';
  */
 
 const STORAGE_KEY = 'mw_welcome_last_seen';
-const LONG_ABSENCE_MS = 30 * 24 * 60 * 60 * 1000;
+const LONG_ABSENCE_MS = 3 * 24 * 60 * 60 * 1000;
 
 type TSeenMap = Record<string, number>;
 
