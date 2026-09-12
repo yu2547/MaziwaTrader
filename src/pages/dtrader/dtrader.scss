@@ -387,6 +387,102 @@ $dt-orange: #ff6337;
     cursor: pointer;
 }
 
+.mw-dt__markets-badge {
+    display: grid;
+    place-items: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: var(--general-section-1);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.mw-dt__markets-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+// The phone list: the whole screen, each market a heading that opens onto its
+// own groups underneath it.
+.mw-dt__markets-sheet {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--general-main-1);
+    color: var(--text-prominent);
+
+    .mw-dt__markets-list {
+        flex: 1;
+        min-height: 0;
+        padding: 1.2rem 1.6rem 1.6rem;
+    }
+
+    .mw-dt__markets-pick {
+        padding: 1rem 0.6rem;
+        font-size: 1.4rem;
+    }
+
+    .mw-dt__markets-star {
+        padding: 0.6rem 0.8rem;
+        font-size: 1.8rem;
+    }
+}
+
+.mw-dt__markets-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-shrink: 0;
+    padding: 1.4rem 1.6rem;
+    border-bottom: 1px solid var(--general-section-1);
+
+    h2 {
+        margin: 0;
+        font-size: 1.6rem;
+        font-weight: 700;
+    }
+}
+
+.mw-dt__markets-close {
+    border: none;
+    background: transparent;
+    color: var(--text-general);
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.mw-dt__markets-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    padding: 1.3rem 0.4rem;
+    border: none;
+    border-bottom: 1px solid var(--general-section-1);
+    background: transparent;
+    color: var(--text-prominent);
+    font-size: 1.4rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+
+    i {
+        font-style: normal;
+        font-size: 1.6rem;
+        color: var(--text-less-prominent);
+    }
+}
+
 // The chart and the digit rings share this slot. Both are on screen together
 // on a desktop; on a phone one shows at a time and the arrows at its edges
 // move between them, which is how Deriv fits them onto a phone.
