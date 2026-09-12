@@ -2,22 +2,23 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { TActiveSymbol } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
+import { CategoryIcon, ChevronIcon, SearchIcon, StarIcon, SymbolIcon } from './market-icon';
 
 /**
  * The market chip and its list.
  *
- * Two shapes, as Deriv has: on a desktop a dropdown with the categories down
- * the left and a starred, grouped list on the right; on a phone the whole
- * screen, with each market opening to its own groups underneath it. Same data,
- * same stars, same search - a phone simply has no room for a column of
- * categories beside a column of markets.
+ * Two shapes, as Deriv has them. On a desktop a dropdown with the categories
+ * down the left and a starred, grouped list on the right. On a phone the whole
+ * screen, with each market opening onto its own groups - and Derived opening
+ * first onto Baskets and Synthetics, because that is a level Deriv's data
+ * actually has (`subgroup`) and its phone list shows.
  *
- * Every name here comes from active_symbols. Deriv's brief list carries codes
- * rather than display names for the groupings (market `synthetic_index`,
- * submarket `crash_index`), so the map below only supplies the wording for the
- * ones Deriv words specially; anything not in it is title-cased from the code
- * itself, which means a market added later still appears, spelled sensibly,
- * without a code change.
+ * The public feed answers active_symbols in codes only - no display names come
+ * back with it (confirmed live: the response carries market, submarket,
+ * subgroup, underlying_symbol and underlying_symbol_name, and nothing else) -
+ * so the wording below is ours, written the way Deriv writes it. Anything not
+ * listed is title-cased from its code, which means a market added later still
+ * appears, spelled sensibly, without a code change.
  */
 
 const MARKET_NAMES: Record<string, string> = {
@@ -25,21 +26,32 @@ const MARKET_NAMES: Record<string, string> = {
     commodities: 'Commodities',
     cryptocurrency: 'Cryptocurrencies',
     forex: 'Forex',
-    indices: 'Stock indices',
+    indices: 'Stock Indices',
     synthetic_index: 'Derived',
 };
 
+const SUBGROUP_NAMES: Record<string, string> = {
+    baskets: 'Baskets',
+    synthetics: 'Synthetics',
+};
+
 const SUBMARKET_NAMES: Record<string, string> = {
+    americas_OTC: 'Americas',
+    asia_oceania_OTC: 'Asia/Oceania',
+    commodity_basket: 'Commodity Basket',
     crash_index: 'Crash/Boom',
     energy: 'Energy',
-    forex_basket: 'Forex basket',
-    major_pairs: 'Major pairs',
+    europe_OTC: 'Europe',
+    forex_basket: 'Forex Basket',
+    jump_index: 'Jump Indices',
+    major_pairs: 'Major Pairs',
     metals: 'Metals',
-    minor_pairs: 'Minor pairs',
+    minor_pairs: 'Minor Pairs',
     non_stable_coin: 'Cryptocurrencies',
-    random_daily: 'Daily reset indices',
-    random_index: 'Continuous indices',
-    step_index: 'Step indices',
+    random_daily: 'Daily Reset Indices',
+    random_index: 'Continuous Indices',
+    range_index: 'Range Index',
+    step_index: 'Step Indices',
 };
 
 const FAVOURITES_KEY = 'mw_dtrader_favourites';
@@ -56,6 +68,7 @@ const titleCase = (code: string) =>
         .join(' ');
 
 export const marketName = (code: string) => MARKET_NAMES[code] ?? titleCase(code);
+const subgroupName = (code: string) => SUBGROUP_NAMES[code] ?? titleCase(code);
 const submarketName = (code: string) => SUBMARKET_NAMES[code] ?? titleCase(code);
 
 const readFavourites = (): string[] => {
@@ -136,16 +149,21 @@ const MarketSelect = ({ change, decimals, onChange, price, symbol, symbols }: TM
         if (!market && active) setMarket(active.market);
     }, [active, market]);
 
-    // The market being traded is the one already open on a phone, so the list
-    // opens showing where you are rather than a column of closed headings.
+    // The market being traded is already open on a phone, along with the
+    // sub-group it belongs to, so the list opens showing where you are rather
+    // than a column of closed headings.
     useEffect(() => {
         if (!active) return;
-        setOpenGroups(current => (current.includes(active.market) ? current : [...current, active.market]));
+        setOpenGroups(current => {
+            const wanted = [active.market, `${active.market}/${active.subgroup}`];
+            const missing = wanted.filter(key => !current.includes(key));
+            return missing.length ? [...current, ...missing] : current;
+        });
     }, [active]);
 
     const query = search.trim().toLowerCase();
 
-    /** The submarket groups of one market, in name order. */
+    /** The submarket groups of a set of symbols, in name order. */
     const groupsOf = (items: TActiveSymbol[]) => {
         const groups = new Map<string, TActiveSymbol[]>();
         items.forEach(item => {
@@ -153,6 +171,14 @@ const MarketSelect = ({ change, decimals, onChange, price, symbol, symbols }: TM
             groups.set(key, [...(groups.get(key) ?? []), item]);
         });
         return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    };
+
+    /** The sub-groups of one market - Derived has them, the rest do not. */
+    const subgroupsOf = (items: TActiveSymbol[]) => {
+        const seen = new Map<string, TActiveSymbol[]>();
+        items.forEach(item => seen.set(item.subgroup, [...(seen.get(item.subgroup) ?? []), item]));
+        const real = [...seen.entries()].filter(([code]) => code && code !== 'none');
+        return real.sort((a, b) => subgroupName(a[0]).localeCompare(subgroupName(b[0])));
     };
 
     const shown = useMemo(() => {
@@ -193,9 +219,7 @@ const MarketSelect = ({ change, decimals, onChange, price, symbol, symbols }: TM
             className={`mw-dt__markets-row${item.underlying_symbol === symbol ? ' mw-dt__markets-row--on' : ''}`}
         >
             <button type='button' className='mw-dt__markets-pick' onClick={() => pick(item.underlying_symbol)}>
-                <span className='mw-dt__markets-badge' aria-hidden='true'>
-                    {item.underlying_symbol_name.match(/\d+/)?.[0] ?? '~'}
-                </span>
+                <SymbolIcon symbol={item.underlying_symbol} />
                 <span className='mw-dt__markets-name'>{item.underlying_symbol_name}</span>
                 {item.exchange_is_open === 0 && <span className='mw-dt__markets-closed'>{localize('Closed')}</span>}
             </button>
@@ -206,19 +230,36 @@ const MarketSelect = ({ change, decimals, onChange, price, symbol, symbols }: TM
                 aria-pressed={favourites.includes(item.underlying_symbol)}
                 onClick={() => toggleFavourite(item.underlying_symbol)}
             >
-                {favourites.includes(item.underlying_symbol) ? '★' : '☆'}
+                <StarIcon is_on={favourites.includes(item.underlying_symbol)} />
             </button>
         </div>
     );
 
     const searchBox = (
-        <input
-            type='search'
-            className='mw-dt__markets-search'
-            placeholder={localize('Search...')}
-            value={search}
-            onChange={event => setSearch(event.target.value)}
-        />
+        <div className='mw-dt__markets-searchbox'>
+            <SearchIcon />
+            <input
+                type='search'
+                className='mw-dt__markets-search'
+                placeholder={localize('Search...')}
+                value={search}
+                onChange={event => setSearch(event.target.value)}
+            />
+        </div>
+    );
+
+    /** One heading that opens and closes, with Deriv's artwork for it. */
+    const heading = (code: string, label: string, icon_code: string, is_sub = false) => (
+        <button
+            type='button'
+            className={`mw-dt__markets-group${is_sub ? ' mw-dt__markets-group--sub' : ''}`}
+            aria-expanded={open_groups.includes(code)}
+            onClick={() => toggleGroup(code)}
+        >
+            {!is_sub && <CategoryIcon code={icon_code} />}
+            <span className='mw-dt__markets-group-label'>{label}</span>
+            <ChevronIcon is_open={open_groups.includes(code)} />
+        </button>
     );
 
     const chip = (
@@ -229,7 +270,7 @@ const MarketSelect = ({ change, decimals, onChange, price, symbol, symbols }: TM
             onClick={() => setIsOpen(open => !open)}
         >
             <span className='mw-dt__market-badge' aria-hidden='true'>
-                {active?.underlying_symbol_name?.match(/\d+/)?.[0] ?? '~'}
+                <SymbolIcon symbol={symbol} />
             </span>
             <span className='mw-dt__market-text'>
                 <b>{active?.underlying_symbol_name ?? symbol}</b>
@@ -296,45 +337,52 @@ const MarketSelect = ({ change, decimals, onChange, price, symbol, symbols }: TM
                         ) : (
                             <>
                                 <section>
-                                    <button
-                                        type='button'
-                                        className='mw-dt__markets-group'
-                                        aria-expanded={open_groups.includes(FAVOURITES)}
-                                        onClick={() => toggleGroup(FAVOURITES)}
-                                    >
-                                        <span>☆ {localize('Favourites')}</span>
-                                        <i aria-hidden='true'>{open_groups.includes(FAVOURITES) ? '⌃' : '⌄'}</i>
-                                    </button>
+                                    {heading(FAVOURITES, localize('Favorites'), FAVOURITES)}
                                     {open_groups.includes(FAVOURITES) &&
                                         (favourites.length ? (
                                             symbols.filter(item => favourites.includes(item.underlying_symbol)).map(row)
                                         ) : (
                                             <p className='mw-dt__markets-empty'>
-                                                {localize('There are no favourites yet.')}
+                                                {localize('There are no favorites yet.')}
                                             </p>
                                         ))}
                                 </section>
 
                                 {markets.map(code => {
                                     const items = symbols.filter(item => item.market === code);
-                                    const is_group_open = open_groups.includes(code);
+                                    const subgroups = subgroupsOf(items);
+                                    const is_market_open = open_groups.includes(code);
                                     return (
                                         <section key={code}>
-                                            <button
-                                                type='button'
-                                                className='mw-dt__markets-group'
-                                                aria-expanded={is_group_open}
-                                                onClick={() => toggleGroup(code)}
-                                            >
-                                                <span>{marketName(code)}</span>
-                                                <i aria-hidden='true'>{is_group_open ? '⌃' : '⌄'}</i>
-                                            </button>
-                                            {is_group_open &&
-                                                groupsOf(items).map(([group, group_items]) => (
-                                                    <div key={group}>
-                                                        <h4>{group}</h4>
-                                                        {group_items.map(row)}
-                                                    </div>
+                                            {heading(code, marketName(code), code)}
+                                            {is_market_open &&
+                                                (subgroups.length ? (
+                                                    // Derived: Baskets and Synthetics before the
+                                                    // groups themselves, as Deriv's own list has it.
+                                                    subgroups.map(([subgroup, subgroup_items]) => {
+                                                        const key = `${code}/${subgroup}`;
+                                                        return (
+                                                            <div key={key} className='mw-dt__markets-subgroup'>
+                                                                {heading(key, subgroupName(subgroup), subgroup, true)}
+                                                                {open_groups.includes(key) &&
+                                                                    groupsOf(subgroup_items).map(([group, rows]) => (
+                                                                        <div key={group}>
+                                                                            <h4>{group}</h4>
+                                                                            {rows.map(row)}
+                                                                        </div>
+                                                                    ))}
+                                                            </div>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <>
+                                                        {groupsOf(items).map(([group, rows]) => (
+                                                            <div key={group}>
+                                                                <h4>{group}</h4>
+                                                                {rows.map(row)}
+                                                            </div>
+                                                        ))}
+                                                    </>
                                                 ))}
                                         </section>
                                     );
@@ -358,7 +406,8 @@ const MarketSelect = ({ change, decimals, onChange, price, symbol, symbols }: TM
                     className={`mw-dt__markets-cat${market === FAVOURITES ? ' mw-dt__markets-cat--on' : ''}`}
                     onClick={() => setMarket(FAVOURITES)}
                 >
-                    ☆ {localize('Favourites')}
+                    <CategoryIcon code={FAVOURITES} />
+                    {localize('Favorites')}
                 </button>
                 {markets.map(code => (
                     <button
@@ -367,6 +416,7 @@ const MarketSelect = ({ change, decimals, onChange, price, symbol, symbols }: TM
                         className={`mw-dt__markets-cat${market === code ? ' mw-dt__markets-cat--on' : ''}`}
                         onClick={() => setMarket(code)}
                     >
+                        <CategoryIcon code={code} />
                         {marketName(code)}
                     </button>
                 ))}

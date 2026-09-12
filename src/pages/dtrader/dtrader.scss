@@ -222,10 +222,11 @@ $dt-orange: #ff6337;
     width: 3.2rem;
     height: 3.2rem;
     flex-shrink: 0;
-    border-radius: 8px;
-    background: var(--general-section-1);
-    font-size: 1.1rem;
-    font-weight: 700;
+
+    svg {
+        width: 3.2rem;
+        height: 3.2rem;
+    }
 }
 
 .mw-dt__market-text {
@@ -290,6 +291,9 @@ $dt-orange: #ff6337;
 }
 
 .mw-dt__markets-cat {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
     padding: 0.9rem 1.4rem;
     border: none;
     border-left: 3px solid transparent;
@@ -313,11 +317,30 @@ $dt-orange: #ff6337;
     padding: 1.2rem;
 }
 
-.mw-dt__markets-search {
-    padding: 0.8rem 1rem;
+// The magnifying glass sits inside the box with the field, as Deriv draws it.
+.mw-dt__markets-searchbox {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-shrink: 0;
+    padding: 0 1.1rem;
     border: 1px solid var(--general-section-1);
     border-radius: 8px;
     background: var(--general-section-1);
+
+    svg {
+        flex-shrink: 0;
+        width: 1.6rem;
+        height: 1.6rem;
+    }
+}
+
+.mw-dt__markets-search {
+    flex: 1;
+    min-width: 0;
+    padding: 0.9rem 0;
+    border: none;
+    background: transparent;
     color: var(--text-prominent);
     font-size: 1.25rem;
     outline: none;
@@ -387,16 +410,33 @@ $dt-orange: #ff6337;
     cursor: pointer;
 }
 
-.mw-dt__markets-badge {
-    display: grid;
-    place-items: center;
-    width: 2.6rem;
-    height: 2.6rem;
+// Deriv's artwork for the symbol itself. The box is kept even before the icon
+// chunk has landed, so the names do not shift sideways as it arrives.
+.mw-dt__markets-icon {
+    width: 2.4rem;
+    height: 2.4rem;
     flex-shrink: 0;
-    border-radius: 6px;
-    background: var(--general-section-1);
-    font-size: 1rem;
-    font-weight: 700;
+}
+
+.mw-dt__markets-star-icon {
+    display: block;
+    width: 1.8rem;
+    height: 1.8rem;
+}
+
+// Drawn rather than an icon: it is the one mark that has to turn, and turning
+// a glyph leaves it a quarter-pixel off its own centre at this size.
+.mw-dt__markets-chevron {
+    width: 0.8rem;
+    height: 0.8rem;
+    flex-shrink: 0;
+    border-right: 2px solid var(--text-less-prominent);
+    border-bottom: 2px solid var(--text-less-prominent);
+    transform: translateY(-0.2rem) rotate(45deg);
+
+    &--up {
+        transform: translateY(0.2rem) rotate(-135deg);
+    }
 }
 
 .mw-dt__markets-name {
@@ -463,7 +503,6 @@ $dt-orange: #ff6337;
 .mw-dt__markets-group {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 1rem;
     width: 100%;
     padding: 1.3rem 0.4rem;
@@ -476,11 +515,23 @@ $dt-orange: #ff6337;
     text-align: left;
     cursor: pointer;
 
-    i {
-        font-style: normal;
-        font-size: 1.6rem;
-        color: var(--text-less-prominent);
+    // The label takes the room, by its own class: "> span" would take the
+    // chevron with it, and a stretched chevron draws as a long diagonal.
+    .mw-dt__markets-group-label {
+        flex: 1;
+        min-width: 0;
     }
+
+    // The sub-groups Derived has - Baskets and Synthetics - sit under their
+    // market and carry no artwork of their own, as on Deriv.
+    &--sub {
+        padding-inline-start: 3.4rem;
+        font-weight: 600;
+    }
+}
+
+.mw-dt__markets-subgroup h4 {
+    padding-inline-start: 1rem;
 }
 
 // The chart and the digit rings share this slot. Both are on screen together
@@ -850,24 +901,18 @@ $dt-orange: #ff6337;
     }
 }
 
-.mw-dt__glyph {
-    width: 1.8rem;
-    height: 1.8rem;
+// Deriv's own trade-type artwork: one tile per side, which is what it shows
+// against each type in this list and on the buttons that buy them.
+.mw-dt__types-icons {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
     flex-shrink: 0;
-    fill: none;
-    stroke: currentcolor;
-    stroke-width: 1.5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
 
-.mw-dt__glyph-dot {
-    fill: currentcolor;
-    stroke: none;
-}
-
-.mw-dt__glyph-dash {
-    stroke-dasharray: 2 2;
+    svg {
+        width: 2.4rem;
+        height: 2.4rem;
+    }
 }
 
 .mw-dt__duration {
@@ -1515,6 +1560,13 @@ $dt-orange: #ff6337;
     scrollbar-width: none;
     border-bottom: 1px solid var(--general-section-1);
 
+    // The families belong to the desktop panel, as they do on Deriv: its phone
+    // sheet is the list and nothing else. Nested rather than in a block of its
+    // own, which would have to come after this rule to win.
+    @media (width <= 1099px) {
+        display: none;
+    }
+
     @media (width >= 1100px) {
         flex-direction: column;
         gap: 0.2rem;
@@ -1571,6 +1623,78 @@ $dt-orange: #ff6337;
     color: var(--text-prominent);
     font-size: 1.25rem;
     outline: none;
+
+    // As with the families: the phone sheet is the list alone.
+    @media (width <= 1099px) {
+        display: none;
+    }
+}
+
+// The row at the top of the list, which opens what each contract pays on.
+.mw-dt__types-learn {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+    margin-top: 1.2rem;
+    padding: 1.4rem 1.6rem;
+    border: none;
+    border-radius: 8px;
+    background: var(--general-section-1);
+    color: var(--text-prominent);
+    font-size: 1.3rem;
+    text-align: left;
+    cursor: pointer;
+
+    span {
+        flex: 1;
+    }
+
+    i {
+        font-style: normal;
+        font-size: 1.6rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+.mw-dt__types-learn-view {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 1.2rem 1.6rem 1.6rem;
+}
+
+.mw-dt__types-back {
+    align-self: flex-start;
+    flex-shrink: 0;
+    padding: 0 0 1.2rem;
+    border: none;
+    background: transparent;
+    color: var(--text-less-prominent);
+    font-size: 1.25rem;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+
+.mw-dt__types-about {
+    padding-bottom: 1.6rem;
+
+    h3 {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin: 0 0 0.6rem;
+        font-size: 1.35rem;
+        font-weight: 700;
+    }
+
+    p {
+        margin: 0;
+        font-size: 1.2rem;
+        line-height: 1.55;
+        color: var(--text-general);
+    }
 }
 
 .mw-dt__types-scroll {

@@ -95,6 +95,18 @@ const TRADE_TYPE_ICONS = {
     LOWER: lazy(() =>
         import('@deriv/quill-icons/TradeTypes').then(module => ({ default: module.TradeTypesHighsAndLowsLowerIcon }))
     ),
+    TURBOSLONG: lazy(() =>
+        import('@deriv/quill-icons/TradeTypes').then(module => ({ default: module.TradeTypesTurboLongIcon }))
+    ),
+    TURBOSSHORT: lazy(() =>
+        import('@deriv/quill-icons/TradeTypes').then(module => ({ default: module.TradeTypesTurboShortIcon }))
+    ),
+    VANILLALONGCALL: lazy(() =>
+        import('@deriv/quill-icons/TradeTypes').then(module => ({ default: module.TradeTypesVanillaCallIcon }))
+    ),
+    VANILLALONGPUT: lazy(() =>
+        import('@deriv/quill-icons/TradeTypes').then(module => ({ default: module.TradeTypesVanillaPutIcon }))
+    ),
     unknown: lazy(() =>
         import('@deriv/quill-icons/Illustrative').then(module => ({ default: module.IllustrativeMarketsIcon }))
     ),

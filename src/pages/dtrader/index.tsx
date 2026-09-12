@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { redirectToLogin } from '@/components/shared';
+import { TradeTypeIcon } from '@/components/trade-type/trade-type-icon';
 import { observer as globalObserver } from '@/external/bot-skeleton';
 import { V2GetActiveToken } from '@/external/bot-skeleton/services/api/appId';
 import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
@@ -14,7 +15,6 @@ import DigitCircles from './digit-circles';
 import MarketSelect from './market-select';
 import PositionsPanel, { TPosition } from './positions-panel';
 import PriceChart from './price-chart';
-import TradeIcon from './trade-icon';
 import {
     DEFAULT_PARAMS,
     digitBounds,
@@ -392,7 +392,11 @@ const DTrader = observer(() => {
                     )}
 
                     <button type='button' className='mw-dt__type-head' onClick={() => setIsTypesOpen(true)}>
-                        <TradeIcon id={type.id} />
+                        <span className='mw-dt__types-icons'>
+                            {type.sides.map(side => (
+                                <TradeTypeIcon key={side.contract_type} type={side.contract_type} size='sm' />
+                            ))}
+                        </span>
                         <b>{localize(type.label)}</b>
                         <span aria-hidden='true'>›</span>
                     </button>
@@ -701,7 +705,7 @@ const DTrader = observer(() => {
                                         disabled={trade.is_placing || Boolean(digit_error)}
                                         onClick={() => buy(index)}
                                     >
-                                        <TradeIcon id={type.id} />
+                                        <TradeTypeIcon type={side.contract_type} size='sm' />
                                         <span>
                                             {trade.is_placing && !digit_error
                                                 ? localize('Buying...')
