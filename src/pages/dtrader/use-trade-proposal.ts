@@ -34,13 +34,18 @@ const readOfferedValues = (message?: string): string[] => {
 
 type TArgs = {
     currency: string;
+    /**
+     * Off for a side that is not there - an accumulator has one - so a
+     * one-sided contract is not priced twice over.
+     */
+    enabled?: boolean;
     params: TTradeParams;
     side_index: number;
     symbol: string;
     type: TTradeType;
 };
 
-const useTradeProposal = ({ currency, params, side_index, symbol, type }: TArgs) => {
+const useTradeProposal = ({ currency, enabled = true, params, side_index, symbol, type }: TArgs) => {
     const [response, setResponse] = useState<TProposalResponse | null>(null);
     const [offered_payouts_per_point, setOfferedPayoutsPerPoint] = useState<string[]>([]);
     const [is_pricing, setIsPricing] = useState(false);
@@ -55,6 +60,11 @@ const useTradeProposal = ({ currency, params, side_index, symbol, type }: TArgs)
         const id = ++request_id.current;
         let timer: ReturnType<typeof setTimeout> | undefined;
         let cancelled = false;
+
+        if (!enabled) {
+            setResponse(null);
+            return undefined;
+        }
 
         // The previous contract's quote is not this contract's quote. Held on
         // screen while the new one is in flight, it read as a payout for the
@@ -96,7 +106,7 @@ const useTradeProposal = ({ currency, params, side_index, symbol, type }: TArgs)
             cancelled = true;
             if (timer) clearTimeout(timer);
         };
-    }, [request_key, symbol]);
+    }, [enabled, request_key, symbol]);
 
     return {
         error: response?.error?.message ?? null,

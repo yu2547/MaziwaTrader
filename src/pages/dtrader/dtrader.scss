@@ -1,7 +1,11 @@
 // Theme tokens: this page carries the app's own chart, which follows the app's
-// theme, so a ground of its own would fight it.
+// theme, so a ground of its own would fight it. The four literals below are the
+// ones Deriv keeps constant in both themes - the two trade directions, the
+// digit it has landed on, and the digit the ticket is predicting.
 $dt-green: #00a79e;
 $dt-red: #de0040;
+$dt-blue: #2196f3;
+$dt-orange: #ff6337;
 
 .mw-dt {
     display: flex;
@@ -19,50 +23,6 @@ $dt-red: #de0040;
 
 .mw-dt__down {
     color: $dt-red;
-}
-
-// One scrolling row at every width, so ten trade types never wrap and push the
-// chart down the page.
-.mw-dt__types {
-    display: flex;
-    gap: 0.8rem;
-    flex-shrink: 0;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding: 1rem 1.6rem;
-    border-bottom: 1px solid var(--general-section-1);
-
-    &::-webkit-scrollbar {
-        display: none;
-    }
-}
-
-.mw-dt__type {
-    flex-shrink: 0;
-    padding: 0.8rem 1.6rem;
-    border: 1px solid var(--general-section-1);
-    border-radius: 999px;
-    background: var(--general-main-1);
-    color: var(--text-general);
-    font-size: 1.3rem;
-    font-weight: 600;
-    white-space: nowrap;
-    cursor: pointer;
-
-    &:hover:not(:disabled) {
-        color: var(--text-prominent);
-    }
-
-    &:disabled {
-        opacity: 0.35;
-        cursor: not-allowed;
-    }
-
-    &--on {
-        border-color: var(--text-prominent);
-        background: var(--text-prominent);
-        color: var(--general-main-1);
-    }
 }
 
 .mw-dt__body {
@@ -427,12 +387,103 @@ $dt-red: #de0040;
     cursor: pointer;
 }
 
+// The chart and the digit rings share this slot. Both are on screen together
+// on a desktop; on a phone one shows at a time and the arrows at its edges
+// move between them, which is how Deriv fits them onto a phone.
+.mw-dt__stage {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    flex: 1;
+    min-height: 0;
+}
+
+.mw-dt__stage-chart {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+// A container rather than a plain box: how many rings fit on a row depends on
+// this column, which is not the window - the run panel's drawer takes 37rem off
+// it, and ten rings in what is left came out 19px wide with the figures spilling
+// past them. The rings ask their own column how much room they have.
+.mw-dt__stage-digits {
+    container-type: inline-size;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.2rem 1.6rem;
+
+    @media (width <= 1099px) {
+        padding: 1.2rem 3.2rem;
+    }
+}
+
+.mw-dt__pager {
+    position: absolute;
+    inset-block-start: 50%;
+    z-index: 2;
+    display: none;
+    place-items: center;
+    width: 3.6rem;
+    height: 3.6rem;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-less-prominent);
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+    transform: translateY(-50%);
+
+    &--prev {
+        inset-inline-start: 0;
+    }
+
+    &--next {
+        inset-inline-end: 0;
+    }
+
+    @media (width <= 1099px) {
+        display: grid;
+    }
+}
+
+@media (width <= 1099px) {
+    .mw-dt__stage {
+        min-height: 28rem;
+    }
+
+    .mw-dt__stage--digits .mw-dt__stage-chart,
+    .mw-dt__stage--chart .mw-dt__stage-digits {
+        display: none;
+    }
+
+    // On one column the market, the rings and the ticket are what the screen
+    // is for; open positions are a record of what has already been traded, so
+    // they go under them rather than pushing them down the page.
+    .mw-dt__chart-side {
+        order: 1;
+    }
+
+    .mw-dt__ticket {
+        order: 2;
+    }
+
+    .mw-dt__positions {
+        order: 3;
+    }
+}
+
 .mw-dt__chart {
     position: relative;
     display: flex;
     flex-direction: column;
     flex: 1;
-    min-height: 30rem;
+    min-height: 26rem;
     padding: 0.8rem;
     border: 1px solid var(--general-section-1);
     border-radius: 10px;
@@ -506,53 +557,136 @@ $dt-red: #de0040;
     color: var(--text-less-prominent);
 }
 
+// The 0-9 rings. Ten across where there is room, five across on a phone - the
+// two rows of five Deriv shows there.
 .mw-dt__digits {
-    display: flex;
-    gap: 0.6rem;
-    flex-wrap: wrap;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 1.6rem 0.6rem;
+    width: 100%;
+    max-width: 76rem;
+
+    @media (width <= 1099px) {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 2rem 0.8rem;
+        max-width: 46rem;
+    }
+}
+
+// Five to a row once the column holding them is too narrow for ten - which is
+// the run panel's drawer as often as it is the window. After the base rule, so
+// it is the one that wins where both apply.
+@container (width < 46rem) {
+    .mw-dt__digits {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 2rem 0.8rem;
+        max-width: 34rem;
+    }
 }
 
 .mw-dt__digit {
+    position: relative;
     display: grid;
-    place-items: center;
-    width: 4.4rem;
-    height: 4.4rem;
-    border: 2px solid var(--general-section-1);
-    border-radius: 50%;
-    background: transparent;
-    color: var(--text-general);
+    place-content: center;
+    aspect-ratio: 1;
+    width: 100%;
+    max-width: 6.4rem;
+    justify-self: center;
+    text-align: center;
+    color: var(--text-prominent);
 
+    // Positioned, so they paint after the ring behind them rather than under
+    // it - an absolutely positioned SVG paints above plain in-flow text, and
+    // the filled ring on the selected digit hid both figures.
     b {
-        font-size: 1.3rem;
+        position: relative;
+        font-size: 1.5rem;
         font-weight: 700;
-        line-height: 1;
+        line-height: 1.1;
     }
 
     i {
+        position: relative;
         font-style: normal;
-        font-size: 0.85rem;
+        font-size: 1.1rem;
+        font-variant-numeric: tabular-nums;
         color: var(--text-less-prominent);
     }
 
-    &--latest {
-        border-color: $dt-green;
-        color: var(--text-prominent);
-    }
-
+    // The digit the ticket is predicting, filled the way Deriv fills it.
     &--on {
-        border-color: var(--text-prominent);
-        background: var(--text-prominent);
-        color: var(--general-main-1);
+        color: #fff;
 
         i {
-            color: var(--general-main-1);
+            color: rgb(255 255 255 / 85%);
+        }
+
+        .mw-dt__digit-track {
+            fill: $dt-blue;
+            stroke: $dt-blue;
+        }
+    }
+
+    @media (width >= 1100px) {
+        b {
+            font-size: 1.3rem;
+        }
+
+        i {
+            font-size: 0.95rem;
         }
     }
 }
 
-.mw-dt__digits--pick .mw-dt__digit {
-    cursor: pointer;
+// Behind the figures by document order rather than by z-index, which would
+// take it behind the page's own background as well.
+.mw-dt__digit-ring {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.mw-dt__digit-track {
+    fill: none;
+    stroke: var(--general-section-1);
+    stroke-width: 2.5;
+}
+
+// The mark on the digits leading and trailing the window: a quarter of the
+// ring across its foot, not a gauge of the percentage.
+.mw-dt__digit-arc {
+    fill: none;
+    stroke-width: 4;
+    stroke-linecap: round;
+
+    &--high {
+        stroke: $dt-green;
+    }
+
+    &--high-2 {
+        stroke: rgb(0 167 158 / 55%);
+    }
+
+    &--low {
+        stroke: $dt-red;
+    }
+
+    &--low-2 {
+        stroke: rgb(222 0 64 / 55%);
+    }
+}
+
+// The digit the latest tick ended on, pointed at from below.
+.mw-dt__digit-mark {
+    position: absolute;
+    inset-block-end: -1.2rem;
+    inset-inline-start: 50%;
+    width: 0;
+    height: 0;
+    border-inline: 0.6rem solid transparent;
+    border-block-end: 0.8rem solid $dt-orange;
+    transform: translateX(-50%);
 }
 
 .mw-dt__ticket {
@@ -569,34 +703,200 @@ $dt-red: #de0040;
     }
 }
 
-.mw-dt__how {
-    margin: 0;
-    font-size: 1.2rem;
+.mw-dt__learn {
+    align-self: flex-start;
+    padding: 0;
+    border: none;
+    background: transparent;
     color: var(--text-less-prominent);
+    font-size: 1.2rem;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    cursor: pointer;
 }
 
-.mw-dt__sides {
+.mw-dt__learn-text {
+    margin: 0;
+    padding: 0.9rem 1.1rem;
+    border-radius: 8px;
+    background: var(--general-section-1);
+    font-size: 1.2rem;
+    line-height: 1.5;
+    color: var(--text-general);
+}
+
+// The type the ticket is on, and the way into the list of the others.
+.mw-dt__type-head {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.2rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 8px;
+    background: var(--general-main-1);
+    color: var(--text-prominent);
+    cursor: pointer;
+
+    b {
+        flex: 1;
+        font-size: 1.5rem;
+        font-weight: 700;
+        text-align: left;
+    }
+
+    span {
+        color: var(--text-less-prominent);
+        font-size: 1.6rem;
+    }
+
+    &:hover {
+        border-color: var(--text-prominent);
+    }
+}
+
+.mw-dt__glyph {
+    width: 1.8rem;
+    height: 1.8rem;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentcolor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.mw-dt__glyph-dot {
+    fill: currentcolor;
+    stroke: none;
+}
+
+.mw-dt__glyph-dash {
+    stroke-dasharray: 2 2;
+}
+
+.mw-dt__duration {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.mw-dt__units {
     display: grid;
     grid-auto-flow: column;
     gap: 0.4rem;
-    padding: 0.4rem;
-    border-radius: 999px;
+    padding: 0.3rem;
+    border-radius: 8px;
     background: var(--general-section-1);
 }
 
-.mw-dt__side {
-    min-height: 4rem;
+.mw-dt__unit {
+    min-height: 3.2rem;
     border: none;
-    border-radius: 999px;
+    border-radius: 6px;
     background: transparent;
     color: var(--text-general);
-    font-size: 1.35rem;
-    font-weight: 700;
+    font-size: 1.25rem;
     cursor: pointer;
 
     &--on {
         background: var(--general-main-1);
-        color: $dt-green;
+        color: var(--text-prominent);
+        font-weight: 700;
+    }
+}
+
+.mw-dt__slider {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.4rem 1rem;
+    padding: 0.9rem 1.2rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 8px;
+    background: var(--general-section-1);
+
+    > span {
+        font-size: 1.15rem;
+        color: var(--text-less-prominent);
+    }
+
+    input {
+        grid-column: 1 / -1;
+        width: 100%;
+        accent-color: $dt-green;
+        cursor: pointer;
+    }
+
+    b {
+        justify-self: end;
+        font-size: 1.35rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.mw-dt__pred {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.mw-dt__pred-label {
+    font-size: 1.2rem;
+    text-align: center;
+    color: var(--text-general);
+}
+
+.mw-dt__pred-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.6rem;
+}
+
+.mw-dt__pred-digit {
+    min-height: 3.4rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 6px;
+    background: var(--general-section-1);
+    color: var(--text-general);
+    font-size: 1.35rem;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+
+    &:hover {
+        color: var(--text-prominent);
+    }
+
+    &--on {
+        border-color: var(--text-prominent);
+        background: var(--text-prominent);
+        color: var(--general-main-1);
+        font-weight: 700;
+    }
+}
+
+.mw-dt__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.mw-dt__chip {
+    flex: 1;
+    min-width: 4.4rem;
+    min-height: 3.2rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: var(--general-main-1);
+    color: var(--text-general);
+    font-size: 1.25rem;
+    cursor: pointer;
+
+    &--on {
+        border-color: var(--text-prominent);
+        background: var(--text-prominent);
+        color: var(--general-main-1);
+        font-weight: 700;
     }
 }
 
@@ -638,16 +938,94 @@ $dt-red: #de0040;
         color: var(--text-less-prominent);
     }
 
-    // The digit strip needs the full width, so its label sits above it.
+    // A row of chips needs the full width, so its label sits above them.
     &--block {
         flex-direction: column;
         align-items: stretch;
         gap: 0.8rem;
+    }
+}
 
-        .mw-dt__digit {
-            width: 3.4rem;
-            height: 3.4rem;
+.mw-dt__stake {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.mw-dt__stake-label {
+    font-size: 1.2rem;
+    color: var(--text-less-prominent);
+}
+
+.mw-dt__stake-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.8rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 8px;
+    background: var(--general-section-1);
+
+    input {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        background: transparent;
+        color: var(--text-prominent);
+        font-size: 1.5rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        text-align: center;
+        outline: none;
+
+        // The browser's own spinners duplicate the two buttons beside them.
+        appearance: textfield;
+
+        &::-webkit-outer-spin-button,
+        &::-webkit-inner-spin-button {
+            appearance: none;
+            margin: 0;
         }
+    }
+
+    i {
+        font-style: normal;
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+}
+
+.mw-dt__stake-step {
+    display: grid;
+    place-items: center;
+    width: 3.2rem;
+    height: 3.2rem;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 6px;
+    background: var(--general-main-1);
+    color: var(--text-prominent);
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.mw-dt__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.2rem;
+    min-height: 4rem;
+    padding: 0.6rem 1.2rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 8px;
+    background: var(--general-section-1);
+    font-size: 1.25rem;
+    color: var(--text-general);
+
+    input {
+        width: 3.6rem;
+        height: 2rem;
     }
 }
 
@@ -810,25 +1188,6 @@ $dt-red: #de0040;
     }
 }
 
-.mw-dt__toggle {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1.2rem;
-    min-height: 4rem;
-    padding: 0.6rem 1.2rem;
-    border: 1px solid var(--general-section-1);
-    border-radius: 8px;
-    background: var(--general-section-1);
-    font-size: 1.25rem;
-    color: var(--text-general);
-
-    input {
-        width: 3.6rem;
-        height: 2rem;
-    }
-}
-
 .mw-dt__quote {
     display: flex;
     flex-direction: column;
@@ -855,28 +1214,75 @@ $dt-red: #de0040;
     }
 }
 
-.mw-dt__buy {
+// One column per side, each with Deriv's payout for that side above the button
+// that buys it.
+.mw-dt__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+    margin-top: auto;
+    padding-top: 0.4rem;
+
+    &--one {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.mw-dt__action {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
-    min-height: 5.2rem;
-    margin-top: auto;
-    padding: 0.8rem;
+    gap: 0.4rem;
+    min-width: 0;
+}
+
+.mw-dt__action-payout {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-less-prominent);
+
+    b {
+        font-size: 1.2rem;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-prominent);
+    }
+}
+
+.mw-dt__action-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 4.8rem;
+    padding: 0 1rem;
     border: none;
     border-radius: 8px;
-    background: $dt-green;
     color: #fff;
     cursor: pointer;
 
-    b {
-        font-size: 1.6rem;
+    span {
+        flex: 1;
+        font-size: 1.5rem;
         font-weight: 700;
+        text-align: left;
     }
 
-    i {
-        font-style: normal;
-        font-size: 1.2rem;
-        opacity: 0.92;
+    b {
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        background: rgb(255 255 255 / 18%);
+        font-size: 1.15rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+    &--up {
+        background: $dt-green;
+    }
+
+    &--down {
+        background: $dt-red;
     }
 
     &:hover:not(:disabled) {
@@ -887,6 +1293,13 @@ $dt-red: #de0040;
         opacity: 0.45;
         cursor: not-allowed;
     }
+}
+
+.mw-dt__action-error {
+    margin: 0;
+    font-size: 1.1rem;
+    line-height: 1.4;
+    color: $dt-red;
 }
 
 .mw-dt__stats {
@@ -925,4 +1338,208 @@ $dt-red: #de0040;
     background: rgb(222 0 64 / 12%);
     font-size: 1.2rem;
     color: $dt-red;
+}
+
+// The trade-type picker. The whole screen on a phone, a panel beside the
+// ticket on a desktop - one list either way.
+.mw-dt__sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+}
+
+.mw-dt__sheet-scrim {
+    position: absolute;
+    inset: 0;
+    border: none;
+    background: rgb(0 0 0 / 45%);
+    cursor: default;
+}
+
+.mw-dt__types-panel {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--general-main-1);
+    color: var(--text-prominent);
+
+    @media (width >= 1100px) {
+        inset: 8rem 33rem auto auto;
+        width: 58rem;
+        max-height: min(62rem, calc(100vh - 12rem));
+        border: 1px solid var(--general-section-1);
+        border-radius: 12px;
+        box-shadow: 0 18px 48px rgb(0 0 0 / 28%);
+        overflow: hidden;
+    }
+}
+
+.mw-dt__types-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.4rem 1.6rem;
+    border-bottom: 1px solid var(--general-section-1);
+
+    h2 {
+        margin: 0;
+        font-size: 1.6rem;
+        font-weight: 700;
+    }
+}
+
+.mw-dt__types-close {
+    border: none;
+    background: transparent;
+    color: var(--text-general);
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.mw-dt__types-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    flex: 1;
+    min-height: 0;
+
+    @media (width >= 1100px) {
+        grid-template-columns: 18rem minmax(0, 1fr);
+    }
+}
+
+.mw-dt__types-rail {
+    display: flex;
+    gap: 0.6rem;
+    padding: 1rem 1.6rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--general-section-1);
+
+    @media (width >= 1100px) {
+        flex-direction: column;
+        gap: 0.2rem;
+        padding: 1.2rem 0;
+        border-right: 1px solid var(--general-section-1);
+        border-bottom: none;
+        overflow-x: visible;
+        overflow-y: auto;
+    }
+}
+
+.mw-dt__types-family {
+    flex-shrink: 0;
+    padding: 0.7rem 1.2rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-general);
+    font-size: 1.25rem;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &--on {
+        border-color: var(--text-prominent);
+        color: var(--text-prominent);
+        font-weight: 700;
+    }
+
+    @media (width >= 1100px) {
+        border: none;
+        border-left: 3px solid transparent;
+        border-radius: 0;
+        text-align: left;
+
+        &--on {
+            border-left-color: $dt-red;
+        }
+    }
+}
+
+.mw-dt__types-list {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 1.2rem 1.6rem 1.6rem;
+}
+
+.mw-dt__types-search {
+    flex-shrink: 0;
+    padding: 0.9rem 1.1rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 8px;
+    background: var(--general-section-1);
+    color: var(--text-prominent);
+    font-size: 1.25rem;
+    outline: none;
+}
+
+.mw-dt__types-scroll {
+    min-height: 0;
+    margin-top: 1.2rem;
+    overflow-y: auto;
+
+    h3 {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        margin: 1.6rem 0 0.6rem;
+        font-size: 1.35rem;
+        font-weight: 700;
+
+        &:first-child {
+            margin-top: 0;
+        }
+    }
+
+    section:first-child h3 {
+        margin-top: 0;
+    }
+}
+
+.mw-dt__types-new {
+    padding: 0.1rem 0.6rem;
+    border-radius: 4px;
+    background: $dt-red;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.mw-dt__types-empty {
+    margin: 1.2rem 0;
+    font-size: 1.25rem;
+    color: var(--text-less-prominent);
+}
+
+.mw-dt__types-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    padding: 1.1rem 1.2rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-prominent);
+    font-size: 1.35rem;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: var(--general-section-1);
+    }
+
+    &--on {
+        background: var(--general-section-1);
+        font-weight: 700;
+    }
+
+    &:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+    }
 }

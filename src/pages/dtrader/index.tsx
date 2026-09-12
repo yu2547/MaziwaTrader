@@ -14,15 +14,19 @@ import DigitCircles from './digit-circles';
 import MarketSelect from './market-select';
 import PositionsPanel, { TPosition } from './positions-panel';
 import PriceChart from './price-chart';
+import TradeIcon from './trade-icon';
 import {
     DEFAULT_PARAMS,
+    digitBounds,
     durationBounds,
     findTradeType,
     GROWTH_RATES,
     MULTIPLIERS,
+    TRADE_DESCRIPTIONS,
     TRADE_TYPES,
     TTradeParams,
 } from './trade-types';
+import TradeTypesPanel from './trade-types-panel';
 import useTradeProposal from './use-trade-proposal';
 import ValuePicker from './value-picker';
 import './dtrader.scss';
@@ -32,9 +36,9 @@ const DIGIT_WINDOW = 1000;
 
 // The values Deriv puts on its own pads. Anything outside what the contract
 // allows is dropped from the pad rather than offered and then refused.
-const TICK_PRESETS = [1, 2, 3, 5, 7, 10];
 const MINUTE_PRESETS = [1, 2, 3, 5, 10, 15, 30, 60];
-const STAKE_PRESETS = [1, 2, 3, 5, 10, 25];
+
+const DIGITS = Array.from({ length: 10 }, (_, digit) => digit);
 
 const DTrader = observer(() => {
     const { feed, isConnected } = usePublicMarketFeed();
@@ -46,7 +50,6 @@ const DTrader = observer(() => {
     const [symbol, setSymbol] = useState(DEFAULT_SYMBOL);
     const [contracts_for, setContractsFor] = useState<TContractForSymbol[]>([]);
     const [type_id, setTypeId] = useState('rise_fall');
-    const [side_index, setSideIndex] = useState(0);
     const [params, setParams] = useState<TTradeParams>(DEFAULT_PARAMS);
 
     const [prices, setPrices] = useState<number[]>([]);
@@ -55,24 +58,26 @@ const DTrader = observer(() => {
     const [positions, setPositions] = useState<TPosition[]>([]);
     const [is_positions_collapsed, setIsPositionsCollapsed] = useState(false);
     const [bought, setBought] = useState<string | null>(null);
+    const [is_types_open, setIsTypesOpen] = useState(false);
+    const [is_learn_open, setIsLearnOpen] = useState(false);
+    /** Phone only: the chart and the digit rings share one slot, as on Deriv. */
+    const [stage, setStage] = useState<'chart' | 'digits'>('digits');
 
     const type = findTradeType(type_id);
     const is_logged_in = Boolean(oauth_session?.is_authenticated || client?.is_logged_in);
     const has_session = is_logged_in || Boolean(getStoredAccessToken() || V2GetActiveToken());
     const currency = oauth_session?.currency || (is_logged_in && (client?.currency as string)) || 'USD';
 
-    const {
-        error: price_error,
-        offered_payouts_per_point,
-        proposal,
-        request,
-    } = useTradeProposal({
-        currency,
-        params,
-        side_index,
-        symbol,
-        type,
-    });
+    /**
+     * Both sides, priced at once and re-priced on their own, because both are
+     * on screen and both are buyable - the way Deriv's own ticket works. A
+     * contract with one side (an accumulator) leaves the second off rather
+     * than pricing the same thing twice.
+     */
+    const has_two_sides = type.sides.length > 1;
+    const quote_up = useTradeProposal({ currency, params, side_index: 0, symbol, type });
+    const quote_down = useTradeProposal({ currency, enabled: has_two_sides, params, side_index: 1, symbol, type });
+    const quotes = useMemo(() => [quote_up, quote_down], [quote_up, quote_down]);
 
     const update = useCallback((patch: Partial<TTradeParams>) => setParams(current => ({ ...current, ...patch })), []);
 
@@ -80,6 +85,7 @@ const DTrader = observer(() => {
     // and it only names them when it turns one down - so the first quote comes
     // back as a refusal carrying the list, and the ticket settles on the
     // middle of it rather than leaving the trader with an error to read.
+    const offered_payouts_per_point = quote_up.offered_payouts_per_point;
     useEffect(() => {
         if (!offered_payouts_per_point.length) return;
         setParams(current =>
@@ -102,20 +108,20 @@ const DTrader = observer(() => {
     }, [isConnected, feed]);
 
     // What this market can be traded as, straight from Deriv - it decides
-    // which tabs are offered here rather than a list of our own.
+    // which types are offered here rather than a list of our own.
     useEffect(() => {
         if (!isConnected) return;
         setContractsFor([]);
         feed.getContractsFor(symbol)
             .then(setContractsFor)
             .catch(() => {
-                // Leaving it empty offers every tab; a wrong one is refused at
+                // Leaving it empty offers every type; a wrong one is refused at
                 // pricing, with Deriv's reason on screen.
             });
     }, [isConnected, feed, symbol]);
 
     // Price history and the live stream, on the feed the app already holds
-    // open. One window serves the spot, the change and the digit strip.
+    // open. One window serves the spot, the change and the digit rings.
     const request_id = useRef(0);
     useEffect(() => {
         if (!isConnected) return undefined;
@@ -192,18 +198,16 @@ const DTrader = observer(() => {
 
     // Markets do not all offer the same contracts - Deriv sells only
     // accumulators and multipliers on the Boom indices, for instance - so
-    // moving to one that cannot trade the tab you are on lands on a tab it can
-    // trade, rather than on a ticket whose only possible answer is a refusal.
+    // moving to one that cannot trade the type you are on lands on a type it
+    // can trade, rather than on a ticket whose only possible answer is a
+    // refusal.
     useEffect(() => {
         if (!supported || supported.has(type.category)) return;
         const next = TRADE_TYPES.find(item => supported.has(item.category));
-        if (next) {
-            setTypeId(next.id);
-            setSideIndex(0);
-        }
+        if (next) setTypeId(next.id);
     }, [supported, type.category]);
 
-    const payout = proposal?.payout ?? 0;
+    const proposal = quote_up.proposal;
     const details = proposal?.contract_details;
     const limits = proposal?.validation_params;
 
@@ -220,14 +224,58 @@ const DTrader = observer(() => {
         return amount === 1 ? localize('1 tick') : localize('{{count}} ticks', { count: amount });
     };
 
-    /** Buys exactly what was quoted - the priced request, sent to be bought. */
-    const buy = async () => {
+    const bounds = useMemo(() => durationBounds(contracts_for, type), [contracts_for, type]);
+    const duration_bounds = (params.duration_unit === 'm' ? bounds.minutes : bounds.ticks) ?? { max: 10, min: 1 };
+
+    // A duration carried over from another market or another contract may not
+    // be one this one offers, and the only answer Deriv can give then is
+    // "Trading is not offered for this duration." This snaps it into range
+    // instead, so changing market leaves a ticket that prices.
+    useEffect(() => {
+        setParams(current => {
+            const unit = bounds.units.includes(current.duration_unit) ? current.duration_unit : bounds.units[0];
+            const limit = unit === 'm' ? bounds.minutes : bounds.ticks;
+            if (!unit || !limit) return current;
+            const duration = Math.min(limit.max, Math.max(limit.min, current.duration));
+            if (unit === current.duration_unit && duration === current.duration) return current;
+            return { ...current, duration, duration_unit: unit };
+        });
+    }, [bounds]);
+
+    /**
+     * The digit this side will not take. Deriv refuses DIGITOVER 9 and
+     * DIGITUNDER 0 outright, so the button says so and stays out rather than
+     * sending a contract that can only come back refused - and the other side
+     * remains buyable while it does.
+     */
+    const digitError = (side_index: number) => {
+        const range = digitBounds(type, side_index);
+        if (!range || (params.digit >= range.min && params.digit <= range.max)) return null;
+        return localize('Digit must be in the range of {{min}} to {{max}}.', { max: range.max, min: range.min });
+    };
+
+    /** Deriv's payout on its own stake, which is what its own buttons carry. */
+    const profitPercent = (payout?: number) => {
+        if (!payout || !params.stake) return null;
+        return `${(((payout - params.stake) / params.stake) * 100).toFixed(2)}%`;
+    };
+
+    const stepStake = (delta: number) => {
+        const next = Math.round((params.stake + delta) * 100) / 100;
+        update({
+            stake: Math.min(stake_limits.max ?? Number.MAX_SAFE_INTEGER, Math.max(stake_limits.min, next)),
+        });
+    };
+
+    /** Buys exactly what was quoted on that side - the priced request, sent to be bought. */
+    const buy = async (side_index: number) => {
         setBought(null);
         if (!has_session) {
             redirectToLogin(false);
             return;
         }
 
+        const { request } = quotes[side_index];
         const opened = await trade.placeTrades(
             {
                 barrier: request.barrier as string | undefined,
@@ -263,23 +311,8 @@ const DTrader = observer(() => {
         setPositions(current => current.filter(position => position.contract_id !== contract_id));
     };
 
-    const bounds = useMemo(() => durationBounds(contracts_for, type), [contracts_for, type]);
-    const duration_bounds = (params.duration_unit === 'm' ? bounds.minutes : bounds.ticks) ?? { max: 10, min: 1 };
-
-    // A duration carried over from another market or another contract may not
-    // be one this one offers, and the only answer Deriv can give then is
-    // "Trading is not offered for this duration." This snaps it into range
-    // instead, so changing market leaves a ticket that prices.
-    useEffect(() => {
-        setParams(current => {
-            const unit = bounds.units.includes(current.duration_unit) ? current.duration_unit : bounds.units[0];
-            const limit = unit === 'm' ? bounds.minutes : bounds.ticks;
-            if (!unit || !limit) return current;
-            const duration = Math.min(limit.max, Math.max(limit.min, current.duration));
-            if (unit === current.duration_unit && duration === current.duration) return current;
-            return { ...current, duration, duration_unit: unit };
-        });
-    }, [bounds]);
+    // Only the digit contracts have a second view to page to.
+    const shown_stage = type.shows_digit_stats ? stage : 'chart';
 
     // The run panel opens as a drawer over the right edge - which is exactly
     // where this page's ticket is (measured: drawer from 914px, ticket
@@ -287,37 +320,6 @@ const DTrader = observer(() => {
     // rather than the trader having to close the panel to place a trade.
     return (
         <div className={`mw-dt${run_panel?.is_drawer_open ? ' mw-dt--drawer' : ''}`}>
-            <nav className='mw-dt__types' aria-label={localize('Trade types')}>
-                {TRADE_TYPES.map(item => {
-                    const unavailable = supported !== null && !supported.has(item.category);
-                    return (
-                        <button
-                            key={item.id}
-                            type='button'
-                            className={`mw-dt__type${item.id === type_id ? ' mw-dt__type--on' : ''}`}
-                            aria-pressed={item.id === type_id}
-                            disabled={unavailable}
-                            title={unavailable ? localize('Not offered on this market.') : undefined}
-                            onClick={() => {
-                                setTypeId(item.id);
-                                setSideIndex(0);
-                                // Each family has its own duration bounds, so
-                                // the ticket lands on a duration that prices
-                                // instead of one the last tab allowed.
-                                const unit = item.duration_units[0] ?? 't';
-                                update({
-                                    duration: unit === 'm' ? (item.min_minutes ?? 1) : (item.min_ticks ?? 1) + 4,
-                                    duration_unit: unit,
-                                });
-                            }}
-                        >
-                            {localize(item.label)}
-                            {item.hot && <span aria-hidden='true'> 🔥</span>}
-                        </button>
-                    );
-                })}
-            </nav>
-
             <div className='mw-dt__body'>
                 <PositionsPanel
                     is_collapsed={is_positions_collapsed}
@@ -336,94 +338,176 @@ const DTrader = observer(() => {
                         symbols={symbols}
                     />
 
-                    <PriceChart decimals={decimals} epochs={epochs} prices={prices} />
+                    <div className={`mw-dt__stage mw-dt__stage--${shown_stage}`}>
+                        <div className='mw-dt__stage-chart'>
+                            <PriceChart decimals={decimals} epochs={epochs} prices={prices} />
+                        </div>
 
-                    {type.shows_digit_stats && <DigitCircles distribution={distribution} latest={latest_digit} />}
+                        {type.shows_digit_stats && (
+                            <div className='mw-dt__stage-digits'>
+                                <DigitCircles
+                                    distribution={distribution}
+                                    latest={latest_digit}
+                                    selected={type.fields.includes('digit') ? params.digit : undefined}
+                                />
+                            </div>
+                        )}
+
+                        {/* The pair Deriv puts either side of this slot on a
+                            phone: back to the chart, and on to the trade
+                            types. Both are off the desktop layout, where the
+                            chart and the rings are on screen together. */}
+                        {type.shows_digit_stats && (
+                            <button
+                                type='button'
+                                className='mw-dt__pager mw-dt__pager--prev'
+                                aria-label={shown_stage === 'chart' ? localize('Show digits') : localize('Show chart')}
+                                onClick={() => setStage(current => (current === 'chart' ? 'digits' : 'chart'))}
+                            >
+                                «
+                            </button>
+                        )}
+                        <button
+                            type='button'
+                            className='mw-dt__pager mw-dt__pager--next'
+                            aria-label={localize('Trade types')}
+                            onClick={() => setIsTypesOpen(true)}
+                        >
+                            »
+                        </button>
+                    </div>
                 </section>
 
                 <aside className='mw-dt__ticket'>
-                    <p className='mw-dt__how'>{localize('How to trade {{label}}?', { label: localize(type.label) })}</p>
+                    <button
+                        type='button'
+                        className='mw-dt__learn'
+                        aria-expanded={is_learn_open}
+                        onClick={() => setIsLearnOpen(current => !current)}
+                    >
+                        {localize('Learn about this trade type')}
+                    </button>
+                    {is_learn_open && (
+                        <p className='mw-dt__learn-text'>{localize(TRADE_DESCRIPTIONS[type.id] ?? '')}</p>
+                    )}
 
-                    {type.sides.length > 1 && (
-                        <div className='mw-dt__sides'>
-                            {type.sides.map((item, index) => (
-                                <button
-                                    key={item.contract_type}
-                                    type='button'
-                                    className={`mw-dt__side${index === side_index ? ' mw-dt__side--on' : ''}`}
-                                    onClick={() => setSideIndex(index)}
-                                >
-                                    {localize(item.label)}
-                                </button>
-                            ))}
+                    <button type='button' className='mw-dt__type-head' onClick={() => setIsTypesOpen(true)}>
+                        <TradeIcon id={type.id} />
+                        <b>{localize(type.label)}</b>
+                        <span aria-hidden='true'>›</span>
+                    </button>
+
+                    {type.fields.includes('duration') && (
+                        <div className='mw-dt__duration'>
+                            {bounds.units.length > 1 && (
+                                <div className='mw-dt__units'>
+                                    {bounds.units.map(unit => (
+                                        <button
+                                            key={unit}
+                                            type='button'
+                                            className={`mw-dt__unit${
+                                                unit === params.duration_unit ? ' mw-dt__unit--on' : ''
+                                            }`}
+                                            aria-pressed={unit === params.duration_unit}
+                                            onClick={() => {
+                                                const limit = unit === 'm' ? bounds.minutes : bounds.ticks;
+                                                update({ duration: limit?.min ?? 1, duration_unit: unit });
+                                            }}
+                                        >
+                                            {unit === 'm' ? localize('Minutes') : localize('Ticks')}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {params.duration_unit === 't' ? (
+                                <div className='mw-dt__slider'>
+                                    <span>{localize('Ticks')}</span>
+                                    <input
+                                        type='range'
+                                        min={duration_bounds.min}
+                                        max={duration_bounds.max}
+                                        step={1}
+                                        value={params.duration}
+                                        aria-label={localize('Ticks')}
+                                        onChange={event => update({ duration: Number(event.target.value) })}
+                                    />
+                                    <b>{durationLabel(params.duration, 't')}</b>
+                                </div>
+                            ) : (
+                                <ValuePicker
+                                    display={durationLabel(params.duration, params.duration_unit)}
+                                    label={localize('Duration')}
+                                    max={duration_bounds.max}
+                                    min={duration_bounds.min}
+                                    onChange={duration => update({ duration })}
+                                    presetLabel={preset => durationLabel(preset, params.duration_unit)}
+                                    presets={MINUTE_PRESETS}
+                                    value={params.duration}
+                                />
+                            )}
                         </div>
                     )}
 
                     {type.fields.includes('digit') && (
-                        <div className='mw-dt__field mw-dt__field--block'>
-                            <span>{localize('Last digit prediction')}</span>
-                            <DigitCircles
-                                distribution={distribution}
-                                latest={latest_digit}
-                                onSelect={digit => update({ digit })}
-                                selected={params.digit}
-                            />
+                        <div className='mw-dt__pred'>
+                            <span className='mw-dt__pred-label'>{localize('Last Digit Prediction')}</span>
+                            <div className='mw-dt__pred-grid'>
+                                {DIGITS.map(digit => (
+                                    <button
+                                        key={digit}
+                                        type='button'
+                                        className={`mw-dt__pred-digit${
+                                            digit === params.digit ? ' mw-dt__pred-digit--on' : ''
+                                        }`}
+                                        aria-pressed={digit === params.digit}
+                                        onClick={() => update({ digit })}
+                                    >
+                                        {digit}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     )}
 
                     {type.fields.includes('growth_rate') && (
-                        <label className='mw-dt__field'>
+                        <div className='mw-dt__field mw-dt__field--block'>
                             <span>{localize('Growth rate')}</span>
-                            <select
-                                value={params.growth_rate}
-                                onChange={event => update({ growth_rate: Number(event.target.value) })}
-                            >
+                            <div className='mw-dt__chips'>
                                 {GROWTH_RATES.map(rate => (
-                                    <option key={rate} value={rate}>
+                                    <button
+                                        key={rate}
+                                        type='button'
+                                        className={`mw-dt__chip${
+                                            rate === params.growth_rate ? ' mw-dt__chip--on' : ''
+                                        }`}
+                                        aria-pressed={rate === params.growth_rate}
+                                        onClick={() => update({ growth_rate: rate })}
+                                    >
                                         {`${(rate * 100).toFixed(0)}%`}
-                                    </option>
+                                    </button>
                                 ))}
-                            </select>
-                        </label>
+                            </div>
+                        </div>
                     )}
 
                     {type.fields.includes('multiplier') && (
-                        <label className='mw-dt__field'>
+                        <div className='mw-dt__field mw-dt__field--block'>
                             <span>{localize('Multiplier')}</span>
-                            <select
-                                value={params.multiplier}
-                                onChange={event => update({ multiplier: Number(event.target.value) })}
-                            >
+                            <div className='mw-dt__chips'>
                                 {MULTIPLIERS.map(value => (
-                                    <option key={value} value={value}>
+                                    <button
+                                        key={value}
+                                        type='button'
+                                        className={`mw-dt__chip${value === params.multiplier ? ' mw-dt__chip--on' : ''}`}
+                                        aria-pressed={value === params.multiplier}
+                                        onClick={() => update({ multiplier: value })}
+                                    >
                                         {`x${value}`}
-                                    </option>
+                                    </button>
                                 ))}
-                            </select>
-                        </label>
-                    )}
-
-                    {type.fields.includes('duration') && (
-                        <ValuePicker
-                            display={durationLabel(params.duration, params.duration_unit)}
-                            label={localize('Duration')}
-                            max={duration_bounds.max}
-                            min={duration_bounds.min}
-                            onChange={duration => update({ duration })}
-                            onUnitChange={next => {
-                                const unit = next as 't' | 'm';
-                                const limit = unit === 'm' ? bounds.minutes : bounds.ticks;
-                                update({ duration: limit?.min ?? 1, duration_unit: unit });
-                            }}
-                            presetLabel={preset => durationLabel(preset, params.duration_unit)}
-                            presets={params.duration_unit === 'm' ? MINUTE_PRESETS : TICK_PRESETS}
-                            unit={params.duration_unit}
-                            units={bounds.units.map(unit => ({
-                                label: unit === 'm' ? localize('Minutes') : localize('Ticks'),
-                                value: unit,
-                            }))}
-                            value={params.duration}
-                        />
+                            </div>
+                        </div>
                     )}
 
                     {type.fields.includes('barrier') && (
@@ -475,19 +559,40 @@ const DTrader = observer(() => {
 
                     {/* Deriv states the stake it will accept for this exact
                         contract - a minute-long accumulator will not go below
-                        1.00 - so the pad and the keyboard both hold to its
-                        limits rather than to a rule of our own. */}
-                    <ValuePicker
-                        display={`${params.stake} ${currency}`}
-                        label={localize('Stake')}
-                        max={stake_limits.max}
-                        min={stake_limits.min}
-                        onChange={stake => update({ stake })}
-                        presetLabel={preset => `${preset} ${currency}`}
-                        presets={STAKE_PRESETS}
-                        step={0.01}
-                        value={params.stake}
-                    />
+                        1.00 - so the stepper holds to its limits rather than to
+                        a rule of our own. */}
+                    <div className='mw-dt__stake'>
+                        <span className='mw-dt__stake-label'>{localize('Stake')}</span>
+                        <div className='mw-dt__stake-row'>
+                            <button
+                                type='button'
+                                className='mw-dt__stake-step'
+                                aria-label={localize('Less')}
+                                onClick={() => stepStake(-1)}
+                            >
+                                −
+                            </button>
+                            <input
+                                type='number'
+                                inputMode='decimal'
+                                min={stake_limits.min}
+                                max={stake_limits.max}
+                                step={0.01}
+                                value={params.stake}
+                                aria-label={localize('Stake')}
+                                onChange={event => update({ stake: Number(event.target.value) })}
+                            />
+                            <i>{currency}</i>
+                            <button
+                                type='button'
+                                className='mw-dt__stake-step'
+                                aria-label={localize('More')}
+                                onClick={() => stepStake(1)}
+                            >
+                                +
+                            </button>
+                        </div>
+                    </div>
 
                     {type.fields.includes('take_profit') && (
                         <label className='mw-dt__field'>
@@ -532,7 +637,7 @@ const DTrader = observer(() => {
                         )}
                         {details?.maximum_ticks && (
                             <div>
-                                <dt>{localize('Max. duration')}</dt>
+                                <dt>{localize('Max. ticks')}</dt>
                                 <dd>{localize('{{count}} ticks', { count: details.maximum_ticks })}</dd>
                             </div>
                         )}
@@ -568,30 +673,49 @@ const DTrader = observer(() => {
                                 <dd>{`${proposal.commission.toFixed(2)} ${currency}`}</dd>
                             </div>
                         )}
-                        {proposal?.display_number_of_contracts && (
-                            <div>
-                                <dt>{localize('Payout per point')}</dt>
-                                <dd>{`${proposal.display_number_of_contracts} ${currency}`}</dd>
-                            </div>
-                        )}
                     </dl>
 
-                    {price_error && <p className='mw-dt__error'>{price_error}</p>}
                     {trade.error_message && <p className='mw-dt__error'>{trade.error_message}</p>}
                     {bought && !trade.error_message && <p className='mw-dt__ok'>{bought}</p>}
 
-                    <button type='button' className='mw-dt__buy' onClick={buy} disabled={trade.is_placing}>
-                        <b>
-                            {trade.is_placing
-                                ? localize('Buying...')
-                                : has_session
-                                  ? localize('Buy')
-                                  : localize('Log in to buy')}
-                        </b>
-                        {payout > 0 && (
-                            <i>{localize('Payout {{payout}} {{currency}}', { currency, payout: payout.toFixed(2) })}</i>
-                        )}
-                    </button>
+                    {/* One button per side, each carrying Deriv's payout for
+                        that side and what it makes on the stake - and buying
+                        that side, which is the ticket's only action. */}
+                    <div className={`mw-dt__actions${has_two_sides ? '' : ' mw-dt__actions--one'}`}>
+                        {type.sides.map((side, index) => {
+                            const quote = quotes[index];
+                            const payout = quote.proposal?.payout ?? 0;
+                            const percent = profitPercent(payout);
+                            const digit_error = digitError(index);
+                            const message = digit_error ?? quote.error;
+
+                            return (
+                                <div key={side.contract_type} className='mw-dt__action'>
+                                    <p className='mw-dt__action-payout'>
+                                        <span>{localize('Payout')}</span>
+                                        <b>{payout > 0 ? `${payout.toFixed(2)} ${currency}` : '-'}</b>
+                                    </p>
+                                    <button
+                                        type='button'
+                                        className={`mw-dt__action-btn mw-dt__action-btn--${index === 0 ? 'up' : 'down'}`}
+                                        disabled={trade.is_placing || Boolean(digit_error)}
+                                        onClick={() => buy(index)}
+                                    >
+                                        <TradeIcon id={type.id} />
+                                        <span>
+                                            {trade.is_placing && !digit_error
+                                                ? localize('Buying...')
+                                                : has_session
+                                                  ? localize(side.label)
+                                                  : localize('Log in')}
+                                        </span>
+                                        {percent && !digit_error && <b>{percent}</b>}
+                                    </button>
+                                    {message && <p className='mw-dt__action-error'>{message}</p>}
+                                </div>
+                            );
+                        })}
+                    </div>
 
                     {/* The stats row Deriv shows for accumulators: how many
                         ticks each of the last runs stayed inside the barrier. */}
@@ -608,6 +732,25 @@ const DTrader = observer(() => {
                     )}
                 </aside>
             </div>
+
+            <TradeTypesPanel
+                is_open={is_types_open}
+                onClose={() => setIsTypesOpen(false)}
+                onSelect={id => {
+                    const next = findTradeType(id);
+                    setTypeId(id);
+                    // Each family has its own duration bounds, so the ticket
+                    // lands on a duration that prices instead of one the last
+                    // type allowed.
+                    const unit = next.duration_units[0] ?? 't';
+                    update({
+                        duration: unit === 'm' ? (next.min_minutes ?? 1) : (next.min_ticks ?? 1) + 4,
+                        duration_unit: unit,
+                    });
+                }}
+                supported={supported}
+                type_id={type_id}
+            />
         </div>
     );
 });

@@ -354,3 +354,38 @@ export const buildTradeRequest = (
 
     return request;
 };
+
+/**
+ * Which digits each side of a digit contract will take.
+ *
+ * Deriv refuses the end that can never win - DIGITOVER 9 and DIGITUNDER 0 have
+ * no outcome that pays - and answers "Digit must be in the range of 0 to 8"
+ * and "Digit must be in the range of 1 to 9". The ticket says the same thing
+ * against the button it applies to, rather than sending a contract whose only
+ * possible answer is that refusal. The other side stays buyable meanwhile,
+ * which is why this is per side rather than per ticket.
+ */
+export const digitBounds = (type: TTradeType, side_index: number) => {
+    if (!type.fields.includes('digit')) return null;
+    if (type.id !== 'over_under') return { max: 9, min: 0 };
+    return side_index === 0 ? { max: 8, min: 0 } : { max: 9, min: 1 };
+};
+
+/** What each contract pays on, for "Learn about this trade type". */
+export const TRADE_DESCRIPTIONS: Record<string, string> = {
+    accumulators:
+        'The stake grows by the growth rate on every tick that stays inside the barrier range, and the contract ends as soon as a tick falls outside it.',
+    even_odd: 'Wins if the last digit of the final tick is even, or odd - whichever side you buy.',
+    higher_lower: 'Wins if the exit spot is above the barrier (Higher) or below it (Lower).',
+    matches_differs:
+        'Wins if the last digit of the final tick is the digit you picked (Matches), or any other digit (Differs).',
+    multipliers: 'The market move is multiplied by the multiplier you choose. The loss is limited to the stake.',
+    over_under:
+        'Wins if the last digit of the final tick is above the digit you picked (Over) or below it (Under). Over takes 0 to 8, Under takes 1 to 9.',
+    rise_fall:
+        'Wins if the exit spot is strictly higher (Rise) or strictly lower (Fall) than the entry spot. Allow equals also pays when the two are equal.',
+    touch_no_touch:
+        'Touch wins if the market touches the barrier at any time during the contract; No Touch wins only if it never does.',
+    turbos: 'Pays per point the market moves your way, and ends if the barrier is hit.',
+    vanillas: 'Pays the difference between the final price and the strike, when it ends in your favour.',
+};
