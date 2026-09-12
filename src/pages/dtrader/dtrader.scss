@@ -34,8 +34,15 @@ $dt-orange: #ff6337;
     padding: 1.2rem 1.6rem 1.6rem;
 
     @media (width >= 1100px) {
-        grid-template-columns: 26rem minmax(0, 1fr) 30rem;
+        grid-template-columns: minmax(0, 1fr) 30rem;
         align-items: stretch;
+    }
+}
+
+// The positions column only exists once there is a position in it.
+.mw-dt__body--positions {
+    @media (width >= 1100px) {
+        grid-template-columns: 26rem minmax(0, 1fr) 30rem;
     }
 }
 
@@ -619,6 +626,14 @@ $dt-orange: #ff6337;
 }
 
 .mw-dt__chart {
+    // The line the ticks draw, and - through currentcolor at 18% fading out -
+    // the fill under it. A mid grey rather than the page's text colour, which
+    // is near-black on the light theme and drew a far heavier line than the
+    // reference: measured off it, the line is #7d7d7d and the fill runs #e0e0e0
+    // down to #f1f1f1, which is this colour at that opacity over white. The
+    // dark theme lifts it, because #7d7d7d on near-black is barely there.
+    --mw-dt-line: #7d7d7d;
+
     position: relative;
     display: flex;
     flex-direction: column;
@@ -628,10 +643,11 @@ $dt-orange: #ff6337;
     border: 1px solid var(--general-section-1);
     border-radius: 10px;
     overflow: hidden;
+    color: var(--mw-dt-line);
+}
 
-    // The gradient under the line inherits this, so the fill always belongs to
-    // the line's own colour.
-    color: var(--text-prominent);
+.theme--dark .mw-dt__chart {
+    --mw-dt-line: #9aa0a6;
 }
 
 .mw-dt__chart-svg {

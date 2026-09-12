@@ -113,9 +113,13 @@ const PriceChart = ({ decimals, epochs = [], prices }: TPriceChartProps) => {
                     aria-label={localize('Price chart')}
                 >
                     <defs>
+                        {/* Measured off the reference, which fades but never
+                            reaches the page: at 0.32 down to 0.08 of the line's
+                            own grey, the fill reads #e2e2e2 where the reference
+                            reads #e0e0e0 and #f0f0f0 where it reads #f1f1f1. */}
                         <linearGradient id='mw-dt-fill' x1='0' y1='0' x2='0' y2='1'>
-                            <stop offset='0%' stopColor='currentColor' stopOpacity='0.18' />
-                            <stop offset='100%' stopColor='currentColor' stopOpacity='0' />
+                            <stop offset='0%' stopColor='currentColor' stopOpacity='0.32' />
+                            <stop offset='100%' stopColor='currentColor' stopOpacity='0.08' />
                         </linearGradient>
                     </defs>
 

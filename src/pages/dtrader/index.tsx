@@ -319,13 +319,19 @@ const DTrader = observer(() => {
     // longer gives up 37rem of it to a drawer.
     return (
         <div className='mw-dt'>
-            <div className='mw-dt__body'>
-                <PositionsPanel
-                    is_collapsed={is_positions_collapsed}
-                    onDismiss={dismiss}
-                    onToggle={() => setIsPositionsCollapsed(current => !current)}
-                    positions={positions}
-                />
+            <div className={`mw-dt__body${positions.length ? ' mw-dt__body--positions' : ''}`}>
+                {/* There is nothing to show until something has been bought,
+                    and an empty panel would hold 26rem of the page open for a
+                    picture of an empty box. It appears with the first contract
+                    and the chart gives the width back. */}
+                {positions.length > 0 && (
+                    <PositionsPanel
+                        is_collapsed={is_positions_collapsed}
+                        onDismiss={dismiss}
+                        onToggle={() => setIsPositionsCollapsed(current => !current)}
+                        positions={positions}
+                    />
+                )}
 
                 <section className='mw-dt__chart-side'>
                     <MarketSelect
