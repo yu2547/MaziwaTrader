@@ -75,8 +75,16 @@ const DTrader = observer(() => {
      * than pricing the same thing twice.
      */
     const has_two_sides = type.sides.length > 1;
-    const quote_up = useTradeProposal({ currency, params, side_index: 0, symbol, type });
-    const quote_down = useTradeProposal({ currency, enabled: has_two_sides, params, side_index: 1, symbol, type });
+    const quote_up = useTradeProposal({ currency, is_connected: isConnected, params, side_index: 0, symbol, type });
+    const quote_down = useTradeProposal({
+        currency,
+        enabled: has_two_sides,
+        is_connected: isConnected,
+        params,
+        side_index: 1,
+        symbol,
+        type,
+    });
     const quotes = useMemo(() => [quote_up, quote_down], [quote_up, quote_down]);
 
     const update = useCallback((patch: Partial<TTradeParams>) => setParams(current => ({ ...current, ...patch })), []);

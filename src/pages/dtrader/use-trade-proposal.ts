@@ -20,6 +20,12 @@ import { buildTradeRequest, TTradeParams, TTradeType } from './trade-types';
 // been sitting on screen is never stale by more than a few seconds.
 const REPRICE_MS = 5000;
 
+// How soon a failed attempt is tried again. A failure is usually the socket not
+// being ready rather than Deriv refusing anything, and waiting out the full
+// cadence for it is what left the buttons reading "-" long after the rest of
+// the page was up.
+const RETRY_MS = 700;
+
 /**
  * Turbos price from a payout per point, and only from the handful of values
  * Deriv offers - which it names when it refuses one:
@@ -39,13 +45,31 @@ type TArgs = {
      * one-sided contract is not priced twice over.
      */
     enabled?: boolean;
+    /**
+     * Whether the feed's socket is open.
+     *
+     * Asking before it is cost a whole re-pricing cycle: the request failed and
+     * the retry was the next one on the clock. Measured on the live site, the
+     * market name and the chart were up at 1.2 and 1.3 seconds and the payouts
+     * did not appear until 5.5 - four seconds of two buttons reading "-" on a
+     * page that was otherwise ready.
+     */
+    is_connected?: boolean;
     params: TTradeParams;
     side_index: number;
     symbol: string;
     type: TTradeType;
 };
 
-const useTradeProposal = ({ currency, enabled = true, params, side_index, symbol, type }: TArgs) => {
+const useTradeProposal = ({
+    currency,
+    enabled = true,
+    is_connected = true,
+    params,
+    side_index,
+    symbol,
+    type,
+}: TArgs) => {
     const [response, setResponse] = useState<TProposalResponse | null>(null);
     const [offered_payouts_per_point, setOfferedPayoutsPerPoint] = useState<string[]>([]);
     const [is_pricing, setIsPricing] = useState(false);
@@ -61,10 +85,14 @@ const useTradeProposal = ({ currency, enabled = true, params, side_index, symbol
         let timer: ReturnType<typeof setTimeout> | undefined;
         let cancelled = false;
 
-        if (!enabled) {
+        if (!enabled || !is_connected) {
             setResponse(null);
             return undefined;
         }
+
+        // Counted per run of this effect: how many attempts in a row have come
+        // back as a failure rather than as an answer from Deriv.
+        let failures = 0;
 
         // The previous contract's quote is not this contract's quote. Held on
         // screen while the new one is in flight, it read as a payout for the
@@ -85,18 +113,25 @@ const useTradeProposal = ({ currency, enabled = true, params, side_index, symbol
 
                 const offered = readOfferedValues(result.error?.message);
                 if (offered.length) setOfferedPayoutsPerPoint(offered);
+                // An answer, even a refusal, is Deriv replying: the socket is
+                // there and the next quote can wait for the usual cadence.
+                failures = 0;
                 setResponse(result);
             } catch {
                 if (!cancelled && id === request_id.current) {
                     // A transport failure is not a refusal by Deriv, so it
                     // leaves the last quote alone rather than replacing it
                     // with a message the trader cannot act on.
+                    failures += 1;
                     setResponse(current => current);
                 }
             } finally {
                 if (!cancelled && id === request_id.current) {
                     setIsPricing(false);
-                    timer = setTimeout(price, REPRICE_MS);
+                    // Straight back after a failure rather than waiting out the
+                    // full cadence, easing off if it keeps failing so a feed
+                    // that is down is not hammered.
+                    timer = setTimeout(price, failures ? Math.min(RETRY_MS * failures, REPRICE_MS) : REPRICE_MS);
                 }
             }
         };
@@ -106,7 +141,7 @@ const useTradeProposal = ({ currency, enabled = true, params, side_index, symbol
             cancelled = true;
             if (timer) clearTimeout(timer);
         };
-    }, [enabled, request_key, symbol]);
+    }, [enabled, is_connected, request_key, symbol]);
 
     return {
         error: response?.error?.message ?? null,
