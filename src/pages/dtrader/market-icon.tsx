@@ -31,12 +31,24 @@ const useIconModule = (key: 'legacy' | 'markets') => {
             return undefined;
         }
         let alive = true;
-        loaders[key]().then(loaded => {
-            cache.set(key, loaded as TIconModule);
-            if (alive) setModule(loaded as TIconModule);
+
+        // Fetched once the page has settled rather than as it mounts. The
+        // market set is 1.8MB of artwork against a 55KB page, and asking for
+        // it at mount put the two in the same queue - the page came up behind
+        // its own decoration. Nothing here is needed to trade: a row without
+        // its icon still reads, and the icons fill in a moment later.
+        const idle = window.requestIdleCallback ?? ((run: () => void) => window.setTimeout(run, 300));
+        const cancel = window.cancelIdleCallback ?? window.clearTimeout;
+        const handle = idle(() => {
+            loaders[key]().then(loaded => {
+                cache.set(key, loaded as TIconModule);
+                if (alive) setModule(loaded as TIconModule);
+            });
         });
+
         return () => {
             alive = false;
+            cancel(handle as number);
         };
     }, [key]);
 

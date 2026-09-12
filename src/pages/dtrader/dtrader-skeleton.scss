@@ -1,0 +1,57 @@
+// The frame the DTrader page fills in, held for the moment its chunk takes to
+// arrive. Same columns and padding as .mw-dt__body, so nothing jumps sideways
+// when the real page replaces it.
+.mw-dt-skeleton {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.2rem;
+    flex: 1;
+    min-height: 0;
+    padding: 1.2rem 1.6rem 1.6rem;
+    background: var(--general-main-1);
+
+    @media (width >= 1100px) {
+        grid-template-columns: minmax(0, 1fr) 30rem;
+    }
+}
+
+.mw-dt-skeleton__stage {
+    display: grid;
+    place-items: center;
+    min-height: 30rem;
+}
+
+.mw-dt-skeleton__ticket {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.mw-dt-skeleton__block {
+    height: 9rem;
+    border-radius: 10px;
+    background: linear-gradient(
+        90deg,
+        var(--general-section-1) 25%,
+        rgb(255 255 255 / 35%) 37%,
+        var(--general-section-1) 63%
+    );
+    background-size: 400% 100%;
+    animation: mw-dt-skeleton-sheen 1.4s ease infinite;
+}
+
+@keyframes mw-dt-skeleton-sheen {
+    0% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0 50%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mw-dt-skeleton__block {
+        animation: none;
+    }
+}

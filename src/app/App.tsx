@@ -8,6 +8,7 @@ import RoutePromptDialog from '@/components/route-prompt-dialog';
 import { crypto_currencies_display_order, fiat_currencies_display_order } from '@/components/shared';
 import { StoreProvider } from '@/hooks/useStore';
 import CallbackPage from '@/pages/callback';
+import DTraderSkeleton from '@/pages/dtrader/dtrader-skeleton';
 import Endpoint from '@/pages/endpoint';
 import { TAuthData } from '@/types/api-types';
 import { initializeI18n, TranslationProvider } from '@deriv-com/translations';
@@ -80,7 +81,20 @@ const router = createBrowserRouter(
             <Route path='bulk-trader' element={<BulkTrader />} errorElement={<RouteErrorBoundary />} />
             <Route path='manual' element={<ManualTrader />} errorElement={<RouteErrorBoundary />} />
             <Route path='tradingview' element={<TradingViewPage />} errorElement={<RouteErrorBoundary />} />
-            <Route path='dtrader' element={<DTrader />} errorElement={<RouteErrorBoundary />} />
+            {/* Its own boundary, so waiting for this page's chunk leaves the
+                header and the navigation where they are and fills only the
+                content area - the boundary above covers the whole shell, and
+                falling back to it blanked the window to the branded loader to
+                fetch 55KB. */}
+            <Route
+                path='dtrader'
+                element={
+                    <Suspense fallback={<DTraderSkeleton />}>
+                        <DTrader />
+                    </Suspense>
+                }
+                errorElement={<RouteErrorBoundary />}
+            />
             <Route path='copy-trading' element={<CopyTrading />} errorElement={<RouteErrorBoundary />} />
         </Route>
     )
