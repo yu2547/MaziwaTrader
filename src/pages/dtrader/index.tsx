@@ -42,7 +42,7 @@ const DIGITS = Array.from({ length: 10 }, (_, digit) => digit);
 
 const DTrader = observer(() => {
     const { feed, isConnected } = usePublicMarketFeed();
-    const { client, oauth_session, run_panel } = useStore() ?? {};
+    const { client, oauth_session } = useStore() ?? {};
     const { localize } = useTranslations();
     const trade = useManualTrade();
 
@@ -314,12 +314,11 @@ const DTrader = observer(() => {
     // Only the digit contracts have a second view to page to.
     const shown_stage = type.shows_digit_stats ? stage : 'chart';
 
-    // The run panel opens as a drawer over the right edge - which is exactly
-    // where this page's ticket is (measured: drawer from 914px, ticket
-    // 964-1264px, so the whole ticket sat underneath it). The page gives way
-    // rather than the trader having to close the panel to place a trade.
+    // The bot's run panel and execution bar are not mounted on this route (see
+    // components/layout/index.tsx), so the page has the width to itself and no
+    // longer gives up 37rem of it to a drawer.
     return (
-        <div className={`mw-dt${run_panel?.is_drawer_open ? ' mw-dt--drawer' : ''}`}>
+        <div className='mw-dt'>
             <div className='mw-dt__body'>
                 <PositionsPanel
                     is_collapsed={is_positions_collapsed}

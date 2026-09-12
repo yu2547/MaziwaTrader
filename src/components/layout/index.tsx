@@ -51,6 +51,11 @@ const Layout = observer(() => {
 
     const isLoggedInCookie = Cookies.get('logged_state') === 'true';
     const isEndpointPage = pathname.includes('endpoint');
+    // DTrader buys from its own ticket and has no bot to start, so neither the
+    // bot's panel nor its execution bar belongs on that page. The bar in
+    // particular sat across the bottom of it on a phone, over the very buttons
+    // the page is for.
+    const isDTraderPage = pathname === '/dtrader';
 
     // Restores the stored OAuth session and opens the trading connection, for
     // every route rather than only the index one. Both used to run inside
@@ -295,8 +300,8 @@ const Layout = observer(() => {
                 there at all. One copy, mounted once. */}
             {!isCallbackPage && !isLandingPage && (
                 <>
-                    <RunPanel />
-                    <ExecutionBar />
+                    {!isDTraderPage && <RunPanel />}
+                    {!isDTraderPage && <ExecutionBar />}
                     {/* Opened by the trade-parameters block's VH Settings
                         button. Lives in the shell rather than the Bot Builder
                         page so it is mounted whenever a workspace can exist,

@@ -39,14 +39,6 @@ $dt-orange: #ff6337;
     }
 }
 
-// The run panel's drawer is 36.6rem wide and overlays the right edge; while it
-// is open the page ends where the drawer begins, so the ticket stays reachable.
-.mw-dt--drawer .mw-dt__body {
-    @media (width >= 1100px) {
-        padding-right: 37rem;
-    }
-}
-
 .mw-dt__positions {
     display: flex;
     flex-direction: column;
@@ -554,9 +546,10 @@ $dt-orange: #ff6337;
 }
 
 // A container rather than a plain box: how many rings fit on a row depends on
-// this column, which is not the window - the run panel's drawer takes 37rem off
-// it, and ten rings in what is left came out 19px wide with the figures spilling
-// past them. The rings ask their own column how much room they have.
+// this column, not on the window - the positions list and the ticket take
+// 56rem of it between them, and ten rings in a column that narrow came out
+// 19px wide with the figures spilling past them. The rings ask their own
+// column how much room they have.
 .mw-dt__stage-digits {
     container-type: inline-size;
     display: flex;
@@ -720,9 +713,8 @@ $dt-orange: #ff6337;
     }
 }
 
-// Five to a row once the column holding them is too narrow for ten - which is
-// the run panel's drawer as often as it is the window. After the base rule, so
-// it is the one that wins where both apply.
+// Five to a row once the column holding them is too narrow for ten. After the
+// base rule, so it is the one that wins where both apply.
 @container (width < 46rem) {
     .mw-dt__digits {
         grid-template-columns: repeat(5, minmax(0, 1fr));
