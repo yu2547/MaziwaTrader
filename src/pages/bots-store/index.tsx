@@ -4,7 +4,7 @@ import { load, save_types } from '@/external/bot-skeleton';
 import { useStore } from '@/hooks/useStore';
 import { waitForDerivWorkspace } from '@/utils/wait-for-workspace';
 import { localize } from '@deriv-com/translations';
-import { type Bot, BOTS } from '../free-bots';
+import { type Bot, BOTS, isScalper } from '../free-bots';
 import './bots-store.scss';
 
 /**
@@ -41,7 +41,8 @@ const BotsStore = observer(() => {
     // with the colour it will keep.
     const groups = useMemo(() => {
         const by_name = new Map<string, Bot[]>();
-        BOTS.forEach(bot => {
+        // The scalpers keep to their own page - see isScalper.
+        BOTS.filter(bot => !isScalper(bot)).forEach(bot => {
             const name = GROUP_OF(bot);
             const existing = by_name.get(name);
             if (existing) existing.push(bot);

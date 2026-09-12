@@ -244,6 +244,18 @@ export const BOTS: Bot[] = [
     },
 ];
 
+/**
+ * The scalpers, which are listed on their own page.
+ *
+ * They stay in this one catalogue - Scalper Bots reads it, and their files and
+ * badges live here with every other bot - but they are kept out of Free Bots
+ * and the Bots Store, so the same nine cards are not repeated under three tabs.
+ *
+ * Recognised by the id suffix every one of them carries, so a tenth scalper
+ * added to the catalogue needs nothing here.
+ */
+export const isScalper = (bot: Bot) => bot.id.endsWith('-scalper');
+
 export type TFreeBotsProps = {
     /**
      * Restricts the catalogue to these categories. Used by the Trading Bots
@@ -267,9 +279,13 @@ const FreeBots = observer(({ allowed_categories, subtitle, title }: TFreeBotsPro
     // allowed_categories still scopes the catalogue - that is how Trading Bots
     // shows only its own section. What is gone is the row of category pills the
     // reader could click; search covers the same ground, category included.
+    //
+    // The scalpers are never listed here: they have a page of their own, and
+    // were appearing on both.
+    const listed = BOTS.filter(bot => !isScalper(bot));
     const bots_in_scope = allowed_categories?.length
-        ? BOTS.filter(bot => allowed_categories.includes(bot.category))
-        : BOTS;
+        ? listed.filter(bot => allowed_categories.includes(bot.category))
+        : listed;
 
     const normalized_search = search_term.trim().toLowerCase();
 
