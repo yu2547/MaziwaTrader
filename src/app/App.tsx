@@ -3,12 +3,12 @@ import { lazy, Suspense } from 'react';
 import React from 'react';
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } from 'react-router-dom';
 import RouteErrorBoundary from '@/components/layout/route-error-boundary';
+import PageSkeleton from '@/components/loader/page-skeleton';
 import LoadingScreen from '@/components/loading-screen/loading-screen';
 import RoutePromptDialog from '@/components/route-prompt-dialog';
 import { crypto_currencies_display_order, fiat_currencies_display_order } from '@/components/shared';
 import { StoreProvider } from '@/hooks/useStore';
 import CallbackPage from '@/pages/callback';
-import DTraderSkeleton from '@/pages/dtrader/dtrader-skeleton';
 import Endpoint from '@/pages/endpoint';
 import { TAuthData } from '@/types/api-types';
 import { initializeI18n, TranslationProvider } from '@deriv-com/translations';
@@ -46,6 +46,24 @@ const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => {
     return <Suspense fallback={<LoadingScreen ready={false} onExited={() => {}} />}>{children}</Suspense>;
 };
 
+/**
+ * A page behind a boundary of its own, so waiting for its chunk leaves the
+ * header and the navigation where they are and fills only the content area.
+ *
+ * Without one, every page falls back to the boundary above - which wraps the
+ * whole shell, and whose fallback is the full-screen branded loader, so moving
+ * between pages blanked the window to fetch tens of kilobytes. The branded one
+ * still covers what it is for: the first load, where the shell itself is on its
+ * way.
+ *
+ * `with_panel` is for the pages that carry a panel down the right, so the
+ * spinner waits where the content will be rather than in the middle of the
+ * whole width.
+ */
+const page = (element: React.ReactNode, with_panel = false) => (
+    <Suspense fallback={<PageSkeleton with_panel={with_panel} />}>{element}</Suspense>
+);
+
 const router = createBrowserRouter(
     createRoutesFromElements(
         <Route
@@ -72,30 +90,19 @@ const router = createBrowserRouter(
                 falls back to the '/' boundary, whose element is the entire
                 Layout, and the header and navigation disappear along with
                 the failing page. */}
-            <Route index element={<AppRoot />} errorElement={<RouteErrorBoundary />} />
+            <Route index element={page(<AppRoot />)} errorElement={<RouteErrorBoundary />} />
+            {/* Both are imported directly rather than lazily, so neither ever
+                suspends and neither needs a boundary. */}
             <Route path='endpoint' element={<Endpoint />} errorElement={<RouteErrorBoundary />} />
             <Route path='callback' element={<CallbackPage />} errorElement={<RouteErrorBoundary />} />
-            <Route path='free-bots' element={<FreeBots />} errorElement={<RouteErrorBoundary />} />
-            <Route path='analysis-tool' element={<AnalysisTool />} errorElement={<RouteErrorBoundary />} />
-            <Route path='risk-calculator' element={<RiskCalculator />} errorElement={<RouteErrorBoundary />} />
-            <Route path='bulk-trader' element={<BulkTrader />} errorElement={<RouteErrorBoundary />} />
-            <Route path='manual' element={<ManualTrader />} errorElement={<RouteErrorBoundary />} />
-            <Route path='tradingview' element={<TradingViewPage />} errorElement={<RouteErrorBoundary />} />
-            {/* Its own boundary, so waiting for this page's chunk leaves the
-                header and the navigation where they are and fills only the
-                content area - the boundary above covers the whole shell, and
-                falling back to it blanked the window to the branded loader to
-                fetch 55KB. */}
-            <Route
-                path='dtrader'
-                element={
-                    <Suspense fallback={<DTraderSkeleton />}>
-                        <DTrader />
-                    </Suspense>
-                }
-                errorElement={<RouteErrorBoundary />}
-            />
-            <Route path='copy-trading' element={<CopyTrading />} errorElement={<RouteErrorBoundary />} />
+            <Route path='free-bots' element={page(<FreeBots />)} errorElement={<RouteErrorBoundary />} />
+            <Route path='analysis-tool' element={page(<AnalysisTool />)} errorElement={<RouteErrorBoundary />} />
+            <Route path='risk-calculator' element={page(<RiskCalculator />)} errorElement={<RouteErrorBoundary />} />
+            <Route path='bulk-trader' element={page(<BulkTrader />)} errorElement={<RouteErrorBoundary />} />
+            <Route path='manual' element={page(<ManualTrader />)} errorElement={<RouteErrorBoundary />} />
+            <Route path='tradingview' element={page(<TradingViewPage />)} errorElement={<RouteErrorBoundary />} />
+            <Route path='dtrader' element={page(<DTrader />, true)} errorElement={<RouteErrorBoundary />} />
+            <Route path='copy-trading' element={page(<CopyTrading />)} errorElement={<RouteErrorBoundary />} />
         </Route>
     )
 );
