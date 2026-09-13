@@ -10,21 +10,20 @@ import { canEvaluateVirtually } from '../utils/virtual-hook-runner';
 import { purchaseSuccessful } from './state/actions';
 import { BEFORE_PURCHASE } from './state/constants';
 
-let delayIndex = 0;
-let purchase_reference;
-
 export default Engine =>
     class Purchase extends Engine {
+        // Both were module-level, so every TradeEngine in the page shared one
+        // copy. purchase_reference is the token Proposal.js matches a returned
+        // price against (`proposal.purchase_reference === getPurchaseReference()`),
+        // so a second engine regenerating it invalidated the first engine's
+        // prices mid-run; delay_index is the retry backoff position for this
+        // run only. Both belong to the engine that is trading.
+        delay_index = 0;
+        purchase_reference = undefined;
+
         purchase(contract_type) {
-            // eslint-disable-next-line no-console
-            console.log('[TRACE] PURCHASE -> purchase entered', contract_type);
             // Prevent calling purchase twice
             if (this.store.getState().scope !== BEFORE_PURCHASE) {
-                // eslint-disable-next-line no-console
-                console.log(
-                    '[TRACE] PURCHASE -> returned early (scope is not BEFORE_PURCHASE)',
-                    this.store.getState().scope
-                );
                 return Promise.resolve();
             }
 
@@ -42,8 +41,6 @@ export default Engine =>
             }
 
             const onSuccess = response => {
-                // eslint-disable-next-line no-console
-                console.log('[TRACE] PURCHASE -> buy response received', response);
                 markTiming('buy_accepted');
                 // Don't unnecessarily send a forget request for a purchased contract.
                 const { buy } = response;
@@ -55,18 +52,13 @@ export default Engine =>
                 });
 
                 this.contractId = buy.contract_id;
-                // eslint-disable-next-line no-console
-                console.log(
-                    '[TRACE] PURCHASE -> contractId set, now waiting for proposal_open_contract',
-                    this.contractId
-                );
                 this.store.dispatch(purchaseSuccessful());
 
                 if (this.is_proposal_subscription_required) {
                     this.renewProposalsOnPurchase();
                 }
 
-                delayIndex = 0;
+                this.delay_index = 0;
                 log(LogTypes.PURCHASE, { longcode: buy.longcode, transaction_id: buy.transaction_id });
                 info({
                     accountID: this.accountInfo.loginid,
@@ -82,8 +74,6 @@ export default Engine =>
 
                 const action = () => {
                     markTiming('buy_sent');
-                    // eslint-disable-next-line no-console
-                    console.log('[TRACE] PURCHASE -> sending buy (by proposal id)', { id, price: askPrice });
                     return api_base.api.send({ buy: id, price: askPrice });
                 };
 
@@ -95,13 +85,7 @@ export default Engine =>
                 });
 
                 if (!this.options.timeMachineEnabled) {
-                    return doUntilDone(action)
-                        .then(onSuccess)
-                        .catch(error => {
-                            // eslint-disable-next-line no-console
-                            console.log('[TRACE] PURCHASE -> buy rejected', error);
-                            throw error;
-                        });
+                    return doUntilDone(action).then(onSuccess);
                 }
 
                 return recoverFromError(
@@ -123,15 +107,11 @@ export default Engine =>
                         });
                     },
                     ['PriceMoved', 'InvalidContractProposal'],
-                    delayIndex++
+                    this.delay_index++
                 ).then(onSuccess);
             }
             const trade_option = tradeOptionToBuy(contract_type, this.tradeOptions, api_base.is_otp_transport);
-            const action = () => {
-                // eslint-disable-next-line no-console
-                console.log('[TRACE] PURCHASE -> sending buy (direct parameters)', trade_option);
-                return api_base.api.send(trade_option);
-            };
+            const action = () => api_base.api.send(trade_option);
 
             this.isSold = false;
 
@@ -141,13 +121,7 @@ export default Engine =>
             });
 
             if (!this.options.timeMachineEnabled) {
-                return doUntilDone(action)
-                    .then(onSuccess)
-                    .catch(error => {
-                        // eslint-disable-next-line no-console
-                        console.log('[TRACE] PURCHASE -> buy rejected', error);
-                        throw error;
-                    });
+                return doUntilDone(action).then(onSuccess);
             }
 
             return recoverFromError(
@@ -165,7 +139,7 @@ export default Engine =>
                     });
                 },
                 ['PriceMoved', 'InvalidContractProposal'],
-                delayIndex++
+                this.delay_index++
             ).then(onSuccess);
         }
         /**
@@ -252,8 +226,8 @@ export default Engine =>
             return Promise.resolve();
         }
 
-        getPurchaseReference = () => purchase_reference;
+        getPurchaseReference = () => this.purchase_reference;
         regeneratePurchaseReference = () => {
-            purchase_reference = getUUID();
+            this.purchase_reference = getUUID();
         };
     };

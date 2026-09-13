@@ -36,31 +36,64 @@ const watchDuring = store =>
         passFlag: 'openContract',
     });
 
-/* The watchScope function is called randomly and resets the prevTick
- * which leads to the same problem we try to solve. So prevTick is isolated
+/**
+ * Resolves true when the generated code should run its loop body again, false
+ * when the scope has moved on and the loop should end. Both `watch('before')`
+ * and `watch('during')` are loop conditions, so "true" has to mean "there is
+ * something new to act on" - repeating it on every store notification would
+ * spin the strategy's before/during block with no tick in between.
+ *
+ * The tick baseline is per call. It used to be a single module-level
+ * `prevTick` shared by every watcher in the app, and since two TradeEngine
+ * instances watching the same symbol see identical epochs, whichever
+ * subscriber ran first recorded the epoch and the other then saw its own tick
+ * as "not new" and ignored it.
+ *
+ * The pass condition is evaluated on a transition rather than only on a tick.
+ * A condition already satisfied when the watch starts is not news - the body
+ * has just run for that state, so the next run waits for a tick, exactly as
+ * before. A condition that becomes satisfied while watching is news and
+ * resolves immediately. That is the OPEN_CONTRACT case: the reducer sets
+ * `openContract: true` without touching `newTick`, so the notification carrying
+ * a real, matched open contract was discarded, and a bot holding that contract
+ * stayed parked here until the next tick - forever, if its tick monitor had
+ * meanwhile been taken over by another engine.
+ *
+ * Leaving the scope ends the loop and is never gated on a tick: an exit cannot
+ * spin, and delaying it only delays the next stage.
  */
-let prevTick;
-const watchScope = ({ store, stopScope, passScope, passFlag }) => {
+export const watchScope = ({ store, stopScope, passScope, passFlag }) => {
     // in case watch is called after stop is fired
     if (store.getState().scope === stopScope) {
         return Promise.resolve(false);
     }
+
+    const passes = state => state.scope === passScope && Boolean(state[passFlag]);
+
+    let previous_tick = store.getState().newTick;
+    let was_passing = passes(store.getState());
+
     return new Promise(resolve => {
         const unsubscribe = store.subscribe(() => {
             const newState = store.getState();
 
-            if (newState.newTick === prevTick) return;
-            prevTick = newState.newTick;
-
-            if (newState.scope === passScope && newState[passFlag]) {
-                unsubscribe();
-                resolve(true);
-            }
-
             if (newState.scope === stopScope) {
                 unsubscribe();
                 resolve(false);
+                return;
             }
+
+            const is_passing = passes(newState);
+            const has_new_tick = newState.newTick !== previous_tick;
+            previous_tick = newState.newTick;
+
+            if (is_passing && (!was_passing || has_new_tick)) {
+                unsubscribe();
+                resolve(true);
+                return;
+            }
+
+            was_passing = is_passing;
         });
     });
 };
@@ -101,8 +134,6 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
     }
 
     init(...args) {
-        // eslint-disable-next-line no-console
-        console.log('[TRACE] TRADE -> init entered');
         const [token, options] = expectInitArg(args);
         const { symbol } = options;
 
@@ -114,11 +145,7 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
     }
 
     start(tradeOptions) {
-        // eslint-disable-next-line no-console
-        console.log('[TRACE] TRADE -> start entered');
         if (!this.options) {
-            // eslint-disable-next-line no-console
-            console.log('[TRACE] TRADE -> start throwing NotInitialized (Bot.init was not called)');
             throw createError('NotInitialized', localize('Bot.init is not called'));
         }
 
@@ -159,11 +186,7 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
             });
         }
 
-        // eslint-disable-next-line no-console
-        console.log('[TRACE] TRADE -> makeDirectPurchaseDecision');
         this.makeDirectPurchaseDecision();
-        // eslint-disable-next-line no-console
-        console.log('[TRACE] TRADE -> makeDirectPurchaseDecision returned');
     }
 
     loginAndGetBalance(token) {
@@ -207,8 +230,6 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
     }
 
     watch(watchName) {
-        // eslint-disable-next-line no-console
-        console.log('[TRACE] TRADE -> watch', watchName);
         if (watchName === 'before') {
             return watchBefore(this.store);
         }

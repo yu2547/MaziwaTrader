@@ -13,25 +13,8 @@ export default Engine =>
         observeOpenContract() {
             if (!api_base.api) return;
             const subscription = api_base.api.onMessage().subscribe(({ data }) => {
-                // Ticks and candles are the only high-frequency traffic; every
-                // other message type is listed so a run that produces no
-                // open-contract update still shows what the socket did send.
-                if (data.msg_type !== 'tick' && data.msg_type !== 'ohlc' && data.msg_type !== 'history') {
-                    // eslint-disable-next-line no-console
-                    console.log('[TRACE] SOCKET -> message', data.msg_type);
-                }
                 if (data.msg_type === 'proposal_open_contract') {
                     const contract = data.proposal_open_contract;
-
-                    // eslint-disable-next-line no-console
-                    console.log('[TRACE] OPEN_CONTRACT -> update', {
-                        contract_id: contract?.contract_id,
-                        expecting: this.contractId,
-                        matched: Boolean(contract) && Boolean(this.expectedContractId(contract?.contract_id)),
-                        entry_tick: contract?.entry_tick,
-                        entry_spot: contract?.entry_spot,
-                        is_sold: contract?.is_sold,
-                    });
 
                     // The only emitter of 'bot.contract' - Transactions,
                     // Summary and the Journal are all fed from here.
@@ -81,12 +64,8 @@ export default Engine =>
                             this.afterPromise();
                         }
 
-                        // eslint-disable-next-line no-console
-                        console.log('[TRACE] OPEN_CONTRACT -> sold, dispatching sell');
                         this.store.dispatch(sell());
                     } else {
-                        // eslint-disable-next-line no-console
-                        console.log('[TRACE] OPEN_CONTRACT -> dispatching openContractReceived');
                         this.store.dispatch(openContractReceived());
                     }
                 }

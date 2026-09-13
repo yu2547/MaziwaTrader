@@ -8,10 +8,17 @@ import { getDirection, getLastDigit } from '../utils/helpers';
 import { expectPositiveInteger } from '../utils/sanitize';
 import * as constants from './state/constants';
 
-let tickListenerKey;
-
 export default Engine =>
     class Ticks extends Engine {
+        // The key ticksService uses to identify THIS engine's tick listener.
+        // It was module-level, so a second TradeEngine calling watchTicks
+        // handed the previous engine's key to stopMonitor and deleted the
+        // listener that was still feeding a running bot its ticks - which is
+        // what left a bot holding a real open contract with no further ticks
+        // to advance it. Held per instance, an engine can only ever stop its
+        // own listener.
+        tick_listener_key = undefined;
+
         async watchTicks(symbol) {
             if (symbol && this.symbol !== symbol) {
                 this.symbol = symbol;
@@ -19,7 +26,7 @@ export default Engine =>
 
                 await ticksService.stopMonitor({
                     symbol,
-                    key: tickListenerKey,
+                    key: this.tick_listener_key,
                 });
                 const callback = ticks => {
                     if (this.is_proposal_subscription_required) {
@@ -30,8 +37,7 @@ export default Engine =>
                     this.store.dispatch({ type: constants.NEW_TICK, payload: epoch });
                 };
 
-                const key = await ticksService.monitor({ symbol, callback });
-                tickListenerKey = key;
+                this.tick_listener_key = await ticksService.monitor({ symbol, callback });
             }
         }
 
