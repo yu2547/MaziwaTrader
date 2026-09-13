@@ -410,8 +410,12 @@ class APIBase {
         // before the disconnect, marked inactive by unsubscribeAllSubscriptions()):
         // re-send each one, in the order they were originally registered.
         if (this.subscription_manager.hasEntries()) {
+            // eslint-disable-next-line no-console
+            console.log('[TRACE] SUBSCRIBE -> restoring existing subscriptions');
             this.connection_manager.setState(CONNECTION_STATE.RESTORING_SUBSCRIPTIONS);
             await this.subscription_manager.restoreAll();
+            // eslint-disable-next-line no-console
+            console.log('[TRACE] SUBSCRIBE -> restore complete');
             return;
         }
 
@@ -432,7 +436,26 @@ class APIBase {
             { key: 'proposal_open_contract', request: { proposal_open_contract: 1, subscribe: 1 } },
         ];
 
-        await Promise.all(streams.map(({ key, request }) => this.subscription_manager.subscribe(key, request)));
+        await Promise.all(
+            streams.map(({ key, request }) =>
+                this.subscription_manager.subscribe(key, request).then(
+                    entry => {
+                        // eslint-disable-next-line no-console
+                        console.log(
+                            '[TRACE] SUBSCRIBE -> accepted',
+                            key,
+                            entry?.subscription_id ?? 'no subscription id'
+                        );
+                        return entry;
+                    },
+                    error => {
+                        // eslint-disable-next-line no-console
+                        console.log('[TRACE] SUBSCRIBE -> refused', key, error);
+                        throw error;
+                    }
+                )
+            )
+        );
     }
 
     getActiveSymbols = async () => {

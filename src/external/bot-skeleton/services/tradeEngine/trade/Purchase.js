@@ -16,8 +16,15 @@ let purchase_reference;
 export default Engine =>
     class Purchase extends Engine {
         purchase(contract_type) {
+            // eslint-disable-next-line no-console
+            console.log('[TRACE] PURCHASE -> purchase entered', contract_type);
             // Prevent calling purchase twice
             if (this.store.getState().scope !== BEFORE_PURCHASE) {
+                // eslint-disable-next-line no-console
+                console.log(
+                    '[TRACE] PURCHASE -> returned early (scope is not BEFORE_PURCHASE)',
+                    this.store.getState().scope
+                );
                 return Promise.resolve();
             }
 
@@ -35,6 +42,8 @@ export default Engine =>
             }
 
             const onSuccess = response => {
+                // eslint-disable-next-line no-console
+                console.log('[TRACE] PURCHASE -> buy response received', response);
                 markTiming('buy_accepted');
                 // Don't unnecessarily send a forget request for a purchased contract.
                 const { buy } = response;
@@ -46,6 +55,11 @@ export default Engine =>
                 });
 
                 this.contractId = buy.contract_id;
+                // eslint-disable-next-line no-console
+                console.log(
+                    '[TRACE] PURCHASE -> contractId set, now waiting for proposal_open_contract',
+                    this.contractId
+                );
                 this.store.dispatch(purchaseSuccessful());
 
                 if (this.is_proposal_subscription_required) {
@@ -68,6 +82,8 @@ export default Engine =>
 
                 const action = () => {
                     markTiming('buy_sent');
+                    // eslint-disable-next-line no-console
+                    console.log('[TRACE] PURCHASE -> sending buy (by proposal id)', { id, price: askPrice });
                     return api_base.api.send({ buy: id, price: askPrice });
                 };
 
@@ -79,7 +95,13 @@ export default Engine =>
                 });
 
                 if (!this.options.timeMachineEnabled) {
-                    return doUntilDone(action).then(onSuccess);
+                    return doUntilDone(action)
+                        .then(onSuccess)
+                        .catch(error => {
+                            // eslint-disable-next-line no-console
+                            console.log('[TRACE] PURCHASE -> buy rejected', error);
+                            throw error;
+                        });
                 }
 
                 return recoverFromError(
@@ -105,7 +127,11 @@ export default Engine =>
                 ).then(onSuccess);
             }
             const trade_option = tradeOptionToBuy(contract_type, this.tradeOptions, api_base.is_otp_transport);
-            const action = () => api_base.api.send(trade_option);
+            const action = () => {
+                // eslint-disable-next-line no-console
+                console.log('[TRACE] PURCHASE -> sending buy (direct parameters)', trade_option);
+                return api_base.api.send(trade_option);
+            };
 
             this.isSold = false;
 
@@ -115,7 +141,13 @@ export default Engine =>
             });
 
             if (!this.options.timeMachineEnabled) {
-                return doUntilDone(action).then(onSuccess);
+                return doUntilDone(action)
+                    .then(onSuccess)
+                    .catch(error => {
+                        // eslint-disable-next-line no-console
+                        console.log('[TRACE] PURCHASE -> buy rejected', error);
+                        throw error;
+                    });
             }
 
             return recoverFromError(

@@ -15,7 +15,11 @@ const PROPOSAL_READY_TIMEOUT_MS = 15000;
 export default Engine =>
     class Proposal extends Engine {
         makeProposals(trade_option) {
+            // eslint-disable-next-line no-console
+            console.log('[TRACE] PROPOSAL -> makeProposals entered');
             if (!this.isNewTradeOption(trade_option)) {
+                // eslint-disable-next-line no-console
+                console.log('[TRACE] PROPOSAL -> makeProposals returned early (not a new trade option)');
                 return;
             }
 
@@ -70,6 +74,8 @@ export default Engine =>
         renewProposalsOnPurchase() {
             this.data.proposals = [];
             this.store.dispatch(clearProposals());
+            // eslint-disable-next-line no-console
+            console.log('[TRACE] PROPOSAL -> requestProposals');
             this.requestProposals();
         }
 
@@ -140,26 +146,36 @@ export default Engine =>
 
             Promise.all(
                 this.proposal_templates.map(proposal => {
-                    doUntilDone(() => api_base.api.send(proposal)).catch(error => {
-                        // We intercept ContractBuyValidationError as user may have specified
-                        // e.g. a DIGITUNDER 0 or DIGITOVER 9, while one proposal may be invalid
-                        // the other is valid. We will error on Purchase rather than here.
+                    // eslint-disable-next-line no-console
+                    console.log('[TRACE] PROPOSAL -> sending proposal', proposal?.contract_type, proposal);
+                    doUntilDone(() => api_base.api.send(proposal))
+                        .then(response => {
+                            // eslint-disable-next-line no-console
+                            console.log('[TRACE] PROPOSAL -> proposal response received', response);
+                            return response;
+                        })
+                        .catch(error => {
+                            // eslint-disable-next-line no-console
+                            console.log('[TRACE] PROPOSAL -> proposal rejected', error);
+                            // We intercept ContractBuyValidationError as user may have specified
+                            // e.g. a DIGITUNDER 0 or DIGITOVER 9, while one proposal may be invalid
+                            // the other is valid. We will error on Purchase rather than here.
 
-                        if (error?.error?.code === 'ContractBuyValidationError') {
-                            this.data.proposals.push({
-                                ...error.error.echo_req,
-                                ...error.echo_req.passthrough,
-                                error,
-                            });
+                            if (error?.error?.code === 'ContractBuyValidationError') {
+                                this.data.proposals.push({
+                                    ...error.error.echo_req,
+                                    ...error.echo_req.passthrough,
+                                    error,
+                                });
 
+                                return null;
+                            }
+                            if (!has_informed_error) {
+                                has_informed_error = true;
+                                this.$scope.observer.emit('Error', error.error);
+                            }
                             return null;
-                        }
-                        if (!has_informed_error) {
-                            has_informed_error = true;
-                            this.$scope.observer.emit('Error', error.error);
-                        }
-                        return null;
-                    });
+                        });
                 })
             );
         }

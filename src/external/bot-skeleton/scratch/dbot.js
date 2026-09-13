@@ -257,7 +257,11 @@ class DBot {
      * JavaScript code that's fed to the interpreter.
      */
     runBot() {
+        // eslint-disable-next-line no-console
+        console.log('[TRACE] DBOT -> runBot entered');
         if (api_base.is_stopping) {
+            // eslint-disable-next-line no-console
+            console.log('[TRACE] DBOT -> runBot returned early (api_base.is_stopping)');
             return;
         }
 
@@ -269,11 +273,17 @@ class DBot {
             this.is_bot_running = true;
 
             api_base.setIsRunning(true);
+            // eslint-disable-next-line no-console
+            console.log('[TRACE] DBOT -> interpreter execution starting');
             this.interpreter.run(code).catch(error => {
+                // eslint-disable-next-line no-console
+                console.log('[TRACE] DBOT -> interpreter run rejected', error);
                 globalObserver.emit('Error', error);
                 this.stopBot();
             });
         } catch (error) {
+            // eslint-disable-next-line no-console
+            console.log('[TRACE] DBOT -> runBot threw before execution', error);
             globalObserver.emit('Error', error);
 
             if (this.interpreter) {

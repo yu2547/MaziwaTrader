@@ -101,6 +101,8 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
     }
 
     init(...args) {
+        // eslint-disable-next-line no-console
+        console.log('[TRACE] TRADE -> init entered');
         const [token, options] = expectInitArg(args);
         const { symbol } = options;
 
@@ -112,7 +114,11 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
     }
 
     start(tradeOptions) {
+        // eslint-disable-next-line no-console
+        console.log('[TRACE] TRADE -> start entered');
         if (!this.options) {
+            // eslint-disable-next-line no-console
+            console.log('[TRACE] TRADE -> start throwing NotInitialized (Bot.init was not called)');
             throw createError('NotInitialized', localize('Bot.init is not called'));
         }
 
@@ -153,7 +159,11 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
             });
         }
 
+        // eslint-disable-next-line no-console
+        console.log('[TRACE] TRADE -> makeDirectPurchaseDecision');
         this.makeDirectPurchaseDecision();
+        // eslint-disable-next-line no-console
+        console.log('[TRACE] TRADE -> makeDirectPurchaseDecision returned');
     }
 
     loginAndGetBalance(token) {
@@ -197,6 +207,8 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
     }
 
     watch(watchName) {
+        // eslint-disable-next-line no-console
+        console.log('[TRACE] TRADE -> watch', watchName);
         if (watchName === 'before') {
             return watchBefore(this.store);
         }

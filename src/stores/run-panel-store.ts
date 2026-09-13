@@ -330,7 +330,11 @@ export default class RunPanelStore {
 
             summary_card.clear();
             this.setContractStage(contract_stages.STARTING);
+            // eslint-disable-next-line no-console
+            console.log('[TRACE] RUN_BUTTON -> runBot');
             this.dbot.runBot();
+            // eslint-disable-next-line no-console
+            console.log('[TRACE] RUN_BUTTON -> runBot returned');
         });
         this.setShowBotStopMessage(false);
     };
