@@ -14,7 +14,6 @@ import Transactions from '@/components/transactions';
 import { popover_zindex } from '@/constants/z-indexes';
 import { useStore } from '@/hooks/useStore';
 import { getActiveCurrency } from '@/utils/active-account-id';
-import { StandaloneChevronUpBoldIcon } from '@deriv/quill-icons/Standalone';
 import { Localize, localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
 import ThemedScrollbars from '../shared_ui/themed-scrollbars';
@@ -27,13 +26,6 @@ type TStatisticsTile = {
 
 type TStatisticsSummary = {
     currency: string;
-    /**
-     * The panel shows five figures: stake, payout, runs, contracts won and
-     * profit/loss. Contracts lost is not one of them, and it is suppressed
-     * rather than deleted because this block is shared with the View Detail
-     * modal, which still shows it. The store keeps computing it either way.
-     */
-    hide_lost_contracts?: boolean;
     is_mobile: boolean;
     lost_contracts: number;
     number_of_runs: number;
@@ -45,9 +37,9 @@ type TStatisticsSummary = {
 };
 type TDrawerHeader = {
     is_clear_stat_disabled: boolean;
+    is_mobile: boolean;
     is_drawer_open: boolean;
     onClearStatClick: () => void;
-    toggleDrawer: (is_open: boolean) => void;
 };
 
 type TDrawerContent = {
@@ -55,6 +47,11 @@ type TDrawerContent = {
     is_drawer_open: boolean;
     active_tour: string;
     setActiveTabIndex: () => void;
+};
+
+type TDrawerFooter = {
+    is_clear_stat_disabled: boolean;
+    onClearStatClick: () => void;
 };
 
 type TStatisticsInfoModal = {
@@ -72,7 +69,6 @@ const StatisticsTile = ({ content, contentClassName, title }: TStatisticsTile) =
 
 export const StatisticsSummary = ({
     currency,
-    hide_lost_contracts,
     is_mobile,
     lost_contracts,
     number_of_runs,
@@ -114,7 +110,6 @@ export const StatisticsSummary = ({
             ref={setStatElement}
             className={classNames('run-panel__stat', {
                 'run-panel__stat--mobile': is_mobile,
-                'run-panel__stat--five': hide_lost_contracts,
             })}
         >
             <div className='run-panel__stat--info' onClick={toggleStatisticsInfoModal}>
@@ -134,9 +129,7 @@ export const StatisticsSummary = ({
                     content={<Money amount={total_payout} currency={currency} show_currency />}
                 />
                 <StatisticsTile title={localize('No. of runs')} alignment='top' content={number_of_runs} />
-                {!hide_lost_contracts && (
-                    <StatisticsTile title={localize('Contracts lost')} alignment='bottom' content={lost_contracts} />
-                )}
+                <StatisticsTile title={localize('Contracts lost')} alignment='bottom' content={lost_contracts} />
                 <StatisticsTile title={localize('Contracts won')} alignment='bottom' content={won_contracts} />
                 <StatisticsTile
                     title={localize('Total profit/loss')}
@@ -152,35 +145,17 @@ export const StatisticsSummary = ({
     );
 };
 
-/**
- * The panel's own top edge: the collapse chevron centred, Reset at the right.
- *
- * The chevron is a second button for the same `is_drawer_open` state, not a
- * second state - the execution bar keeps its own while the panel is shut, and
- * hides it while the panel is open, so exactly one is on screen at a time and
- * both call the same toggleDrawer.
- */
-const DrawerHeader = ({ is_clear_stat_disabled, is_drawer_open, onClearStatClick, toggleDrawer }: TDrawerHeader) =>
+const DrawerHeader = ({ is_clear_stat_disabled, is_mobile, is_drawer_open, onClearStatClick }: TDrawerHeader) =>
+    is_mobile &&
     is_drawer_open && (
-        <div className='run-panel__head'>
-            <button
-                type='button'
-                className='run-panel__head-handle'
-                onClick={() => toggleDrawer(false)}
-                aria-expanded={true}
-                aria-label={localize('Hide run panel')}
-            >
-                <StandaloneChevronUpBoldIcon iconSize='xs' />
-            </button>
-            <Button
-                id='db-run-panel__clear-button'
-                className='run-panel__clear-button'
-                disabled={is_clear_stat_disabled}
-                text={localize('Reset')}
-                onClick={onClearStatClick}
-                secondary
-            />
-        </div>
+        <Button
+            id='db-run-panel__clear-button'
+            className='run-panel__clear-button'
+            disabled={is_clear_stat_disabled}
+            text={localize('Reset')}
+            onClick={onClearStatClick}
+            secondary
+        />
     );
 
 const DrawerContent = ({ active_index, is_drawer_open, active_tour, setActiveTabIndex, ...props }: TDrawerContent) => {
@@ -213,6 +188,23 @@ const DrawerContent = ({ active_index, is_drawer_open, active_tour, setActiveTab
         </>
     );
 };
+
+const DrawerFooter = ({ is_clear_stat_disabled, onClearStatClick }: TDrawerFooter) => (
+    <div className='run-panel__footer'>
+        <Button
+            id='db-run-panel__clear-button'
+            className='run-panel__footer-button'
+            disabled={is_clear_stat_disabled}
+            onClick={onClearStatClick}
+            has_effect
+            secondary
+        >
+            <span>
+                <Localize i18n_default_text='Reset' />
+            </span>
+        </Button>
+    </div>
+);
 
 const StatisticsInfoModal = ({
     is_mobile,
@@ -313,7 +305,7 @@ const RunPanelContent = observer(() => {
     // not whether the panel happens to be open, it is whether there is a
     // session whose panel the user is entitled to keep.
     React.useEffect(() => {
-        if (!run_panel.is_running) {
+        if (!isDesktop && !run_panel.is_running) {
             toggleDrawer(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -323,7 +315,6 @@ const RunPanelContent = observer(() => {
         <DrawerContent
             active_index={active_index}
             currency={currency}
-            hide_lost_contracts
             is_drawer_open={is_drawer_open}
             is_mobile={!isDesktop}
             lost_contracts={lost_contracts}
@@ -338,16 +329,14 @@ const RunPanelContent = observer(() => {
         />
     );
 
-    // Reset used to be duplicated: a footer button on desktop and a floating
-    // one on the phone sheet. It has a single home now, the panel's top-right,
-    // which is the same place on every width - so the desktop footer is gone
-    // rather than restyled.
+    const footer = <DrawerFooter is_clear_stat_disabled={is_clear_stat_disabled} onClearStatClick={onClearStatClick} />;
+
     const header = (
         <DrawerHeader
             is_clear_stat_disabled={is_clear_stat_disabled}
+            is_mobile={!isDesktop}
             is_drawer_open={is_drawer_open}
             onClearStatClick={onClearStatClick}
-            toggleDrawer={toggleDrawer}
         />
     );
 
@@ -360,18 +349,16 @@ const RunPanelContent = observer(() => {
 
     return (
         <>
-            {/* One panel model on every width: it rises from the bottom and
-                spans the viewport. The 366px right-hand drawer desktop used to
-                get is gone - it was a second design for the same panel, and
-                the two had drifted apart. */}
-            <div className={is_drawer_open ? 'run-panel__container--mobile' : 'run-panel'}>
+            <div className={!isDesktop && is_drawer_open ? 'run-panel__container--mobile' : 'run-panel'}>
                 <Drawer
                     anchor='right'
                     className={classNames('run-panel', {
-                        'run-panel__container--tour-active': active_tour,
+                        'run-panel__container': isDesktop,
+                        'run-panel__container--tour-active': isDesktop && active_tour,
                     })}
                     contentClassName='run-panel__content'
                     header={header}
+                    footer={isDesktop && footer}
                     is_open={is_drawer_open}
                     toggleDrawer={toggleDrawer}
                     width={366}

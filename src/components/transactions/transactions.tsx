@@ -168,18 +168,11 @@ const Transactions = observer(({ is_drawer_open }: TTransactions) => {
                             getRowSize={({ index }) => {
                                 const row = transaction_list?.[index];
                                 switch (row.type) {
-                                    // The list is virtualised, so row height is
-                                    // set here rather than in CSS - a stylesheet
-                                    // change alone would leave these gaps behind.
-                                    // 50 -> 38 is what takes the reference's
-                                    // density: roughly a third more trades on
-                                    // screen without the two spot values or the
-                                    // price and P/L pair having to wrap.
                                     case transaction_elements.CONTRACT: {
-                                        return 38;
+                                        return 50;
                                     }
                                     case transaction_elements.DIVIDER: {
-                                        return 16;
+                                        return 21;
                                     }
                                     default: {
                                         return 0;

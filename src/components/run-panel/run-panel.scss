@@ -1,20 +1,14 @@
 @use 'components/shared/styles/mixins' as *;
 
-// The panel is a trading terminal, not a page: it is dark in both app themes,
-// so these are literal values rather than --general-* tokens. Reading the
-// theme would give a white panel in light mode, which is the single largest
-// difference from the reference.
-$mw-panel-bg: #0e1117; // panel ground, near-black
-$mw-panel-surface: #161a21; // tab strip, statistics, control chips
-$mw-panel-line: #242a33; // separators and chip borders
-$mw-panel-text: #e8eaed; // primary type
-$mw-panel-muted: #9aa3ad; // labels, inactive tabs
-$mw-panel-accent: #2f7dff; // active tab underline
+// Navy fill behind the selected tab on the phone sheet, per the reference.
+// Deliberately darker than the existing --mw-blue (#2f7dff) and analysis-tool
+// $mw-blue (#1a5cff): both are link-bright and, as a full-height block under
+// white text, neither reads as a selected surface.
+$mw-tab-active: #1a3d7c;
 
 /**
 * @define -panel
 **/
-
 .run-panel {
     height: 0;
 
@@ -54,12 +48,10 @@ $mw-panel-accent: #2f7dff; // active tab underline
     // the wrapper, this rule would then hide a panel the user had just opened,
     // which is the opposite of the point. dc-drawer--open comes from the same
     // is_drawer_open state via drawer.tsx:49, so it cannot disagree with it.
-    // No longer gated on a phone width: the panel is a bottom sheet on every
-    // viewport now, so a closed one must render nothing everywhere. Left at a
-    // phone width it parked a strip of tabs over the execution bar on desktop
-    // the moment the right-hand drawer geometry was removed.
-    > .dc-drawer:not(.dc-drawer--open) {
-        display: none;
+    @media (width <= 768px) {
+        > .dc-drawer:not(.dc-drawer--open) {
+            display: none;
+        }
     }
 
     &__container {
@@ -106,23 +98,6 @@ $mw-panel-accent: #2f7dff; // active tab underline
             height: calc(100vh - var(--mw-exec-bar-height, 6rem) - 6rem);
             max-height: calc(100vh - var(--mw-exec-bar-height, 6rem) - 6rem);
 
-            // The app footer is desktop-only (layout/index.tsx) and carries the
-            // Risk Disclaimer at bottom: 0. The execution bar steps above it
-            // there, so the panel has to clear both or it would cover the bar.
-            // The footer's 3.6rem comes off the height as well as the offset:
-            // without that the panel grows upward by the same amount and its
-            // top edge - the chevron - ends up underneath the app header,
-            // which is position: sticky at z-index 100 and therefore wins. The
-            // chevron rendered but could not be clicked.
-            // Placed after the two declarations above, not before them: same
-            // specificity, so source order decides and an earlier media block
-            // loses to the plain rule it is meant to override.
-            @media (width >= 1280px) {
-                bottom: calc(var(--mw-exec-bar-height, 6rem) + 3.6rem);
-                height: calc(100vh - var(--mw-exec-bar-height, 6rem) - 3.6rem - 6rem);
-                max-height: calc(100vh - var(--mw-exec-bar-height, 6rem) - 3.6rem - 6rem);
-            }
-
             // A number, not var(--zindex-drawer): that variable is declared on
             // `.bot` (app.scss), and no element in this app carries that class,
             // so the var resolved to nothing and took the whole declaration
@@ -137,102 +112,7 @@ $mw-panel-accent: #2f7dff; // active tab underline
             padding-bottom: 0;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 -8px 24px rgb(0 0 0 / 45%);
-            background: $mw-panel-bg;
-            color: $mw-panel-text;
-            border-top: 1px solid $mw-panel-line;
-
-            // Every inherited surface inside the sheet is repainted rather
-            // than left to the theme, so the panel reads the same in light and
-            // dark. Scoped to the sheet: these classes are shared with the rest
-            // of the app, which keeps its own theming.
-            .dc-drawer,
-            .dc-drawer__container,
-            .run-panel__content,
-            .dc-tabs,
-            .dc-tabs__content,
-            .transactions,
-            .journal,
-            .summary {
-                background: transparent;
-                color: inherit;
-            }
-
-            // The shared Drawer paints its own collapse arrow above the
-            // content - 36px of it, directly over the panel's top edge. That
-            // was the affordance for the old right-hand drawer; the panel has
-            // its own chevron now, and two of them one above the other is the
-            // extra top control the reference does not have.
-            > .dc-drawer > .dc-drawer__toggle {
-                display: none;
-            }
-
-            // Transactions, Summary and Journal are shared with the View Detail
-            // modal, which keeps the app theme - so their dark treatment lives
-            // here, inside the sheet, rather than in their own stylesheets.
-            .transactions__header {
-                color: $mw-panel-muted;
-                border-bottom-color: $mw-panel-line;
-            }
-
-            .transactions__item-wrapper {
-                border-top-color: $mw-panel-line;
-            }
-
-            .transactions__item {
-                color: $mw-panel-text;
-            }
-
-            .transactions__profit--win {
-                color: #00c8a0;
-            }
-
-            .transactions__profit--loss {
-                color: #ff5c5c;
-            }
-
-            .transactions__divider-line {
-                background: $mw-panel-line;
-            }
-
-            // Download and View Detail: compact, dark, thin border. They ship
-            // as the shared `secondary` button, which is a light pill.
-            .download__container .dc-btn {
-                min-width: 0;
-                height: 2.8rem !important;
-                padding: 0 1.2rem;
-                border: 1px solid $mw-panel-line !important;
-                border-radius: 4px !important;
-                background: transparent !important;
-                color: $mw-panel-text !important;
-                font-size: 1.2rem !important;
-                font-weight: 400 !important;
-
-                &:hover:not(:disabled) {
-                    background: $mw-panel-surface !important;
-                }
-
-                &:disabled {
-                    opacity: 0.45;
-                }
-
-                span,
-                .dc-btn__text {
-                    color: inherit !important;
-                    font-size: inherit !important;
-                    font-weight: inherit !important;
-                }
-            }
-
-            .download__container {
-                padding: 0.8rem 1.2rem;
-            }
-
-            // Summary's empty state: centred light type on the panel ground,
-            // no card and no illustration.
-            .summary-panel-inactive__strong {
-                color: $mw-panel-text;
-            }
+            box-shadow: 0 -8px 24px rgb(0 0 0 / 18%);
 
             // Keeps a scroll gesture that reaches the end of the sheet from
             // continuing into the workspace behind it. This is what replaces
@@ -324,48 +204,6 @@ $mw-panel-accent: #2f7dff; // active tab underline
         // }
     }
 
-    // The panel's own top edge: chevron centred, Reset pinned right. Both sit
-    // on one row, so the chevron is centred against the panel rather than
-    // against whatever space Reset leaves - it is absolutely positioned for
-    // exactly that reason.
-    &__head {
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        min-height: 3.6rem;
-        padding: 0.4rem 1.2rem;
-        background: $mw-panel-bg;
-        border-bottom: 1px solid $mw-panel-line;
-        flex-shrink: 0;
-
-        &-handle {
-            position: absolute;
-            inset-inline: 0;
-            margin-inline: auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 4.4rem;
-            height: 2.8rem;
-            padding: 0;
-            border: none;
-            background: transparent;
-            color: $mw-panel-muted;
-            cursor: pointer;
-
-            svg > path {
-                fill: currentcolor;
-            }
-
-            // Expanded, so it points down - the collapsed one in the execution
-            // bar keeps pointing up.
-            svg {
-                transform: rotate(180deg);
-            }
-        }
-    }
-
     &__tile {
         @include flex-center;
 
@@ -373,23 +211,17 @@ $mw-panel-accent: #2f7dff; // active tab underline
         height: 100%;
 
         &-title {
-            min-height: 1.6rem;
-            margin-bottom: 2px;
-            font-size: 1.1rem;
-            font-weight: 400;
-            line-height: 1.3;
-            text-align: center;
-            color: $mw-panel-muted;
+            min-height: 1.8rem;
+            margin-bottom: 4px;
+
+            @include typeface(--small-center-bold-black, none);
         }
 
         &-content {
-            height: auto;
-            margin-bottom: 2px;
-            font-size: 1.3rem;
-            font-weight: 700;
-            line-height: 1.3;
-            text-align: center;
-            color: $mw-panel-text;
+            height: 18px;
+            margin-bottom: 4px;
+
+            @include typeface(--small-center-normal-black, none);
         }
     }
 
@@ -398,14 +230,26 @@ $mw-panel-accent: #2f7dff; // active tab underline
 
         flex-direction: column;
 
-        // Full width, uncapped. This carried `max-width: 35rem` for the old
-        // 36.6rem desktop drawer, with the cap lifted again on phones. The
-        // panel spans the viewport on every size now, so the cap only ever
-        // stranded the tiles at the left - 43px of dead space at 393, 80px at
-        // 430 - and stopped the three columns lining up with the Type /
-        // Entry-Exit / Buy price header above them.
+        // Fluid up to the design width rather than pinned at it. This was a
+        // flat `width: 35rem`, and run-panel__content clips with
+        // `overflow: hidden !important`, so any drawer narrower than 350px cut
+        // the panel off mid-content - "10.00 USD" rendered as "10.00 US" - and
+        // squeezed the 3-column tile grid, which is what pushed the second row
+        // of statistics out of view. Desktop is unchanged: the drawer is wider
+        // than 35rem there, so max-width still governs.
         width: 100%;
-        max-width: none;
+        max-width: 35rem;
+
+        // ...but on the phone sheet the panel IS the viewport, and the cap
+        // strands the statistics at 350px inside it: 43px of dead space at
+        // 393, 80px at 430, with the block left-aligned so its three columns
+        // stop lining up with the Type / Entry-Exit / Buy price header above
+        // them. The cap exists for the desktop drawer (36.6rem), which is
+        // untouched here - the sheet is never narrower than 375px, which is
+        // already wider than the 35rem the cap was protecting.
+        @media (width <= 768px) {
+            max-width: none;
+        }
 
         // Never surrender height. This is a flex item of run-panel__content,
         // a column that clips with `overflow: hidden !important`, so any
@@ -416,8 +260,7 @@ $mw-panel-accent: #2f7dff; // active tab underline
         // to lose height, and it does: it carries flex: auto and min-height: 0
         // precisely so it can absorb this.
         flex-shrink: 0;
-        background-color: $mw-panel-surface;
-        border-top: 1px solid $mw-panel-line;
+        background-color: var(--general-section-2);
 
         @include mobile-or-tablet-screen {
             margin: 0;
@@ -443,18 +286,17 @@ $mw-panel-accent: #2f7dff; // active tab underline
         }
 
         &--info {
-            @include flex-center(center, flex-end);
+            @include flex-center(center, flex-start);
 
-            width: 100%;
-            padding: 0.8rem 1.2rem 0;
+            width: 33%;
+            padding: 16px 0 2px;
             cursor: pointer;
-            font-size: 1.1rem;
-            color: $mw-panel-muted;
+            color: var(--text-general);
             -webkit-tap-highlight-color: transparent;
 
             &-item {
                 display: inline-block;
-                border-bottom: 1px dotted $mw-panel-muted;
+                border-bottom: 1px dotted var(--text-general);
             }
         }
 
@@ -478,37 +320,29 @@ $mw-panel-accent: #2f7dff; // active tab underline
             // minmax(6.4rem, auto) keeps each row at its designed height as a
             // floor while allowing it to grow instead of disappear.
             grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-rows: repeat(2, minmax(6.4rem, auto));
 
-            // Tighter than the 6.4rem rows this used to carry. The reference
-            // gives the statistics about two thirds of that height, and the
-            // space it releases goes to the transaction list, which is the
-            // part of the panel worth looking at.
-            grid-template-rows: repeat(2, minmax(4.4rem, auto));
-            padding: 0.4rem 0.8rem 0.8rem;
-            row-gap: 0.2rem;
-
-            // Two rows is what this grid is; it may never be less. flex-shrink:
-            // 0 on the parent asks the flex algorithm nicely, but this does not
-            // depend on the flex context agreeing - the transactions list is a
-            // sibling at flex: 1 1 auto and competes for the same space, and
-            // losing that contest is what took the second row off the screen
-            // while the first row stayed.
-            min-height: 8.8rem;
+            // Two rows of 6.4rem is what this grid is; it may never be less.
+            // flex-shrink: 0 on the parent asks the flex algorithm nicely, but
+            // this does not depend on the flex context agreeing - the
+            // transactions list is a sibling at flex: 1 1 auto and competes for
+            // the same space, and losing that contest is what took the second
+            // row (contracts lost, contracts won, total profit/loss) off the
+            // screen while the first row stayed.
+            min-height: 12.8rem;
         }
 
         &-amount {
-            font-size: 1.3rem;
-            font-weight: 700;
-            line-height: 1.3;
-            text-align: center;
-            color: $mw-panel-text;
+            @include typeface(--small-center-normal-black, none);
 
             &--positive {
-                color: #00c8a0;
+                font-weight: bold;
+                color: var(--text-profit-success);
             }
 
             &--negative {
-                color: #ff5c5c;
+                font-weight: bold;
+                color: var(--text-loss-danger);
             }
         }
 
@@ -585,68 +419,73 @@ $mw-panel-accent: #2f7dff; // active tab underline
             }
         }
 
-        // The selected tab is white text over a thin blue underline - no filled
-        // block. The navy fill this replaces was built to an older reference;
-        // the current one keeps the strip flat so the tabs read as navigation
-        // rather than as three buttons.
-        // Applied at every width, because the panel is now one design on all of
-        // them rather than a phone sheet and a desktop drawer.
-        .dc-tabs__list {
-            display: flex;
-            align-items: stretch;
-            background: $mw-panel-surface;
-            border-bottom: 1px solid $mw-panel-line;
-
-            // The list is a <ul>, so it still carries the UA's default
-            // padding-inline-start: 40px, and tabs.scss gives it `width: 100%`
-            // under content-box - a 393px panel got a 433px strip, which
-            // pushes Journal off the edge once the items fill the width.
-            padding-inline: 0;
-        }
-
-        .dc-tabs__item {
-            // Equal thirds. tabs.scss sizes each item with `width:
-            // var(--tab-width)`, which the Tabs component sets from the widest
-            // label, so the tabs came out uneven. A definite flex-basis of 0
-            // takes over sizing from that width without out-specifying it.
-            flex: 1 1 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            padding: 1.1rem 0.8rem;
-            font-size: 1.3rem;
-            font-weight: 400;
-            line-height: 1.2;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            background: transparent;
-            color: $mw-panel-muted;
-            transition: color 140ms ease;
-
-            &.dc-tabs__active {
-                background: transparent;
-                color: $mw-panel-text;
-                font-weight: 700;
-
-                // The underline travels with the tab rather than being drawn
-                // by the shared __active-line element, which is positioned
-                // against the strip and mis-tracks once the items are flexed
-                // to equal thirds.
-                &:after {
-                    content: '';
-                    position: absolute;
-                    inset-inline: 0;
-                    bottom: -1px;
-                    height: 2px;
-                    background: $mw-panel-accent;
-                }
+        .dc-tabs {
+            &__item {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                padding: 0 0.8rem;
             }
         }
 
-        // Superseded by the ::after above.
-        .dc-tabs__active-line {
-            display: none;
+        // Reference shows the selected tab as a solid navy block with white
+        // text filling the tab's full height. tabs.scss marks the active tab
+        // with weight 700 plus a 2px coral underline (__active and
+        // __active-line), which reads as almost nothing at phone size - the
+        // three tabs look alike and the selected one is easy to lose.
+        // Scoped to the phone sheet on purpose: Tabs is shared with the rest
+        // of the app, and desktop keeps the underline treatment it already has.
+        // 768px rather than the mobile-or-tablet-screen mixin (1279px), because
+        // that mixin's range covers 769-1279px, where run-panel.tsx is still
+        // rendering the desktop panel - the fill would have landed on desktop
+        // at 1024px and not at 1280px. This matches the isDesktop split the
+        // component actually branches on.
+        @media (width <= 768px) {
+            .dc-tabs__list {
+                display: flex;
+                align-items: stretch;
+
+                // The list is a <ul>, so it still carries the UA's default
+                // padding-inline-start: 40px, and tabs.scss gives it
+                // `width: 100%` under content-box - a 393px panel got a 433px
+                // strip. It went unnoticed while the items sized to their own
+                // labels and the row happened to fit inside the overhang; once
+                // they fill the width, the 40px pushes the third tab off the
+                // edge and Journal is clipped.
+                padding-inline: 0;
+            }
+
+            .dc-tabs__item {
+                // Equal thirds, and the fill spans the whole cell rather than
+                // hugging the label. tabs.scss sizes each item with
+                // `width: var(--tab-width)`, which the Tabs component sets from
+                // the widest label - so the tabs came out uneven and the active
+                // block ended up narrower than its slot. A definite flex-basis
+                // of 0 takes over sizing from that width without having to
+                // out-specify it.
+                flex: 1 1 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 1.6rem 0.8rem;
+                font-size: 1.5rem;
+                line-height: 1.2;
+                background: var(--general-main-1);
+                transition:
+                    background 140ms ease,
+                    color 140ms ease;
+
+                &.dc-tabs__active {
+                    background: $mw-tab-active;
+                    color: #fff;
+                    font-weight: 700;
+                }
+            }
+
+            // The coral line would sit under the filled block and read as an
+            // artefact; the fill is the selected state here.
+            .dc-tabs__active-line {
+                display: none;
+            }
         }
     }
 
@@ -720,28 +559,13 @@ $mw-panel-accent: #2f7dff; // active tab underline
         }
     }
 
-    // Reset sits in the panel head now rather than floating over the sheet, so
-    // the absolute positioning it used to carry is gone - it is simply the
-    // last item on that row. Compact, dark and outlined, per the reference.
     &__clear-button {
-        position: relative !important;
-        height: 2.6rem !important;
-        min-width: 0 !important;
-        padding: 0 1.2rem !important;
-        border: 1px solid $mw-panel-line !important;
-        border-radius: 4px !important;
-        background: transparent !important;
-        color: $mw-panel-text !important;
-        font-size: 1.2rem !important;
-        font-weight: 400 !important;
-        z-index: 1;
-
-        &:hover:not(:disabled) {
-            background: $mw-panel-surface !important;
-        }
-
-        &:disabled {
-            opacity: 0.45;
+        @include mobile-or-tablet-screen {
+            position: absolute !important;
+            top: 0.5rem;
+            right: 1.6rem;
+            height: 2.6rem !important;
+            min-width: 8rem;
         }
     }
 }
