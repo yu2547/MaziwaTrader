@@ -2,51 +2,47 @@
 // shell, so it is present on every route rather than being re-created per
 // page.
 $exec-bar-height: 6rem;
-
-// Anchored top-right of the content area, matching the reference: the Run
-// control and the execution readout sit together in one card, with Trading
-// Configuration tucked under it.
-// The run panel is a fixed column - right: 0, width 36.6rem, top 10.4rem (see
-// run-panel.scss). This card belongs at the head of that same column, which
-// means matching its width and edge and then pushing the panel down to make
-// room. Anchoring it at an arbitrary offset just laid it over the panel's own
-// header instead.
-$exec-bar-column-width: 36.6rem;
-$exec-bar-top: 9.6rem; // clears the header + shell nav
 $exec-bar-card-height: 6rem;
 
-// Matches the Drawer's width prop (366) in run-panel.tsx and the width the
-// compiled .run-panel__container carries, so the orb can step clear of the
-// open panel's column on desktop.
+// Matches the Drawer's width prop (366) in run-panel.tsx, so the orb can step
+// clear of the panel on desktop.
 $run-panel-width: 36.6rem;
-$exec-bar-gap: 1.2rem;
 
+// One full-width bar pinned to the bottom, on every viewport. It used to be a
+// 36.6rem card anchored top-right on desktop, matching the run panel's old
+// right-hand column - that column is gone, the panel rises from the bottom on
+// all sizes now, and this is its footer.
 .mw-exec-bar {
     position: fixed;
-    inset-inline-end: 0;
-    top: $exec-bar-top;
+    inset-inline: 0;
+    top: auto;
+    bottom: 0;
     z-index: 3;
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
-    gap: 0.6rem;
-    width: $exec-bar-column-width;
+    align-items: stretch;
+    gap: 0;
+    width: auto;
 
-    @media (width <= 768px) {
-        inset-inline: 0;
-        top: auto;
-        bottom: 0;
-        width: auto;
-        align-items: stretch;
-        gap: 0;
+    // The app footer renders on desktop only and is fixed at bottom: 0 with
+    // the Risk Disclaimer in it. Now that this bar is bottom-anchored on every
+    // width it would sit straight on top of it, so it steps up by exactly the
+    // footer's height there.
+    @media (width >= 1280px) {
+        bottom: 3.6rem;
     }
 
     &__handle {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 3rem;
-        height: 3rem;
+
+        // Centred over the bar rather than parked at one end: with the column
+        // stretching its children, an explicit width opts this out of the
+        // stretch and it would otherwise sit at the inline start.
+        align-self: center;
+        width: 4.4rem;
+        height: 2.8rem;
         padding: 0;
         border: none;
         border-radius: 6px;
@@ -67,6 +63,8 @@ $exec-bar-gap: 1.2rem;
         }
     }
 
+    // A dark bar edge to edge, not a floating card - it is the panel's bottom
+    // rail, so it carries no rounding, no side borders and no drop shadow.
     &__inner {
         display: flex;
         align-items: stretch;
@@ -74,17 +72,12 @@ $exec-bar-gap: 1.2rem;
         width: 100%;
         min-width: 0;
         min-height: $exec-bar-card-height;
-        border-radius: 6px;
+        border-radius: 0;
         overflow: hidden;
-        background: var(--general-main-1);
-        border: 1px solid var(--general-section-1);
-        box-shadow: 0 6px 24px rgb(0 0 0 / 12%);
-
-        @media (width <= 768px) {
-            border-radius: 0;
-            border-inline: none;
-            border-bottom: none;
-        }
+        background: #0e1117;
+        border-top: 1px solid #242a33;
+        border-inline: none;
+        border-bottom: none;
     }
 
     &__config-short {
@@ -120,99 +113,71 @@ $exec-bar-gap: 1.2rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+
+            // Left-aligned beside the button rather than centred in the bar,
+            // and no longer hidden below 480px: the bar spans the viewport now,
+            // so "Bot is not running" has room at every width the app supports.
+            text-align: start;
+            font-size: 1.2rem;
+            color: #e8eaed;
         }
 
-        // Under this width the button, the stage text and the speed switch
-        // cannot all fit, and the button is the one that has to survive.
-        @media (width <= 480px) {
-            .animation__text {
-                display: none;
+        .animation__wrapper {
+            width: 100%;
+            height: 100%;
+            gap: 1.2rem;
+            padding-inline-end: 1.2rem;
+        }
+
+        // The action button is a fifth of the bar, the status readout takes the
+        // rest - the split the reference uses.
+        // .run__button_wrapper is included because TradeAnimation wraps the
+        // button in it whenever the disabled-with-tooltip state is showing
+        // (no bot loaded). Without it the wrapper sized to its content there
+        // and the button came out at 6% instead of 21%.
+        .run__button_wrapper,
+        .animation__run-button,
+        .animation__stop-button {
+            flex: 0 0 21%;
+            min-width: 8.8rem;
+            border-radius: 0 !important;
+        }
+
+        // That state nests the button one level further, inside an
+        // inline-styled div that dims it, so the fill has to be passed down
+        // through it or the button sizes to its label again.
+        .run__button_wrapper {
+            display: flex;
+            align-items: center;
+
+            > div {
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+
+            .animation__run-button,
+            .animation__stop-button {
+                flex: 1 1 auto;
+                width: 100%;
             }
         }
-    }
 
-    // FAST is the resting state (teal), SLOW is the deliberate one (amber) -
-    // the same read the reference gives at a glance.
-    &__status {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: flex-start;
-        gap: 0.2rem;
-        min-width: 0;
-
-        // Sized to its own content rather than growing. At `flex: 1` it split
-        // the bar evenly with the run area, which left the stage text and its
-        // progress bar squeezed into the remaining half - the speed switch is
-        // the secondary control here and should not claim equal room.
-        flex: 0 0 auto;
-        position: relative;
-        padding: 0.6rem 5rem 0.6rem 1.4rem;
-        border: none;
-        background: #eef8f4;
-        cursor: pointer;
-        text-align: start;
-        transition: background 200ms ease;
-
-        &--slow {
-            background: #fdf6e3;
+        // The readout is part of the bar, not a bordered card sitting inside
+        // it: the border and rounding were there to close off the old
+        // right-hand column.
+        .animation__container {
+            flex: 1 1 auto;
+            min-width: 0;
+            border: none;
+            border-radius: 0;
+            background: transparent;
+            padding-inline: 0;
         }
     }
 
-    &__switch {
-        position: absolute;
-        inset-inline-end: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 3.4rem;
-        height: 1.8rem;
-        border-radius: 999px;
-        background: #e8a317;
-        transition: background 200ms ease;
-
-        &:after {
-            content: '';
-            position: absolute;
-            top: 0.2rem;
-            inset-inline-start: 0.2rem;
-            width: 1.4rem;
-            height: 1.4rem;
-            border-radius: 50%;
-            background: #fff;
-            box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
-            transition: transform 200ms ease;
-        }
-
-        &--on {
-            background: #2fb39a;
-
-            &:after {
-                transform: translateX(1.6rem);
-            }
-        }
-    }
-
-    &__status-label {
-        font-size: 1.1rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--text-less-prominent);
-    }
-
-    &__status-value {
-        font-size: 1.4rem;
-        font-weight: 700;
-        color: var(--text-prominent);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    // A live bot is the one state worth showing from across the room.
-    &--running &__status-value {
-        color: #4eaaa5;
-    }
+    // The Execution FAST/SLOW switch that used to sit on the right of the bar
+    // is gone. It was presentation only - a persisted preference no engine
+    // path ever read - so nothing about how trades execute changes with it.
 
     &__config {
         flex: none;
@@ -823,24 +788,10 @@ $exec-bar-gap: 1.2rem;
 }
 
 // Every route has to clear the fixed bar, otherwise the last of the page sits
-// permanently underneath it.
+// permanently underneath it. The bar is at the bottom on every width now, so
+// the reserve is no longer a phone-only concern.
 .layout .main-body {
-    padding-bottom: 4rem;
-
-    @media (width <= 768px) {
-        padding-bottom: calc(#{$exec-bar-height} + 4rem);
-    }
-}
-
-// The run panel starts below the card rather than under it. Its height is
-// driven by --bot-content-height, so the same offset is taken back off the
-// height to keep its bottom edge where it was.
-@media (width >= 769px) {
-    .run-panel__container {
-        top: calc(#{$exec-bar-top} + #{$exec-bar-card-height} + #{$exec-bar-gap}) !important;
-        bottom: 6.1rem !important;
-        height: auto !important;
-    }
+    padding-bottom: calc(#{$exec-bar-height} + 4rem);
 }
 
 // Radar in the scanner hero: rings and blips that sweep while a scan is
