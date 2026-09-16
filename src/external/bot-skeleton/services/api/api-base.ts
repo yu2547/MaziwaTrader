@@ -149,20 +149,38 @@ class APIBase {
         // line-for-line no-diff - easiest to verify that nothing about it
         // changed.
         if (!V2GetActiveToken() && getStoredAccessToken()) {
+            wsLog('Connection', '[MaziwaTrader] OAuth session detected - initializing OTP transport');
             const otp_connected = await this.initOtpConnection();
             if (otp_connected) {
+                wsLog('Connection', '[MaziwaTrader WebSocket] OTP transport ready - classic socket not opened', {
+                    account_id: this.account_id,
+                });
                 this.initEventListeners();
                 if (this.time_interval) clearInterval(this.time_interval);
                 this.time_interval = null;
                 chart_api.init(force_create_connection);
                 return;
             }
-            // No demo Options account yet (or the OTP request failed) - fall
-            // through to the classic/anonymous connection below, exactly
-            // what an unauthenticated session gets today. Does not retry
-            // here; the next init() call (e.g. next page load, or a
-            // reconnect) will attempt OTP again.
-            wsLog('Connection', 'api_base.init(): OTP connection unavailable, falling back to anonymous connection');
+
+            // This used to fall through to the classic connection below. That
+            // connection is built with the OAuth client id where a legacy
+            // numeric app_id belongs, so it can never open - the session
+            // landed on a socket that answers nothing, and every request the
+            // bot or the ticket sent waited for ever with no error. That is
+            // what "it hangs while trading" was.
+            //
+            // An OAuth session has exactly one transport. When the OTP cannot
+            // be had, that is the failure, and it is reported: no second
+            // attempt on a socket that is known not to answer, and nothing
+            // invented in its place.
+            const reason = this.otp_error ?? 'The OTP transport could not be opened.';
+            wsLog(
+                'Connection',
+                `[MaziwaTrader OTP] transport unavailable - not falling back to the classic socket: ${reason}`
+            );
+            setConnectionStatus(CONNECTION_STATUS.CLOSED);
+            globalObserver.emit('Error', new Error(`Trading connection unavailable. ${reason}`));
+            return;
         }
 
         const created_new_connection = this.connection_manager.connect(force_create_connection);
