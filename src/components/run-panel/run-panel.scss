@@ -6,6 +6,10 @@
 // white text, neither reads as a selected surface.
 $mw-tab-active: #1a3d7c;
 
+// The 2px rule that slides between tabs beneath the block above. Sampled from
+// the reference recording: rgb(80, 129, 210).
+$mw-tab-line: #5081d2;
+
 /**
 * @define -panel
 **/
@@ -419,26 +423,51 @@ $mw-tab-active: #1a3d7c;
             }
         }
 
+        // The selected tab carries BOTH marks, which is what the reference
+        // shows and what this panel was missing on anything wider than a
+        // phone: a navy block on the tab itself, and a blue rule that slides
+        // between tabs beneath them. Sampled off the reference recording at
+        // 1920x826 - the block reads rgb(21, 59, 119) against $mw-tab-active's
+        // rgb(26, 61, 124), i.e. the same navy, and the rule rgb(80, 129, 210)
+        // over 2px.
+        // The fill used to be gated to <= 768px, so desktop showed a bare
+        // coral underline and the selected tab was easy to lose. The colours
+        // apply at every width now; only the phone's sizing stays in the query
+        // below. The background transition is what carries the block between
+        // tabs - it is a solid colour, so it interpolates.
         .dc-tabs {
             &__item {
                 overflow: hidden;
                 text-overflow: ellipsis;
                 padding: 0 0.8rem;
+                background: var(--general-main-1);
+                transition:
+                    background 180ms ease,
+                    color 180ms ease;
+
+                &.dc-tabs__active {
+                    background: $mw-tab-active;
+                    color: #fff;
+                    font-weight: 700;
+                }
             }
         }
 
-        // Reference shows the selected tab as a solid navy block with white
-        // text filling the tab's full height. tabs.scss marks the active tab
-        // with weight 700 plus a 2px coral underline (__active and
-        // __active-line), which reads as almost nothing at phone size - the
-        // three tabs look alike and the selected one is easy to lose.
-        // Scoped to the phone sheet on purpose: Tabs is shared with the rest
-        // of the app, and desktop keeps the underline treatment it already has.
-        // 768px rather than the mobile-or-tablet-screen mixin (1279px), because
-        // that mixin's range covers 769-1279px, where run-panel.tsx is still
-        // rendering the desktop panel - the fill would have landed on desktop
-        // at 1024px and not at 1280px. This matches the isDesktop split the
-        // component actually branches on.
+        // tabs.scss already animates this - it transitions left/width over
+        // 0.3s, which is the slide between tabs the reference has - so only
+        // the colour and weight are corrected here. It used to be hidden
+        // outright on phones, where the fill was treated as the whole of the
+        // selected state; the reference runs both at once. Scoped to the run
+        // panel, because Tabs is shared and the rest of the app keeps coral.
+        .dc-tabs__active-line {
+            display: block;
+            height: 2px;
+            background: $mw-tab-line;
+        }
+
+        // Phone sizing only. 768px rather than the mobile-or-tablet-screen
+        // mixin (1279px), because that mixin's range covers 769-1279px, where
+        // run-panel.tsx is still rendering the desktop panel.
         @media (width <= 768px) {
             .dc-tabs__list {
                 display: flex;
@@ -469,22 +498,6 @@ $mw-tab-active: #1a3d7c;
                 padding: 1.6rem 0.8rem;
                 font-size: 1.5rem;
                 line-height: 1.2;
-                background: var(--general-main-1);
-                transition:
-                    background 140ms ease,
-                    color 140ms ease;
-
-                &.dc-tabs__active {
-                    background: $mw-tab-active;
-                    color: #fff;
-                    font-weight: 700;
-                }
-            }
-
-            // The coral line would sit under the filled block and read as an
-            // artefact; the fill is the selected state here.
-            .dc-tabs__active-line {
-                display: none;
             }
         }
     }
