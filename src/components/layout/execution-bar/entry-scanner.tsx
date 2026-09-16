@@ -421,7 +421,18 @@ const EntryScanner = observer(
                                     onClick={() => selectMode(item.id)}
                                     disabled={is_scanning}
                                 >
-                                    {item.label}
+                                    {/* The compact form the reference uses -
+                                        O1 / U8 rather than Over1 / Under8 -
+                                        derived from the mode's own id so there
+                                        is no second copy of it to drift. The
+                                        full `label` is still what prose like
+                                        "Ready to scan ..." reads from.
+                                        Wrapped so it can sit above the fill:
+                                        the selected tab's gradient is an
+                                        absolutely positioned layer, and an
+                                        absolutely positioned pseudo-element
+                                        paints over a bare text node. */}
+                                    <span>{item.id.replace('/', ' / ')}</span>
                                 </button>
                             ))}
                         </div>

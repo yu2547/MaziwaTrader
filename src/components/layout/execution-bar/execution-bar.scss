@@ -21,6 +21,17 @@ $exec-bar-card-height: 6rem;
 $run-panel-width: 36.6rem;
 $exec-bar-gap: 1.2rem;
 
+// The AI launcher's violet family. Literal values rather than theme tokens:
+// the orb is the same instrument in light and dark, and reading --general-*
+// would repaint it white-ish on a light page.
+$mw-ai-deep: #1e1c2e; // near-black violet, the sphere's lower edge
+$mw-ai-dark: #3e385e; // dark violet
+$mw-ai-violet: #7a4da1; // violet body
+$mw-ai-bright: #9c64bc; // brighter purple, toward the lit side
+$mw-ai-highlight: #bb98cf; // specular highlight
+$mw-ai-white: #faf2fb; // lettering
+$mw-ai-online: #31dc81; // status dot
+
 .mw-exec-bar {
     position: fixed;
     inset-inline-end: 0;
@@ -170,10 +181,10 @@ $exec-bar-gap: 1.2rem;
         bottom: calc(3.6rem + 1.6rem);
         z-index: 9;
 
-        // The resting glow. The orb is a dark sphere on a light page, so
+        // The resting bloom. The orb is a dark sphere on a light page, so
         // without this it reads as a flat disc; the halo is what makes it look
         // lit from inside rather than printed on.
-        filter: drop-shadow(0 0 0.9rem rgb(37 99 235 / 45%));
+        filter: drop-shadow(0 0 0.9rem rgb(122 77 161 / 45%));
 
         // Carries the hover/press/scanning states below. Only transform and
         // filter, both compositor properties, so the orb stays on the GPU and
@@ -184,8 +195,13 @@ $exec-bar-gap: 1.2rem;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 8.4rem;
-        height: 8.4rem;
+
+        // 7.2rem against a 4.6rem core is the reference's ring-to-core ratio
+        // (185-195 over 120-130). It was 8.4rem, which is where the outermost
+        // ping had room to grow into a ripple. ORB_SIZE in index.tsx must
+        // track this - it is what clamps the drag to the viewport.
+        width: 7.2rem;
+        height: 7.2rem;
         overflow: visible;
         padding: 0;
         border: none;
@@ -194,59 +210,13 @@ $exec-bar-gap: 1.2rem;
         cursor: grab;
         touch-action: none;
 
-        // The leading edge of the sweep, turning in step with the wedge below.
-        // The scanner's radar has the same pair (.mw-scanner__radar:after) and
-        // for the same reason: a wedge on its own reads as a shimmer, and it is
-        // the bright spoke that makes the eye see something turning.
-        // The gradient is empty for the first half of its length because that
-        // half is behind the 4.6rem sphere - all of the spoke that can actually
-        // be seen lies in the ring of space between the sphere and the rim.
-        // This used to be the halo; that moved onto the core's box-shadow,
-        // where it blooms from the sphere instead of filling the whole orb and
-        // washing out the 1px rings crossing it.
-        &:before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            inset-inline-start: 50%;
-            width: 4.2rem;
-            height: 2px;
-            margin-top: -1px;
-            transform-origin: 0 50%;
-            background: linear-gradient(
-                90deg,
-                rgb(191 219 254 / 0%) 0%,
-                rgb(191 219 254 / 0%) 52%,
-                rgb(191 219 254 / 95%) 64%,
-                rgb(191 219 254 / 0%) 100%
-            );
-            animation: mw-radar-turn 2.6s linear infinite;
-            pointer-events: none;
-        }
-
-        // The sweep. A conic wedge turning behind the sphere, the same beam the
-        // Entry Scanner's radar runs (.mw-scanner__radar:before) and on the same
-        // keyframes - the orb is the button that opens that panel, so it should
-        // read as the same instrument. This is the part that makes it a
-        // detector rather than a pulsing dot: expanding rings alone read as a
-        // heartbeat, and only a turning beam reads as something sweeping for a
-        // signal. It sits above the rings and below the core, which carries
-        // z-index 2, so the beam passes behind the "AI" and never washes it out.
-        &:after {
-            content: '';
-            position: absolute;
-            inset: 0.6rem;
-            border-radius: 50%;
-            background: conic-gradient(
-                from 0deg,
-                rgb(96 165 250 / 0%) 0deg,
-                rgb(96 165 250 / 38%) 62deg,
-                rgb(147 197 253 / 78%) 88deg,
-                rgb(96 165 250 / 0%) 92deg
-            );
-            animation: mw-radar-turn 2.6s linear infinite;
-            pointer-events: none;
-        }
+        // The turning radar sweep that used to live here - a bright spoke and
+        // a conic wedge, both on mw-radar-turn - is gone. It made the launcher
+        // read as a detector permanently mid-scan, where the reference is a
+        // quiet sphere that only quickens when a scan is actually running. The
+        // Entry Scanner's own radar still runs both, which is where a sweep
+        // belongs: on the instrument doing the scanning, not on the button that
+        // opens it.
 
         &--dragging {
             cursor: grabbing;
@@ -322,31 +292,63 @@ $exec-bar-gap: 1.2rem;
         width: 4.6rem;
         height: 4.6rem;
         border-radius: 50%;
-
-        // Dark blue, ending on the navy the scanner's own header is built from
-        // (#16294a, line ~523). The light stop at 32%/26% is the only bright
-        // part - it is what keeps this a lit sphere rather than a blue circle.
-        background: radial-gradient(circle at 32% 26%, #60a5fa 0%, #2563eb 28%, #1e40af 68%, #16294a 100%);
-        color: #fff;
+        color: $mw-ai-white;
         font-size: 1.6rem;
         font-weight: 700;
         letter-spacing: 0.02em;
 
+        // Violet glass, not a flat disc: bright at the upper-left where the
+        // light falls, through violet, down to the near-black violet at the
+        // lower edge.
+        background: radial-gradient(
+            circle at 34% 28%,
+            $mw-ai-highlight 0%,
+            $mw-ai-bright 22%,
+            $mw-ai-violet 48%,
+            $mw-ai-dark 78%,
+            $mw-ai-deep 100%
+        );
+
         // The first shadow is the halo, blooming out of the sphere itself
         // rather than out of the button box - that keeps the brightest part of
-        // the glow tight around the core, so the rings and the beam still have
-        // a dark enough field to be seen against.
+        // the glow tight around the core, so the rings still have a dark
+        // enough field to be seen against. The two insets are the glass: a
+        // lit crown and a shadowed floor.
         box-shadow:
-            0 0 2.2rem rgb(37 99 235 / 45%),
-            0 8px 26px rgb(30 64 175 / 48%),
-            inset 0 -0.7rem 1.3rem rgb(15 34 74 / 55%),
-            inset 0 0.6rem 1rem rgb(255 255 255 / 28%);
-        transition: transform 150ms ease;
+            0 0 2.2rem rgb(154 100 188 / 48%),
+            0 8px 26px rgb(62 56 94 / 55%),
+            inset 0 -0.7rem 1.3rem rgb(30 28 46 / 62%),
+            inset 0 0.6rem 1rem rgb(250 242 251 / 26%);
 
-        // No idle animation here by design: the sphere is the one part that
-        // holds still. It used to run a 1 -> 1.06 scale breathe, which left
-        // the "AI" lettering subtly resizing on its own the whole time the app
-        // was open. The rings and the status dot carry the motion instead.
+        // Text stays crisp while the glass layer beneath it breathes.
+        text-shadow: 0 0 0.6rem rgb(250 242 251 / 45%);
+        transition:
+            transform 150ms ease,
+            box-shadow 200ms ease;
+
+        // The diagonal glass streak, upper-left to lower-right. A separate
+        // layer so it can catch the light at its own angle instead of being
+        // folded into the radial gradient, which can only be concentric.
+        &:before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(
+                138deg,
+                rgb(250 242 251 / 42%) 0%,
+                rgb(187 152 207 / 16%) 26%,
+                rgb(255 255 255 / 0%) 52%,
+                rgb(30 28 46 / 22%) 100%
+            );
+            pointer-events: none;
+
+            // The breathing lives here rather than on the core itself, so the
+            // sphere appears to pulse while the "AI" lettering never resizes.
+            // The core used to run a 1 -> 1.06 scale, which left the text
+            // subtly growing and shrinking the whole time the app was open.
+            animation: mw-ai-breathe 2.6s ease-in-out infinite;
+        }
     }
 
     // Hover lifts the whole orb and warms its halo; press pushes it back in.
@@ -356,104 +358,144 @@ $exec-bar-gap: 1.2rem;
     // after a tap, does not leave the orb stuck enlarged.
     @media (hover: hover) {
         &__ai:hover {
-            transform: scale(1.06);
-            filter: drop-shadow(0 0 1.4rem rgb(96 165 250 / 65%));
+            transform: scale(1.04);
+            filter: drop-shadow(0 0 1.4rem rgb(154 100 188 / 68%));
         }
     }
 
+    // The press is the click response the reference asks for: the core
+    // brightens, the bloom swells and the orb gives a little, all inside the
+    // 160ms transition on the button - so the scanner's own 220ms entrance
+    // continues the same gesture rather than replacing it with a cut.
     &__ai:active {
-        transform: scale(0.94);
+        transform: scale(0.96);
+        filter: drop-shadow(0 0 1.8rem rgb(187 152 207 / 85%));
     }
 
-    // A scan is running. Deliberately only the rings, beam and halo - the
-    // sphere and its "AI" stay put, per the reference, so the centre never
-    // jitters. The instrument speeds up; it does not change shape.
+    &__ai:active &__ai-core {
+        box-shadow:
+            0 0 2.8rem rgb(187 152 207 / 70%),
+            0 8px 26px rgb(62 56 94 / 55%),
+            inset 0 -0.7rem 1.3rem rgb(30 28 46 / 45%),
+            inset 0 0.6rem 1rem rgb(250 242 251 / 38%);
+    }
+
+    &__ai:active &__ai-ring {
+        animation-duration: 1s;
+    }
+
+    // A scan is running. Deliberately only the rings and the bloom - the
+    // sphere and its "AI" stay put, so the centre never jitters. The
+    // instrument quickens; it does not change shape.
     &__ai--scanning {
-        filter: drop-shadow(0 0 1.6rem rgb(125 211 252 / 75%));
-    }
-
-    &__ai--scanning:before,
-    &__ai--scanning:after {
-        animation-duration: 1.2s;
+        filter: drop-shadow(0 0 1.6rem rgb(187 152 207 / 78%));
     }
 
     &__ai--scanning &__ai-ring {
-        animation-duration: 1.2s;
-        border-color: rgb(186 230 253 / 95%);
+        animation-duration: 1.3s;
+        border-color: rgb(187 152 207 / 92%);
     }
 
-    // Pings, not a heartbeat. All three rings are the same circle on the same
-    // keyframes and differ only in when they start, so each is born at the
-    // sphere's edge and dies at the orb's rim - a new one every 0.87s, three in
-    // flight at once. They used to sit at three fixed radii breathing in place,
-    // which reads as an idle glow rather than something being emitted.
-    // mw-radar-sweep (0.7 -> 1.15) is the scanner's own ring animation: at this
-    // inset that starts the ring at 5rem, just clear of the 4.6rem core, and
-    // ends it at 8.3rem, just inside the 8.4rem button.
+    // Three thin concentric rings held at fixed radii, tight around the core.
+    // They were expanding pings before - each ring born at the sphere's edge
+    // and travelling out to the button's rim - which read as a ripple rather
+    // than as an instrument, and at the outer end of the sweep the ring was
+    // wide enough to be clipped into an ellipse by the button box.
+    // They breathe in place instead: the innermost carries the most light and
+    // each one outward is thinner and softer.
     &__ai-ring {
         position: absolute;
-        inset: 0.6rem;
+        inset: 0.9rem; // 5.4rem circle, just clear of the 4.6rem core
         border-radius: 50%;
-
-        // A hairline on its own disappeared into the halo. The shadow gives the
-        // ping a little light of its own, and rides the element's opacity, so
-        // it fades out with the ring rather than lingering behind it.
-        border: 1px solid rgb(191 219 254 / 90%);
-        box-shadow:
-            0 0 0.5rem rgb(96 165 250 / 50%),
-            inset 0 0 0.5rem rgb(96 165 250 / 40%);
-        animation: mw-radar-sweep 2.6s ease-out infinite;
+        border: 1px solid rgb(187 152 207 / 62%);
+        box-shadow: 0 0 0.4rem rgb(154 100 188 / 38%);
+        animation: mw-ai-ring-breathe 2.6s ease-in-out infinite;
     }
 
     &__ai-ring--mid {
-        animation-delay: 0.86s;
+        inset: 0.45rem; // 6.3rem
+        border-color: rgb(187 152 207 / 40%);
+        box-shadow: 0 0 0.4rem rgb(154 100 188 / 24%);
+        animation-delay: 0.25s;
     }
 
     &__ai-ring--wide {
-        animation-delay: 1.73s;
+        inset: 0; // 7.2rem, the button's own extent
+        border-color: rgb(187 152 207 / 24%);
+        box-shadow: 0 0 0.4rem rgb(154 100 188 / 14%);
+        animation-delay: 0.5s;
     }
 
+    // Roughly 1-2 o'clock on the core, overlapping its edge. The ring is the
+    // page behind it rather than a white stroke, so the dot reads as sitting
+    // on the sphere rather than floating over it.
     &__ai-dot {
         position: absolute;
-        top: 2rem;
-        inset-inline-end: 2.1rem;
+        top: 1.55rem;
+        inset-inline-end: 1.75rem;
         z-index: 3;
-        width: 1.1rem;
-        height: 1.1rem;
+        width: 0.9rem;
+        height: 0.9rem;
         border-radius: 50%;
-        background: #22c55e;
-        border: 2px solid var(--general-main-1);
-        box-shadow: 0 0 0 0 rgb(34 197 94 / 60%);
-        animation: mw-ai-live 2s ease-out infinite;
+        background: $mw-ai-online;
+        border: 2px solid rgb(250 242 251 / 85%);
+        box-shadow: 0 0 0 0 rgb(49 220 129 / 55%);
+        animation: mw-ai-live 2.4s ease-out infinite;
     }
 }
 
+// The glass layer's breathing: 1.5%, which at a 46px sphere is under a pixel -
+// enough to feel alive, not enough to read as movement.
+@keyframes mw-ai-breathe {
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.015);
+        opacity: 0.88;
+    }
+}
+
+@keyframes mw-ai-ring-breathe {
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.85;
+    }
+
+    50% {
+        transform: scale(1.03);
+        opacity: 1;
+    }
+}
+
+// A slow halo out of the dot, not a blink - the reference asks for a status
+// light that does not flash.
 @keyframes mw-ai-live {
     0% {
-        box-shadow: 0 0 0 0 rgb(34 197 94 / 60%);
+        box-shadow: 0 0 0 0 rgb(49 220 129 / 55%);
     }
 
     70% {
-        box-shadow: 0 0 0 0.6rem rgb(34 197 94 / 0%);
+        box-shadow: 0 0 0 0.5rem rgb(49 220 129 / 0%);
     }
 
     100% {
-        box-shadow: 0 0 0 0 rgb(34 197 94 / 0%);
+        box-shadow: 0 0 0 0 rgb(49 220 129 / 0%);
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
+    // Everything on the orb is a breathe now, so all of it simply stops at its
+    // resting state - three legible rings, a lit sphere and a steady dot. The
+    // beam and spoke this block used to hide no longer exist.
     .mw-exec-bar__ai-ring,
-    .mw-exec-bar__ai-dot {
+    .mw-exec-bar__ai-dot,
+    .mw-exec-bar__ai-core:before {
         animation: none;
-    }
-
-    // The rings stop at a legible resting circle, but a beam and a spoke frozen
-    // mid-turn are just marks across the orb with nothing to explain them - so
-    // they go. The sphere keeps its halo, so the orb still looks lit.
-    .mw-exec-bar__ai:before,
-    .mw-exec-bar__ai:after {
-        display: none;
     }
 }
 
@@ -604,6 +646,7 @@ $exec-bar-gap: 1.2rem;
     }
 
     &__mode {
+        position: relative;
         padding: 1rem;
         border: none;
         border-radius: 8px;
@@ -613,9 +656,39 @@ $exec-bar-gap: 1.2rem;
         font-weight: 700;
         cursor: pointer;
 
-        &--active {
+        // Only the colour transitions here; the fill itself is the layer
+        // below, because a gradient is not an interpolable value - setting it
+        // on `background` makes the selection jump from one tab to the next
+        // with no motion at all, which is what it used to do.
+        transition: color 220ms ease;
+
+        // The blue-to-cyan fill, carried on its own layer so it can cross-fade
+        // between tabs: it sits at zero opacity under every tab and rises on
+        // the selected one, so the old tab's fill falls away as the new one
+        // comes up rather than the block teleporting.
+        &:before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
             background: linear-gradient(135deg, #2563eb, #3b82f6);
+            opacity: 0;
+            transition: opacity 220ms ease;
+            pointer-events: none;
+        }
+
+        // Keeps the label above its own fill.
+        > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        &--active {
             color: #fff;
+
+            &:before {
+                opacity: 1;
+            }
         }
 
         &:disabled {
@@ -629,12 +702,23 @@ $exec-bar-gap: 1.2rem;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 1.2rem;
 
-        &--two {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+        // Scan depth, mode and ticks stay on one row at phone widths - the
+        // reference shows the three side by side - so they tighten rather than
+        // stack. This block used to drop every grid to a single column below
+        // 600px, which is what put them one per row.
+        @media (width <= 600px) {
+            gap: 0.6rem;
         }
 
-        @media (width <= 600px) {
-            grid-template-columns: minmax(0, 1fr);
+        &--two {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+
+            // The market and trade-type cards carry sentences rather than
+            // numbers - "Scan to find the best market" - so these two keep
+            // stacking on a phone.
+            @media (width <= 600px) {
+                grid-template-columns: minmax(0, 1fr);
+            }
         }
     }
 
@@ -671,6 +755,28 @@ $exec-bar-gap: 1.2rem;
             color: var(--text-prominent);
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        // Three cards across a 343px sheet leaves about 105px each, so the
+        // padding and type come down to suit rather than the row breaking.
+        // Same cards, same values - only the scale changes.
+        @media (width <= 600px) {
+            padding: 0.9rem 0.8rem;
+            gap: 0.2rem;
+
+            > span {
+                font-size: 0.95rem;
+                letter-spacing: 0.04em;
+            }
+
+            input {
+                font-size: 1.5rem;
+            }
+
+            strong {
+                font-size: 1.3rem;
+                white-space: nowrap;
+            }
         }
     }
 
@@ -947,6 +1053,49 @@ $exec-bar-gap: 1.2rem;
 // Opening the scanner: the backdrop fades, the sheet fades and rises the last
 // few pixels with it. Transform and opacity only, so neither step touches
 // layout while the trading panel is still painted underneath.
+// The closing half of the movement: the sheet settles back the way it rose and
+// the backdrop lifts with it. Reverse directions of mw-scanner-in and
+// mw-scanner-fade, slightly quicker - a dismissal should not take as long as an
+// arrival. The duration matches AI_EXIT_MS in execution-bar/index.tsx, which is
+// how long the component is held mounted for; if one changes the other has to.
+.mw-scanner-exit {
+    // The panel is on its way out and must not take any more input.
+    pointer-events: none;
+
+    // ease-in rather than a steeper curve: with the control points pulled down
+    // the sheet held at full opacity for most of the 200ms and then vanished,
+    // which reads as a cut with a delay in front of it rather than a fade.
+    .mw-scanner__sheet {
+        animation: mw-scanner-out 200ms ease-in forwards;
+    }
+
+    .mw-scanner__backdrop {
+        animation: mw-scanner-fade-out 200ms ease-in forwards;
+    }
+}
+
+@keyframes mw-scanner-out {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(0.8rem) scale(0.97);
+    }
+}
+
+@keyframes mw-scanner-fade-out {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
 @keyframes mw-scanner-fade {
     from {
         opacity: 0;
