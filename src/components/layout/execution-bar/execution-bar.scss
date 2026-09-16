@@ -76,6 +76,26 @@ $mw-ai-online: #31dc81; // status dot
         &--open svg {
             transform: rotate(180deg);
         }
+
+        // Centred over the bar on a phone, where the bar spans the viewport
+        // and the chevron sits above it as its own handle. The column is
+        // align-items: stretch there, and an explicit width opts this out of
+        // the stretch, so without align-self it parked at the inline start.
+        @media (width <= 768px) {
+            align-self: center;
+        }
+
+        // Desktop keeps it where it has always been - inside the card, at its
+        // right edge. Out of flow rather than a column child, because as a
+        // child it pushed the card 36px down to make room above it; the bar is
+        // position: fixed, so this resolves against the bar itself and the
+        // offset centres it in the 6rem card.
+        @media (width > 768px) {
+            position: absolute;
+            top: 1.5rem;
+            inset-inline-end: 0;
+            z-index: 1;
+        }
     }
 
     &__inner {
@@ -133,13 +153,12 @@ $mw-ai-online: #31dc81; // status dot
             text-overflow: ellipsis;
         }
 
-        // Under this width the button, the stage text and the speed switch
-        // cannot all fit, and the button is the one that has to survive.
-        @media (width <= 480px) {
-            .animation__text {
-                display: none;
-            }
-        }
+        // The stage text used to be hidden below 480px, because the button,
+        // the text and the Execution speed switch could not all fit and the
+        // button was the one that had to survive. The switch is gone, so the
+        // room is there - and with the text hidden a phone reported no state
+        // at all: a running bot and an idle one looked identical, which is
+        // exactly what the bar is for.
     }
 
     // The Execution FAST/SLOW switch used to sit on the right of the bar. It

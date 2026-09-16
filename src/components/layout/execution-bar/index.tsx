@@ -237,20 +237,26 @@ const ExecutionBar = observer(() => {
     return (
         <>
             <div className={`mw-exec-bar ${is_running ? 'mw-exec-bar--running' : ''}`} ref={setBarElement}>
+                {/* A sibling of the bar rather than a cell inside it. On a
+                    phone the bar spans the viewport and this is its handle,
+                    sitting centred above it; inside __inner it could only ever
+                    be the last cell of a row, i.e. pinned to one end. The
+                    column is align-items: flex-end on desktop, which keeps it
+                    at the card's right edge as before. */}
+                <button
+                    type='button'
+                    className={`mw-exec-bar__handle ${is_drawer_open ? 'mw-exec-bar__handle--open' : ''}`}
+                    onClick={() => toggleDrawer(!is_drawer_open)}
+                    aria-expanded={is_drawer_open}
+                    aria-label={is_drawer_open ? localize('Hide run panel') : localize('Show run panel')}
+                >
+                    <StandaloneChevronUpBoldIcon iconSize='xs' />
+                </button>
+
                 <div className='mw-exec-bar__inner'>
                     <div className='mw-exec-bar__run'>
                         <TradeAnimation className='mw-exec-bar__animation' />
                     </div>
-
-                    <button
-                        type='button'
-                        className={`mw-exec-bar__handle ${is_drawer_open ? 'mw-exec-bar__handle--open' : ''}`}
-                        onClick={() => toggleDrawer(!is_drawer_open)}
-                        aria-expanded={is_drawer_open}
-                        aria-label={is_drawer_open ? localize('Hide run panel') : localize('Show run panel')}
-                    >
-                        <StandaloneChevronUpBoldIcon iconSize='xs' />
-                    </button>
                 </div>
             </div>
 
