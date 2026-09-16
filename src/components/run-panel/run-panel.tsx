@@ -14,9 +14,18 @@ import Transactions from '@/components/transactions';
 import { popover_zindex } from '@/constants/z-indexes';
 import { useStore } from '@/hooks/useStore';
 import { getActiveCurrency } from '@/utils/active-account-id';
+import { StandaloneChevronUpBoldIcon } from '@deriv/quill-icons/Standalone';
 import { Localize, localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
 import ThemedScrollbars from '../shared_ui/themed-scrollbars';
+
+/**
+ * How long a phone sheet is held on screen while it slides away. Matches the
+ * mw-sheet-drop animation in run-panel.scss, with a margin: the closing class
+ * lands a render after the close, so the animation starts slightly after this
+ * timer does, and it holds its last frame until the sheet unmounts.
+ */
+const SHEET_EXIT_MS = 260;
 
 type TStatisticsTile = {
     content: React.ElementType | string;
@@ -40,6 +49,7 @@ type TDrawerHeader = {
     is_mobile: boolean;
     is_drawer_open: boolean;
     onClearStatClick: () => void;
+    toggleDrawer: (is_open: boolean) => void;
 };
 
 type TDrawerContent = {
@@ -145,17 +155,38 @@ export const StatisticsSummary = ({
     );
 };
 
-const DrawerHeader = ({ is_clear_stat_disabled, is_mobile, is_drawer_open, onClearStatClick }: TDrawerHeader) =>
+const DrawerHeader = ({
+    is_clear_stat_disabled,
+    is_mobile,
+    is_drawer_open,
+    onClearStatClick,
+    toggleDrawer,
+}: TDrawerHeader) =>
     is_mobile &&
     is_drawer_open && (
-        <Button
-            id='db-run-panel__clear-button'
-            className='run-panel__clear-button'
-            disabled={is_clear_stat_disabled}
-            text={localize('Reset')}
-            onClick={onClearStatClick}
-            secondary
-        />
+        <>
+            {/* The open sheet's own collapse control, centred on its top edge
+                as the reference has it. The execution bar's chevron steps
+                aside while the sheet is open on a phone (execution-bar.scss),
+                so this is the one on screen then - and both call the same
+                toggleDrawer, so there is still a single open state. */}
+            <button
+                type='button'
+                className='run-panel__collapse'
+                onClick={() => toggleDrawer(false)}
+                aria-label={localize('Hide run panel')}
+            >
+                <StandaloneChevronUpBoldIcon iconSize='xs' />
+            </button>
+            <Button
+                id='db-run-panel__clear-button'
+                className='run-panel__clear-button'
+                disabled={is_clear_stat_disabled}
+                text={localize('Reset')}
+                onClick={onClearStatClick}
+                secondary
+            />
+        </>
     );
 
 const DrawerContent = ({ active_index, is_drawer_open, active_tour, setActiveTabIndex, ...props }: TDrawerContent) => {
@@ -311,11 +342,54 @@ const RunPanelContent = observer(() => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // The phone sheet slides away rather than vanishing. A closed sheet is
+    // taken out with display: none (run-panel.scss) - that is what stops a
+    // strip of it covering the Run button - and display cannot be animated,
+    // so the sheet is held open for the length of its exit instead, carrying
+    // a closing class that runs the reverse of its entrance.
+    //
+    // The close is detected during render, from the open state the previous
+    // render saw, rather than in an effect. An effect only runs after the
+    // closed sheet has been committed, so it had to render the panel twice -
+    // once closed, which unmounts the statistics, and again held open, which
+    // mounts them back - and that doubled the main-thread cost of every close
+    // on a phone, eating the start of the very animation it was there for.
+    // Setting state during render makes React redo this component before it
+    // touches any child, so the children render once.
+    //
+    // It only animates a close from a sheet the user had open. The mount
+    // effect above shuts the panel on load; `is_ready` is not set until the
+    // frame after that has settled, so a page load never plays the exit of a
+    // sheet nobody saw.
+    const [is_sheet_closing, setIsSheetClosing] = React.useState(false);
+    const [rendered_open, setRenderedOpen] = React.useState(is_drawer_open);
+    const is_ready = React.useRef(false);
+
+    if (rendered_open !== is_drawer_open) {
+        setRenderedOpen(is_drawer_open);
+        setIsSheetClosing(rendered_open && !is_drawer_open && is_ready.current && !isDesktop);
+    }
+
+    React.useEffect(() => {
+        const frame = window.requestAnimationFrame(() => {
+            is_ready.current = true;
+        });
+        return () => window.cancelAnimationFrame(frame);
+    }, []);
+
+    React.useEffect(() => {
+        if (!is_sheet_closing) return undefined;
+        const timer = window.setTimeout(() => setIsSheetClosing(false), SHEET_EXIT_MS);
+        return () => window.clearTimeout(timer);
+    }, [is_sheet_closing]);
+
+    const is_sheet_shown = is_drawer_open || is_sheet_closing;
+
     const content = (
         <DrawerContent
             active_index={active_index}
             currency={currency}
-            is_drawer_open={is_drawer_open}
+            is_drawer_open={is_sheet_shown}
             is_mobile={!isDesktop}
             lost_contracts={lost_contracts}
             number_of_runs={number_of_runs}
@@ -335,8 +409,9 @@ const RunPanelContent = observer(() => {
         <DrawerHeader
             is_clear_stat_disabled={is_clear_stat_disabled}
             is_mobile={!isDesktop}
-            is_drawer_open={is_drawer_open}
+            is_drawer_open={is_sheet_shown}
             onClearStatClick={onClearStatClick}
+            toggleDrawer={toggleDrawer}
         />
     );
 
@@ -349,7 +424,15 @@ const RunPanelContent = observer(() => {
 
     return (
         <>
-            <div className={!isDesktop && is_drawer_open ? 'run-panel__container--mobile' : 'run-panel'}>
+            <div
+                className={
+                    !isDesktop && is_sheet_shown
+                        ? classNames('run-panel__container--mobile', {
+                              'run-panel__container--closing': is_sheet_closing,
+                          })
+                        : 'run-panel'
+                }
+            >
                 <Drawer
                     anchor='right'
                     className={classNames('run-panel', {
@@ -359,7 +442,7 @@ const RunPanelContent = observer(() => {
                     contentClassName='run-panel__content'
                     header={header}
                     footer={isDesktop && footer}
-                    is_open={is_drawer_open}
+                    is_open={is_sheet_shown}
                     toggleDrawer={toggleDrawer}
                     width={366}
                     zIndex={popover_zindex.RUN_PANEL}

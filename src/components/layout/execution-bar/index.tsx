@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
+import RiskDisclaimer from '@/components/layout/footer/RiskDisclaimer';
 import TradeAnimation from '@/components/trade-animation';
 import { useStore } from '@/hooks/useStore';
 import { StandaloneChevronUpBoldIcon } from '@deriv/quill-icons/Standalone';
@@ -255,9 +256,27 @@ const ExecutionBar = observer(() => {
 
                 <div className='mw-exec-bar__inner'>
                     <div className='mw-exec-bar__run'>
-                        <TradeAnimation className='mw-exec-bar__animation' />
+                        {/* should_show_overlay puts the settled result - Won
+                            or Lost, from the real contract - across the status
+                            area. The bar never passed it, so a finished trade
+                            went straight from "Contract bought" to the next
+                            one with no result shown, which reads as the bot
+                            stalling. The phone drawer's footer used to carry a
+                            copy of this control that did pass it; that copy was
+                            removed and the result went with it. Shown on
+                            phones only (execution-bar.scss). */}
+                        <TradeAnimation className='mw-exec-bar__animation' should_show_overlay />
                     </div>
                 </div>
+            </div>
+
+            {/* The Risk Disclaimer on a phone. The footer that carries it is
+                only drawn from 1280px up, so phones had none. Same component -
+                same pill, same dialog, portalled to the body - positioned just
+                above the bar in execution-bar.scss and hidden on wider screens,
+                where the footer already has one. */}
+            <div className='mw-exec-bar__disclaimer'>
+                <RiskDisclaimer />
             </div>
 
             {/* Draggable: press and move to reposition, press and release to

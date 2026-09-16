@@ -102,6 +102,36 @@ $mw-tab-line: #5081d2;
             height: calc(100vh - var(--mw-exec-bar-height, 6rem) - 6rem);
             max-height: calc(100vh - var(--mw-exec-bar-height, 6rem) - 6rem);
 
+            // On a phone the sheet runs from directly under the 4rem header to
+            // the top of the execution bar, as the reference does - it used to
+            // stop 2rem short of the header, leaving a strip of navigation
+            // showing above it.
+            // Sized by pinning both edges rather than by a vh height: mobile
+            // browsers size vh to the viewport with the URL bar collapsed, so a
+            // vh sheet ran underneath the bar whenever the URL bar was showing.
+            // A fixed box between two offsets follows the viewport as it is.
+            // The bar carries the bottom safe-area inset itself now
+            // (execution-bar.scss), and publishes its height including it, so
+            // the inset is not added a second time here.
+            // Then the movement: the sheet rises from the bottom when it opens
+            // and drops back when it closes, over roughly the quarter-second
+            // the reference takes. transform and opacity only, so the workspace
+            // behind it does not relayout while it moves.
+            @media (width <= 768px) {
+                top: 4rem;
+                bottom: var(--mw-exec-bar-height, 6rem);
+                height: auto;
+                max-height: none;
+                animation: mw-sheet-rise 270ms cubic-bezier(0.2, 0.8, 0.3, 1);
+
+                // Held on screen by run-panel.tsx while this plays; it takes
+                // no input on the way out.
+                &.run-panel__container--closing {
+                    pointer-events: none;
+                    animation: mw-sheet-drop 220ms ease-in forwards;
+                }
+            }
+
             // A number, not var(--zindex-drawer): that variable is declared on
             // `.bot` (app.scss), and no element in this app carries that class,
             // so the var resolved to nothing and took the whole declaration
@@ -495,9 +525,28 @@ $mw-tab-line: #5081d2;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                padding: 1.6rem 0.8rem;
-                font-size: 1.5rem;
+
+                // Compact, as the phone reference is: a ~34px strip rather
+                // than the 52px one this was, which gives the space back to
+                // the transaction list.
+                padding: 0.9rem 0.8rem;
+                font-size: 1.3rem;
                 line-height: 1.2;
+
+                // On a phone the selected tab is marked by the blue rule
+                // alone - white-on-navy is the desktop treatment. The phone
+                // reference shows plain tabs with a thin underline under the
+                // selected one, and the filled block made the strip read as
+                // three buttons. The rule keeps its slide from tabs.scss.
+                background: transparent;
+                color: var(--text-less-prominent);
+                font-weight: 400;
+
+                &.dc-tabs__active {
+                    background: transparent;
+                    color: var(--text-prominent);
+                    font-weight: 700;
+                }
             }
         }
     }
@@ -581,6 +630,40 @@ $mw-tab-line: #5081d2;
             min-width: 8rem;
         }
     }
+
+    // The open sheet's collapse chevron: centred on the same row as Reset,
+    // pointing down because pressing it lowers the sheet. Phones only - between
+    // 769 and 1279px the execution bar is still the desktop card and keeps its
+    // own chevron, so showing this there as well would put two on screen.
+    &__collapse {
+        display: none;
+
+        @media (width <= 768px) {
+            position: absolute;
+            top: 0.4rem;
+            inset-inline-start: 50%;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 4.4rem;
+            height: 2.8rem;
+            margin-inline-start: -2.2rem;
+            padding: 0;
+            border: none;
+            background: transparent;
+            color: var(--text-general);
+            cursor: pointer;
+
+            svg {
+                transform: rotate(180deg);
+            }
+
+            svg > path {
+                fill: currentcolor;
+            }
+        }
+    }
 }
 
 .controls {
@@ -641,6 +724,39 @@ $mw-tab-line: #5081d2;
         width: 100%;
         height: 4rem;
         border-radius: 0 4px 4px 0;
+    }
+}
+
+// The phone sheet's entrance and exit. It travels its own full height, so it
+// rises from behind the execution bar rather than dropping in from above.
+@keyframes mw-sheet-rise {
+    from {
+        opacity: 0.6;
+        transform: translateY(100%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes mw-sheet-drop {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0.6;
+        transform: translateY(100%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .run-panel__container--mobile,
+    .run-panel__container--mobile.run-panel__container--closing {
+        animation: none;
     }
 }
 

@@ -54,6 +54,15 @@ $mw-ai-spin: 3.5s;
         width: auto;
         align-items: stretch;
         gap: 0;
+
+        // Level with the run panel's sheet rather than under it, so the sheet
+        // rises from behind the bar the way the reference does instead of
+        // sliding over Run and the status for the length of its entrance. The
+        // two never overlap once the sheet has settled; this only decides who
+        // is on top while it moves. Equal z-index, and the bar comes later in
+        // the page, so it wins - while the Entry Scanner, at the same 10 and
+        // later again, still covers it.
+        z-index: 10;
     }
 
     &__handle {
@@ -87,6 +96,19 @@ $mw-ai-spin: 3.5s;
         // the stretch, so without align-self it parked at the inline start.
         @media (width <= 768px) {
             align-self: center;
+
+            // While the sheet is on screen it carries its own chevron at its
+            // top edge (run-panel.tsx), which is where the reference has it,
+            // so this one steps aside. The bar is then just the card, and the
+            // height it publishes drops by this row - which is what lets the
+            // sheet reach all the way down to it.
+            // Keyed on the sheet being in the page rather than on the open
+            // state: the sheet stays mounted while it slides away, and if this
+            // row came back the moment the close began, the bar would grow by
+            // 3rem mid-slide and pull the sheet's bottom edge up with it.
+            body:has(.run-panel__container--mobile) & {
+                display: none;
+            }
         }
 
         // Desktop keeps it where it has always been - inside the card, at its
@@ -119,6 +141,44 @@ $mw-ai-spin: 3.5s;
             border-radius: 0;
             border-inline: none;
             border-bottom: none;
+
+            // The page opts into viewport-fit=cover, so the bottom edge of
+            // the screen is the device's, not the browser's - on a phone with
+            // a home indicator or gesture bar, Run sat underneath it. The card
+            // keeps its own background through the inset, and because the bar
+            // measures its height with the padding included, the sheet above
+            // it clears the inset without adding it again.
+            padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+    }
+
+    // The settled result across the status area is a phone treatment. The
+    // desktop card has never shown it, and is left as it is.
+    @media (width > 768px) {
+        .db-contract-card__result {
+            display: none;
+        }
+    }
+
+    // Phone Risk Disclaimer. Fixed at one height in both states, as in the
+    // reference: collapsed it sits just above the chevron row; open, that row
+    // is gone and the pill lies over the statistics' lower-left corner, which
+    // is exactly where the reference puts it. Its dialog is portalled, so this
+    // does not contain it.
+    // z-index 10, the same as the sheet and the Entry Scanner, rather than one
+    // above them: at equal z-index the later element in the page paints on top,
+    // and this is rendered after the run panel but before the scanner - so it
+    // sits over the open sheet and under an open scanner. At 11 it showed
+    // through the scanner's backdrop.
+    &__disclaimer {
+        display: none;
+
+        @media (width <= 768px) {
+            display: block;
+            position: fixed;
+            inset-inline-start: 1.2rem;
+            bottom: calc(#{$exec-bar-card-height} + 3rem + 0.8rem + env(safe-area-inset-bottom, 0px));
+            z-index: 10;
         }
     }
 
@@ -163,6 +223,21 @@ $mw-ai-spin: 3.5s;
         // room is there - and with the text hidden a phone reported no state
         // at all: a running bot and an idle one looked identical, which is
         // exactly what the bar is for.
+
+        // On a phone the status box runs from the button to the bar's far
+        // edge, as the reference's does. Nothing sized it before, so it shrank
+        // to its text - 128px of a 396px bar - and the settled Won/Lost, which
+        // fills this box, would have been a small tag rather than the band
+        // across the bar the reference shows.
+        @media (width <= 768px) {
+            padding-inline-end: 2.4rem;
+
+            .animation__wrapper,
+            .animation__container {
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+        }
     }
 
     // The Execution FAST/SLOW switch used to sit on the right of the bar. It

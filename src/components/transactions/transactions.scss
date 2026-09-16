@@ -222,6 +222,13 @@
             direction: rtl;
         }
 
+        // Compact rows below the desktop layout, matching the 43px row height
+        // transactions.tsx gives the virtualised list at the same breakpoint.
+        @media (width < 1280px) {
+            grid-row-gap: 2px;
+            padding: 0.5rem 0;
+        }
+
         &-wrapper {
             height: 5.2rem;
             padding: 0 1.6rem;
@@ -231,6 +238,10 @@
 
             &:hover {
                 background-color: var(--state-hover);
+            }
+
+            @media (width < 1280px) {
+                height: 4.3rem;
             }
         }
     }

@@ -168,8 +168,15 @@ const Transactions = observer(({ is_drawer_open }: TTransactions) => {
                             getRowSize={({ index }) => {
                                 const row = transaction_list?.[index];
                                 switch (row.type) {
+                                    // Compact below the desktop layout, as the
+                                    // phone reference is. The list is
+                                    // virtualised, so the height lives here as
+                                    // well as in the stylesheet - the two have to
+                                    // agree, or rows clip or leave gaps. The
+                                    // breakpoint is useDevice's (1280px), which
+                                    // is the same split the panel branches on.
                                     case transaction_elements.CONTRACT: {
-                                        return 50;
+                                        return isDesktop ? 50 : 43;
                                     }
                                     case transaction_elements.DIVIDER: {
                                         return 21;
