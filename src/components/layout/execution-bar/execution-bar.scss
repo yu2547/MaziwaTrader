@@ -32,6 +32,10 @@ $mw-ai-highlight: #bb98cf; // specular highlight
 $mw-ai-white: #faf2fb; // lettering
 $mw-ai-online: #31dc81; // status dot
 
+// One revolution of the ring system. Slow enough to read as an instrument
+// sweeping rather than a spinner waiting.
+$mw-ai-spin: 3.5s;
+
 .mw-exec-bar {
     position: fixed;
     inset-inline-end: 0;
@@ -368,6 +372,35 @@ $mw-ai-online: #31dc81; // status dot
             // subtly growing and shrinking the whole time the app was open.
             animation: mw-ai-breathe 2.6s ease-in-out infinite;
         }
+
+        // The inner scan: a narrow band of light travelling across the sphere's
+        // face, well below the rings in strength - the rings are the movement
+        // the eye should follow. It is driven by background-position rather
+        // than a transform, so nothing about the core's geometry moves and the
+        // lettering beneath it cannot be dragged along. The circle clips it.
+        &:after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(
+                115deg,
+                rgb(250 242 251 / 0%) 40%,
+                rgb(250 242 251 / 22%) 50%,
+                rgb(250 242 251 / 0%) 60%
+            );
+            background-size: 260% 100%;
+            animation: mw-ai-core-sweep 5.6s ease-in-out infinite;
+            pointer-events: none;
+        }
+    }
+
+    // Above the glass and the sweep, and animated by nothing. Both layers on
+    // the core are absolutely positioned, and an absolutely positioned
+    // pseudo-element paints over a bare text node.
+    &__ai-text {
+        position: relative;
+        z-index: 1;
     }
 
     // Hover lifts the whole orb and warms its halo; press pushes it back in.
@@ -422,27 +455,63 @@ $mw-ai-online: #31dc81; // status dot
     // wide enough to be clipped into an ellipse by the button box.
     // They breathe in place instead: the innermost carries the most light and
     // each one outward is thinner and softer.
+    // The scanning system: three concentric rings turning around a core that
+    // does not move. Each is an ARC rather than a closed circle - a perfect
+    // circle rotating is indistinguishable from a still one, so a ring that
+    // merely spun would have read as static no matter how smooth it was. The
+    // gap in each ring is what makes the rotation visible.
+    // ---
+    // All three share one period and one direction, so they hold their angular
+    // relationship and read as a single coordinated instrument. Their phases
+    // are offset with negative delays - which shifts the starting angle
+    // without delaying the start - so the arcs are distributed around the
+    // circle instead of stacking into one thick band.
+    // ---
+    // Radial spacing is fixed by `inset` and is untouched by the rotation, so
+    // the rings never drift apart or ripple outward.
     &__ai-ring {
         position: absolute;
         inset: 0.9rem; // 5.4rem circle, just clear of the 4.6rem core
         border-radius: 50%;
-        border: 1px solid rgb(187 152 207 / 62%);
-        box-shadow: 0 0 0.4rem rgb(154 100 188 / 38%);
-        animation: mw-ai-ring-breathe 2.6s ease-in-out infinite;
+
+        // Three quarters lit, innermost and brightest.
+        border: 1px solid transparent;
+        border-top-color: rgb(187 152 207 / 78%);
+        border-right-color: rgb(187 152 207 / 78%);
+        border-bottom-color: rgb(187 152 207 / 45%);
+        box-shadow: 0 0 0.4rem rgb(154 100 188 / 32%);
+
+        // Rotation and glow are separate animations on separate properties, so
+        // the breathing cannot disturb the turn.
+        animation:
+            mw-ai-ring-spin $mw-ai-spin linear infinite,
+            mw-ai-ring-glow $mw-ai-spin ease-in-out infinite;
     }
 
     &__ai-ring--mid {
         inset: 0.45rem; // 6.3rem
-        border-color: rgb(187 152 207 / 40%);
-        box-shadow: 0 0 0.4rem rgb(154 100 188 / 24%);
-        animation-delay: 0.25s;
+
+        // Half lit.
+        border-top-color: rgb(187 152 207 / 52%);
+        border-right-color: rgb(187 152 207 / 52%);
+        border-bottom-color: transparent;
+        box-shadow: 0 0 0.4rem rgb(154 100 188 / 20%);
+        animation-delay:
+            -1.17s,
+            -1.17s; // a third of the way round
     }
 
     &__ai-ring--wide {
         inset: 0; // 7.2rem, the button's own extent
-        border-color: rgb(187 152 207 / 24%);
-        box-shadow: 0 0 0.4rem rgb(154 100 188 / 14%);
-        animation-delay: 0.5s;
+
+        // A quarter lit, outermost and faintest.
+        border-top-color: rgb(187 152 207 / 34%);
+        border-right-color: transparent;
+        border-bottom-color: transparent;
+        box-shadow: 0 0 0.4rem rgb(154 100 188 / 12%);
+        animation-delay:
+            -2.33s,
+            -2.33s; // two thirds
     }
 
     // Roughly 1-2 o'clock on the core, overlapping its edge. The ring is the
@@ -458,8 +527,14 @@ $mw-ai-online: #31dc81; // status dot
         border-radius: 50%;
         background: $mw-ai-online;
         border: 2px solid rgb(250 242 251 / 85%);
-        box-shadow: 0 0 0 0 rgb(49 220 129 / 55%);
-        animation: mw-ai-live 2.4s ease-out infinite;
+        box-shadow: 0 0 0.4rem rgb(49 220 129 / 45%);
+
+        // Fixed to the core, not carried by the rings: it is a sibling of
+        // them, so the rotation cannot reach it and it never travels round the
+        // circle. The only movement is a slow lift in opacity - not a blink,
+        // and not the expanding halo this used to fire, which read as a pulse
+        // against a system that is meant to be quiet.
+        animation: mw-ai-live 4s ease-in-out infinite;
     }
 }
 
@@ -478,32 +553,57 @@ $mw-ai-online: #31dc81; // status dot
     }
 }
 
-@keyframes mw-ai-ring-breathe {
+// The ring system's turn. Linear, because an eased revolution speeds up and
+// slows down every cycle, which reads as a spinner catching rather than an
+// instrument sweeping.
+@keyframes mw-ai-ring-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+// Glow only - no scale. The rings used to breathe outward 1 -> 1.03, which
+// moved them against each other and against the core.
+@keyframes mw-ai-ring-glow {
     0%,
     100% {
-        transform: scale(1);
-        opacity: 0.85;
+        opacity: 0.82;
     }
 
     50% {
-        transform: scale(1.03);
         opacity: 1;
+    }
+}
+
+// The band of light crossing the sphere's face. Held off-face for the back
+// half of the cycle so the sweep is occasional rather than continuous.
+@keyframes mw-ai-core-sweep {
+    0% {
+        background-position: 130% 0;
+    }
+
+    55%,
+    100% {
+        background-position: -130% 0;
     }
 }
 
 // A slow halo out of the dot, not a blink - the reference asks for a status
 // light that does not flash.
+// A slow lift and settle in opacity. No scale, no travelling halo, nothing
+// that could be read as a blink.
 @keyframes mw-ai-live {
-    0% {
-        box-shadow: 0 0 0 0 rgb(49 220 129 / 55%);
-    }
-
-    70% {
-        box-shadow: 0 0 0 0.5rem rgb(49 220 129 / 0%);
-    }
-
+    0%,
     100% {
-        box-shadow: 0 0 0 0 rgb(49 220 129 / 0%);
+        opacity: 0.9;
+    }
+
+    50% {
+        opacity: 1;
     }
 }
 

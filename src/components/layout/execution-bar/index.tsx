@@ -285,7 +285,13 @@ const ExecutionBar = observer(() => {
                 <span className='mw-exec-bar__ai-ring' aria-hidden='true' />
                 <span className='mw-exec-bar__ai-ring mw-exec-bar__ai-ring--mid' aria-hidden='true' />
                 <span className='mw-exec-bar__ai-ring mw-exec-bar__ai-ring--wide' aria-hidden='true' />
-                <span className='mw-exec-bar__ai-core'>AI</span>
+                {/* The lettering is its own layer so it sits above the core's
+                    glass and scanning sheen - both are absolutely positioned
+                    pseudo-elements, which paint over a bare text node - and so
+                    nothing animating the core can reach the letters. */}
+                <span className='mw-exec-bar__ai-core'>
+                    <span className='mw-exec-bar__ai-text'>AI</span>
+                </span>
                 <span className='mw-exec-bar__ai-dot' aria-hidden='true' />
             </button>
 
