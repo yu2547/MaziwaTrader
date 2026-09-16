@@ -67,6 +67,61 @@ const readError = (thrown: unknown): string | null => {
 // subscription drops an update rather than the contract never settling.
 const SETTLEMENT_GRACE_MS = 15000;
 
+/**
+ * Deriv can leave a request unanswered, and api.send() then never settles: a
+ * socket that has gone quiet, one being replaced mid-reconnect, or one that
+ * never opened at all. Awaiting that is what leaves a button reading
+ * "Buying..." with nothing behind it.
+ *
+ * Every await below is raced against the clock, so a press always ends in an
+ * answer or in a message, never in a page that has stopped responding.
+ */
+const CONNECT_TIMEOUT_MS = 15000;
+const PRICE_TIMEOUT_MS = 10000;
+
+/**
+ * Longer than the others, and deliberately never retried on its own: a buy that
+ * has gone out may have been taken even when the answer does not arrive, so the
+ * only safe thing to do is say so and let the trader look.
+ */
+const BUY_TIMEOUT_MS = 20000;
+
+class TimeoutError extends Error {}
+
+/**
+ * What Deriv answers these two requests with. Only the fields this file reads
+ * are named; `api.send()` is untyped (@deriv/deriv-api ships no declarations),
+ * so without them the awaited value arrives as `unknown` and nothing can be
+ * read off it.
+ */
+type TProposalReply = { proposal?: { ask_price?: number; id?: string } };
+type TBuyReply = { buy?: { contract_id?: number | string; longcode?: string; transaction_id?: number | string } };
+
+/**
+ * Races an untyped request against the clock. The one cast is here, in one
+ * place, rather than at each call site: what comes back is whatever the socket
+ * sent, and the caller names the shape it expects to read.
+ *
+ * The request itself is not cancelled - a WebSocket request cannot be - and no
+ * answer is invented: on timeout this rejects with a TimeoutError carrying the
+ * caller's message, and a real failure is passed through untouched.
+ */
+const withTimeout = <T>(work: Promise<unknown>, ms: number, message: string): Promise<T> =>
+    new Promise<T>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new TimeoutError(message)), ms);
+        work.then(
+            value => {
+                clearTimeout(timer);
+                // The one cast: what the socket sent, named by the caller.
+                resolve(value as T);
+            },
+            error => {
+                clearTimeout(timer);
+                reject(error);
+            }
+        );
+    });
+
 const useManualTrade = () => {
     const { run_panel, oauth_session } = useStore() ?? {};
     const [is_placing, setIsPlacing] = useState(false);
@@ -190,7 +245,18 @@ const useManualTrade = () => {
     const prepareConnection = useCallback(async (): Promise<string | null> => {
         if (!api_base.api || !api_base.is_authorized) {
             if (!getStoredAccessToken()) return 'Log in to place trades.';
-            const connected = await api_base.initOtpConnection();
+            let connected = false;
+            try {
+                connected = await withTimeout<boolean>(
+                    api_base.initOtpConnection(),
+                    CONNECT_TIMEOUT_MS,
+                    'timed out opening the trading connection'
+                );
+            } catch {
+                // A connection that never answers is a connection we do not
+                // have, and the message below already says so.
+                connected = false;
+            }
             if (!connected) {
                 return `Could not open a trading connection for your account. ${api_base.otp_error ?? ''}`.trim();
             }
@@ -198,7 +264,11 @@ const useManualTrade = () => {
 
         const selected_account_id = oauth_session?.selected_account_id;
         if (api_base.is_otp_transport && selected_account_id && api_base.account_id !== selected_account_id) {
-            const switched = await api_base.switchOtpAccount(selected_account_id);
+            const switched = await withTimeout<boolean>(
+                api_base.switchOtpAccount(selected_account_id),
+                CONNECT_TIMEOUT_MS,
+                'timed out switching account'
+            ).catch(() => false);
             return switched
                 ? 'Reconnected to the account in the header. Press again to trade on it.'
                 : 'The connection is on a different account than the header shows.';
@@ -256,16 +326,45 @@ const useManualTrade = () => {
                 if (payout_per_point !== undefined) proposal_request.payout_per_point = payout_per_point;
                 if (limit_order !== undefined) proposal_request.limit_order = limit_order;
 
-                const proposal_response = await api.send(proposal_request);
+                // Nothing has been bought at this point, so a price request that
+                // goes unanswered is safe to give up on and say so.
+                const proposal_response = await withTimeout<TProposalReply>(
+                    api.send(proposal_request),
+                    PRICE_TIMEOUT_MS,
+                    'Deriv did not answer the price request in time. Nothing was bought - check your connection and try again.'
+                );
                 if (readError(proposal_response)) throw proposal_response;
 
                 const proposal = proposal_response.proposal;
                 if (!proposal?.id) throw new Error('The price request came back without a proposal.');
 
-                const buy_response = await api.send({ buy: proposal.id, price: proposal.ask_price });
+                let buy_response: TBuyReply;
+                try {
+                    buy_response = await withTimeout<TBuyReply>(
+                        api.send({ buy: proposal.id, price: proposal.ask_price }),
+                        BUY_TIMEOUT_MS,
+                        'The purchase was not confirmed in time.'
+                    );
+                } catch (thrown) {
+                    // A buy that goes unanswered is not the same as a buy that
+                    // failed - it may well have been taken. So nothing is
+                    // retried and nothing is claimed either way: the press ends,
+                    // and the trader is told to look before pressing again.
+                    if (thrown instanceof TimeoutError) {
+                        const unconfirmed =
+                            'Deriv did not confirm the purchase in time. It may still have been placed - check your open positions before buying again.';
+                        if (is_mounted.current) setErrorMessage(unconfirmed);
+                        globalObserver.emit('ui.log.error', unconfirmed);
+                        return false;
+                    }
+                    throw thrown;
+                }
                 if (readError(buy_response)) throw buy_response;
 
                 const buy = buy_response.buy;
+                // Deriv answers a successful buy with the contract; anything
+                // else is surfaced rather than carried on with as a NaN id.
+                if (!buy?.contract_id) throw new Error('The purchase came back without a contract.');
                 const contract_id = Number(buy.contract_id);
 
                 // The contract runs for `duration` ticks; give the stream that
