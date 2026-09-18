@@ -174,6 +174,16 @@ const AssistantOrbs = () => {
             >
                 <span className='mw-gem-orb__halo' aria-hidden='true' />
                 <span className='mw-gem-orb__core'>
+                    {/* The light moving inside the sphere. Its own clipped layer
+                        so nothing that drifts can cross the orb's edge, and
+                        behind the lettering, which never moves. */}
+                    <span className='mw-gem-orb__field' aria-hidden='true'>
+                        <span className='mw-gem-orb__bubble mw-gem-orb__bubble--1' />
+                        <span className='mw-gem-orb__bubble mw-gem-orb__bubble--2' />
+                        <span className='mw-gem-orb__bubble mw-gem-orb__bubble--3' />
+                        <span className='mw-gem-orb__bubble mw-gem-orb__bubble--4' />
+                        <span className='mw-gem-orb__bubble mw-gem-orb__bubble--5' />
+                    </span>
                     <span className='mw-gem-orb__text'>GEMINI</span>
                 </span>
                 <span className='mw-gem-orb__dot' aria-hidden='true' />
