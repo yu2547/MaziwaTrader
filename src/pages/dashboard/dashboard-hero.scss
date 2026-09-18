@@ -216,6 +216,60 @@
     }
 }
 
+// Phones only - the width the app treats as mobile everywhere else. Tablets
+// and anything wider keep the layout above, untouched.
+@media (width <= 600px) {
+    // Two by two, as the reference has the four Quick Actions on a phone - a
+    // single column made them four full-width slabs, and the page a long
+    // scroll before it reached the bots.
+    .mw-dashboard-hero__actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.8rem;
+    }
+
+    // Sized for a half-width card: a little tighter round the edges, and text
+    // large enough to read at that width - the description and "Open" were
+    // 10.5px, which a two-column card makes worse, not better.
+    .mw-dashboard-hero-card {
+        gap: 0.5rem;
+        padding: 1.2rem 1.1rem 1.1rem;
+        border-width: 1.5px;
+        border-radius: 1.4rem;
+
+        // Each card outlined in its own colour, as in the reference - on the
+        // wider layout the colour is only a faint inner ring.
+        &--blue {
+            border-color: rgb(77 151 255 / 60%);
+        }
+
+        &--green {
+            border-color: rgb(65 182 111 / 60%);
+        }
+
+        &--violet {
+            border-color: rgb(145 103 255 / 65%);
+        }
+
+        &--gold {
+            border-color: rgb(212 175 55 / 65%);
+        }
+
+        &__title {
+            font-size: 1.5rem;
+        }
+
+        &__description {
+            font-size: 1.2rem;
+            line-height: 1.4;
+        }
+
+        &__footer {
+            font-size: 1.25rem;
+            color: #8fb8ff;
+        }
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .mw-dashboard-hero * {
         transition: none !important;
