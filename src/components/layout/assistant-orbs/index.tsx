@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import GeminiPanel from '@/pages/gemini/gemini-panel';
 import { localize } from '@deriv-com/translations';
 import EntryScanner from '../execution-bar/entry-scanner';
@@ -36,12 +36,22 @@ const GEMINI_ORB_POS_KEY = 'mw_gemini_orb_position';
 const AI_EXIT_MS = 260;
 
 /**
- * The hint beside the orb after a page load, as the reference has it: it
- * arrives a moment after the app has settled and leaves on its own. Long
- * enough to read twice, short enough not to become furniture.
+ * The "AI Market Scanner" card after a page load, as the reference has it:
+ * shown once per mount - which is once per load or sign-in - a moment after
+ * the app settles, held long enough to read, then eased away. INTRO_EXIT_MS
+ * must match the exit animation in execution-bar.scss, which is how long the
+ * card is held mounted while it fades.
  */
-const AI_HINT_DELAY_MS = 1400;
-const AI_HINT_VISIBLE_MS = 7000;
+const INTRO_DELAY_MS = 900;
+const INTRO_VISIBLE_MS = 4500;
+const INTRO_EXIT_MS = 300;
+
+/** Space between the card's pointer and the orb, and between the card and the screen edge. */
+const INTRO_GAP_PX = 12;
+const INTRO_EDGE_PX = 8;
+
+type TIntroPhase = 'waiting' | 'shown' | 'leaving' | 'done';
+type TIntroPlacement = { left: number; placement: 'above' | 'below'; pointer: number; top: number };
 
 const AssistantOrbs = () => {
     const [is_ai_open, setIsAiOpen] = useState(false);
@@ -52,11 +62,12 @@ const AssistantOrbs = () => {
     // with the modal dismissed behind it.
     const [is_scanning, setIsScanning] = useState(false);
     const [is_gemini_open, setIsGeminiOpen] = useState(false);
-    // The post-load hint. Timed rather than dismissed, and never shown while
+    // The post-load card. Timed rather than dismissed, and never shown while
     // the scanner itself is open - pointing at a button the user is already
     // using would be noise.
-    const [is_hint_shown, setIsHintShown] = useState(false);
-    const [hint_position, setHintPosition] = useState<{ right: number; top: number } | null>(null);
+    const [intro_phase, setIntroPhase] = useState<TIntroPhase>('waiting');
+    const [intro_placement, setIntroPlacement] = useState<TIntroPlacement | null>(null);
+    const [intro_element, setIntroElement] = useState<HTMLButtonElement | null>(null);
 
     // The scanner animates in over 220ms but used to vanish on the frame it
     // closed, because it is mounted conditionally and unmounting cannot be
@@ -76,7 +87,9 @@ const AssistantOrbs = () => {
     const openAi = useCallback(() => {
         if (exit_timer.current) window.clearTimeout(exit_timer.current);
         setIsAiClosing(false);
-        setIsHintShown(false);
+        // Opening the scanner answers the card, so it is done for good - it
+        // does not come back when the scanner closes.
+        setIntroPhase('done');
         setIsAiOpen(true);
     }, []);
 
@@ -86,30 +99,47 @@ const AssistantOrbs = () => {
     const gemini_orb = useDraggableOrb({ onActivate: openGemini, storage_key: GEMINI_ORB_POS_KEY });
 
     // One shot per mount, which is per page load or sign-in - the component
-    // goes up with the app shell and stays up.
+    // goes up with the app shell and stays up. Each step only moves the card
+    // forward from where it expects it to be, so opening the scanner part-way
+    // through ('done') is never undone by a timer still pending.
     useEffect(() => {
-        const show = window.setTimeout(() => setIsHintShown(true), AI_HINT_DELAY_MS);
-        const hide = window.setTimeout(() => setIsHintShown(false), AI_HINT_DELAY_MS + AI_HINT_VISIBLE_MS);
+        const advance = (from: TIntroPhase, to: TIntroPhase) => () =>
+            setIntroPhase(current => (current === from ? to : current));
+        const show = window.setTimeout(advance('waiting', 'shown'), INTRO_DELAY_MS);
+        const leave = window.setTimeout(advance('shown', 'leaving'), INTRO_DELAY_MS + INTRO_VISIBLE_MS);
+        const done = window.setTimeout(advance('leaving', 'done'), INTRO_DELAY_MS + INTRO_VISIBLE_MS + INTRO_EXIT_MS);
         return () => {
             window.clearTimeout(show);
-            window.clearTimeout(hide);
+            window.clearTimeout(leave);
+            window.clearTimeout(done);
         };
     }, []);
 
-    // Placed from the orb's measured position rather than from a copy of its
-    // CSS anchors: the orb is draggable, and where it rests otherwise depends
-    // on the execution bar's height and on whether the run panel's statistics
-    // are up. Measuring is the only way to sit beside it in all of those.
-    useEffect(() => {
-        if (!is_hint_shown || !ai_orb.element) return;
-        const box = ai_orb.element.getBoundingClientRect();
-        // Anchored by its right edge, not its left. A fixed box positioned from
-        // the left takes its available width from there to the edge of the
-        // screen - beside an orb in the bottom-right corner that is about 90px,
-        // so the card came out a narrow column of wrapped words. From the right
-        // it grows back across the screen instead.
-        setHintPosition({ right: window.innerWidth - (box.left - 8), top: box.top + box.height / 2 });
-    }, [is_hint_shown, ai_orb.element, ai_orb.position]);
+    // Placed from the orb's measured box, and the card's own measured size,
+    // before the card is painted - so it never appears in one place and jumps.
+    // Measured rather than copied from the orb's CSS anchors: the orb is
+    // draggable, and where it rests otherwise depends on the execution bar,
+    // the run panel and the page.
+    // Above the orb with its pointer on the orb's centre, as the reference has
+    // it. The card is kept inside the screen, sliding sideways if the orb is
+    // near an edge (the pointer stays on the orb), and flips below the orb only
+    // when there is no room above - on DTrader, where the orb sits near the top.
+    useLayoutEffect(() => {
+        if (!intro_element || !ai_orb.element) return;
+        const orb = ai_orb.element.getBoundingClientRect();
+        const width = intro_element.offsetWidth;
+        const height = intro_element.offsetHeight;
+        const centre = orb.left + orb.width / 2;
+        const left = Math.min(Math.max(centre - width / 2, INTRO_EDGE_PX), window.innerWidth - width - INTRO_EDGE_PX);
+        const fits_above = orb.top - INTRO_GAP_PX - height >= INTRO_EDGE_PX;
+        setIntroPlacement({
+            left,
+            placement: fits_above ? 'above' : 'below',
+            // Held clear of the card's rounded corners.
+            pointer: Math.min(Math.max(centre - left, 18), width - 18),
+            top: fits_above ? orb.top - INTRO_GAP_PX - height : orb.bottom + INTRO_GAP_PX,
+        });
+    }, [intro_element, ai_orb.element, ai_orb.position]);
 
     useEffect(
         () => () => {
@@ -147,12 +177,26 @@ const AssistantOrbs = () => {
                 <span className='mw-exec-bar__ai-ring' aria-hidden='true' />
                 <span className='mw-exec-bar__ai-ring mw-exec-bar__ai-ring--mid' aria-hidden='true' />
                 <span className='mw-exec-bar__ai-ring mw-exec-bar__ai-ring--wide' aria-hidden='true' />
-                {/* The lettering is its own layer so it sits above the core's
-                    glass and scanning sheen - both are absolutely positioned
-                    pseudo-elements, which paint over a bare text node - and so
-                    nothing animating the core can reach the letters. */}
+                {/* Signal points travelling the rings. Each is a carrier the
+                    size of its ring, turning at its own speed, with the point
+                    drawn at its top - so it rides the ring's line exactly. */}
+                <span className='mw-exec-bar__ai-orbit mw-exec-bar__ai-orbit--1' aria-hidden='true' />
+                <span className='mw-exec-bar__ai-orbit mw-exec-bar__ai-orbit--2' aria-hidden='true' />
+                <span className='mw-exec-bar__ai-orbit mw-exec-bar__ai-orbit--3' aria-hidden='true' />
+                <span className='mw-exec-bar__ai-orbit mw-exec-bar__ai-orbit--4' aria-hidden='true' />
+                <span className='mw-exec-bar__ai-orbit mw-exec-bar__ai-orbit--5' aria-hidden='true' />
+                {/* The lettering is its own layer so it sits above everything
+                    else on the core - glass, light, beam and frame are all
+                    absolutely positioned, which paints over a bare text node -
+                    and so nothing animating the core can reach the letters. */}
                 <span className='mw-exec-bar__ai-core'>
+                    <span className='mw-exec-bar__ai-field' aria-hidden='true'>
+                        <span className='mw-exec-bar__ai-bubble mw-exec-bar__ai-bubble--1' />
+                        <span className='mw-exec-bar__ai-bubble mw-exec-bar__ai-bubble--2' />
+                        <span className='mw-exec-bar__ai-bubble mw-exec-bar__ai-bubble--3' />
+                    </span>
                     <span className='mw-exec-bar__ai-sweep' aria-hidden='true' />
+                    <span className='mw-exec-bar__ai-frame' aria-hidden='true' />
                     <span className='mw-exec-bar__ai-text'>AI</span>
                 </span>
                 <span className='mw-exec-bar__ai-dot' aria-hidden='true' />
@@ -192,21 +236,37 @@ const AssistantOrbs = () => {
             {/* Says what the orb is, once, shortly after the app settles - the
                 orb is a lettered sphere with no label, and nothing else on the
                 page explains it. It follows the orb wherever the user has
-                dragged it, and opening the scanner takes it away early.
-                aria-hidden because the orb already carries the same meaning in
-                its own label; a screen reader should hear it once, not twice. */}
-            {is_hint_shown && !is_ai_open && hint_position && (
+                dragged it; tapping it opens the scanner, the same as the orb.
+                Hidden until it has been measured and placed, which happens
+                before the first paint. aria-hidden because the orb already
+                carries the same meaning in its own label; a screen reader
+                should hear it once, not twice. */}
+            {(intro_phase === 'shown' || intro_phase === 'leaving') && !is_ai_open && (
                 <button
                     type='button'
-                    className='mw-exec-bar__ai-hint'
-                    style={{ right: hint_position.right, top: hint_position.top }}
+                    ref={setIntroElement}
+                    className={`mw-exec-bar__ai-hint mw-exec-bar__ai-hint--${
+                        intro_placement?.placement ?? 'above'
+                    }${intro_phase === 'leaving' ? ' mw-exec-bar__ai-hint--leaving' : ''}`}
+                    style={
+                        intro_placement
+                            ? ({
+                                  left: intro_placement.left,
+                                  top: intro_placement.top,
+                                  '--mw-hint-pointer': `${intro_placement.pointer}px`,
+                              } as CSSProperties)
+                            : { visibility: 'hidden' }
+                    }
                     onClick={openAi}
                     tabIndex={-1}
                     aria-hidden='true'
                 >
-                    <span className='mw-exec-bar__ai-hint-title'>{localize('AI Market Scanner')}</span>
-                    <span className='mw-exec-bar__ai-hint-text'>
-                        {localize('Tap to find optimal trading opportunities')}
+                    <span className='mw-exec-bar__ai-hint-icon'>🤖</span>
+                    <span className='mw-exec-bar__ai-hint-body'>
+                        <span className='mw-exec-bar__ai-hint-title'>{localize('AI Market Scanner')}</span>
+                        <span className='mw-exec-bar__ai-hint-text'>
+                            {localize('Click here to find optimal trading opportunities!')}
+                        </span>
                     </span>
                 </button>
             )}

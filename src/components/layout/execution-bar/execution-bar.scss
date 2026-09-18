@@ -32,14 +32,18 @@ $mw-ai-highlight: #bb98cf; // specular highlight
 $mw-ai-white: #faf2fb; // lettering
 $mw-ai-online: #31dc81; // status dot
 
-// One revolution of the ring system. Slow enough to read as an instrument
-// sweeping rather than a spinner waiting.
-$mw-ai-spin: 3.5s;
+// The ring system: three periods, and the middle ring turning the other way,
+// so the rings slide against one another like independent sensors rather than
+// turning as one rigid piece. Close enough in speed to read as one
+// coordinated instrument, not three unrelated spinners.
+$mw-ai-ring-inner: 3.8s;
+$mw-ai-ring-mid: 5s;
+$mw-ai-ring-wide: 7s;
 
-// The needle inside the sphere. Unhurried while nothing is happening, and
-// quickened while a scan is actually running.
-$mw-ai-needle-idle: 6s;
-$mw-ai-needle-scanning: 1.6s;
+// The scan beam crossing the sphere. Unhurried while nothing is happening,
+// and quickened while a scan is actually running.
+$mw-ai-scan-idle: 2.8s;
+$mw-ai-scan-active: 1.4s;
 
 // The floating orbs' footing, published once and read by both of them.
 // There are two spheres now - the AI scanner and Gemini, stacked in the same
@@ -236,41 +240,104 @@ $mw-ai-needle-scanning: 1.6s;
         }
     }
 
-    // The hint beside the orb after a load. Placed from the orb's measured
-    // box (execution-bar/index.tsx), so it sits at the orb's left edge and on
-    // its centre line wherever the orb happens to be - hence the translate
-    // rather than offsets of its own.
+    // The "AI Market Scanner" card after a load: a dark navy card with a blue-
+    // violet rim and a soft glow, pointing down at the orb it describes. Placed
+    // from the orb's measured box and its own measured size
+    // (assistant-orbs/index.tsx): left and top are set there, and so is
+    // --mw-hint-pointer, the pointer's distance from the card's left edge, which
+    // keeps it on the orb's centre when the card has slid to stay on screen.
+    // A fixed width rather than max-content, so the text wraps where the
+    // reference wraps it - "AI Market / Scanner", and the description over
+    // three lines - on every screen.
     &__ai-hint {
         position: fixed;
         z-index: 10;
-        transform: translateY(-50%);
-        width: max-content;
         display: flex;
-        flex-direction: column;
-        gap: 0.2rem;
-        max-width: 19rem;
-        padding: 0.9rem 1.2rem;
-        border: 1px solid rgb(122 77 161 / 45%);
-        border-radius: 10px;
-        background: rgb(30 28 46 / 96%);
-        box-shadow: 0 10px 28px rgb(15 12 26 / 45%);
+        align-items: flex-start;
+        gap: 1rem;
+        width: 22rem;
+        max-width: calc(100vw - 1.6rem);
+        padding: 1.2rem 1.4rem 1.3rem;
+        border: 1px solid rgb(118 120 255 / 45%);
+        border-radius: 14px;
+        background: #151b3a;
+        box-shadow:
+            0 12px 32px rgb(8 10 30 / 55%),
+            0 0 1.6rem rgb(110 100 255 / 24%);
         text-align: start;
         cursor: pointer;
-        animation: mw-ai-hint-in 220ms ease-out;
+        animation: mw-ai-hint-in 300ms ease-out both;
+
+        // The pointer: a square turned 45 degrees in the card's own colour,
+        // with the rim drawn on its two outer edges only, so the outline runs
+        // on unbroken from the card into the point.
+        &:after {
+            content: '';
+            position: absolute;
+            left: var(--mw-hint-pointer, 50%);
+            width: 1.2rem;
+            height: 1.2rem;
+            background: #151b3a;
+            transform: translateX(-50%) rotate(45deg);
+        }
+    }
+
+    // It grows out of its own pointer, the point nearest the orb.
+    &__ai-hint--above {
+        transform-origin: var(--mw-hint-pointer, 50%) 100%;
+    }
+
+    &__ai-hint--below {
+        transform-origin: var(--mw-hint-pointer, 50%) 0;
+    }
+
+    // Above the orb, pointing down.
+    &__ai-hint--above:after {
+        bottom: -0.65rem;
+        border-right: 1px solid rgb(118 120 255 / 45%);
+        border-bottom: 1px solid rgb(118 120 255 / 45%);
+    }
+
+    // Below it, pointing up - only where there is no room above.
+    &__ai-hint--below:after {
+        top: -0.65rem;
+        border-top: 1px solid rgb(118 120 255 / 45%);
+        border-left: 1px solid rgb(118 120 255 / 45%);
+    }
+
+    // Eased away rather than cut. Held in its last frame until the component
+    // unmounts it, INTRO_EXIT_MS later.
+    &__ai-hint--leaving {
+        animation: mw-ai-hint-out 300ms ease-in both;
+        pointer-events: none;
+    }
+
+    // The app's own robot, the one on its bot cards, at the reference's size.
+    &__ai-hint-icon {
+        flex: none;
+        font-size: 3.8rem;
+        line-height: 1;
+    }
+
+    &__ai-hint-body {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-width: 0;
     }
 
     &__ai-hint-title {
-        font-size: 1.3rem;
+        font-size: 1.7rem;
         font-weight: 700;
-        line-height: 1.25;
-        color: $mw-ai-white;
+        line-height: 1.2;
+        color: #fff;
     }
 
     &__ai-hint-text {
-        font-size: 1.15rem;
+        font-size: 1.35rem;
         font-weight: 400;
         line-height: 1.35;
-        color: rgb(250 242 251 / 72%);
+        color: rgb(210 214 240 / 82%);
     }
 
     // Phone Risk Disclaimer. Fixed at one height in both states, as in the
@@ -487,10 +554,14 @@ $mw-ai-needle-scanning: 1.6s;
         // The diagonal glass streak, upper-left to lower-right. A separate
         // layer so it can catch the light at its own angle instead of being
         // folded into the radial gradient, which can only be concentric.
+        // Over the inner light, as glass is; under the beam, the frame and the
+        // lettering. The core is its own stacking context (z-index above), so
+        // these orders hold among its layers and nothing outside can intrude.
         &:before {
             content: '';
             position: absolute;
             inset: 0;
+            z-index: 1;
             border-radius: inherit;
             background: linear-gradient(
                 138deg,
@@ -507,63 +578,231 @@ $mw-ai-needle-scanning: 1.6s;
             // subtly growing and shrinking the whole time the app was open.
             animation: mw-ai-breathe 2.6s ease-in-out infinite;
         }
+    }
 
-        // The inner scan: a narrow band of light travelling across the sphere's
-        // face, well below the rings in strength - the rings are the movement
-        // the eye should follow. It is driven by background-position rather
-        // than a transform, so nothing about the core's geometry moves and the
-        // lettering beneath it cannot be dragged along. The circle clips it.
-        &:after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            background: linear-gradient(
-                115deg,
-                rgb(250 242 251 / 0%) 40%,
-                rgb(250 242 251 / 22%) 50%,
-                rgb(250 242 251 / 0%) 60%
+    // Soft light drifting inside the sphere. Its own layer, clipped to the circle
+    // twice over - overflow with the radius, and clip-path, which also holds for
+    // layers the browser has moved onto the GPU - so nothing that drifts can
+    // cross the orb's edge.
+    &__ai-field {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        border-radius: 50%;
+        overflow: hidden;
+        clip-path: circle(50%);
+        pointer-events: none;
+    }
+
+    // Low and soft: internal energy under the glass rather than objects on it.
+    // Sized and placed in percentages of the sphere, and each drift is in
+    // percentages of the bubble itself, so the field scales with the orb. The
+    // paths were laid out as bubble centres and checked to stay inside.
+    &__ai-bubble {
+        position: absolute;
+        border-radius: 50%;
+        opacity: 0.45;
+        will-change: transform, opacity;
+
+        // Large, lavender to white, upper left.
+        &--1 {
+            left: 23%;
+            top: 23%;
+            width: 30%;
+            height: 30%;
+            background: radial-gradient(
+                circle,
+                rgb(248 236 255 / 90%) 0%,
+                rgb(206 170 240 / 50%) 40%,
+                rgb(206 170 240 / 0%) 70%
             );
-            background-size: 260% 100%;
-            animation: mw-ai-core-sweep 5.6s ease-in-out infinite;
-            pointer-events: none;
+            filter: blur(1.5px);
+            animation: mw-ai-bubble-1 8s ease-in-out infinite;
+        }
+
+        // Medium, violet, lower right.
+        &--2 {
+            left: 52%;
+            top: 46%;
+            width: 20%;
+            height: 20%;
+            background: radial-gradient(
+                circle,
+                rgb(232 200 255 / 90%) 0%,
+                rgb(170 120 230 / 50%) 42%,
+                rgb(170 120 230 / 0%) 72%
+            );
+            filter: blur(1px);
+            animation: mw-ai-bubble-2 9.5s ease-in-out -3.5s infinite;
+        }
+
+        // Small, white, upper right.
+        &--3 {
+            left: 52%;
+            top: 24%;
+            width: 12%;
+            height: 12%;
+            background: radial-gradient(
+                circle,
+                rgb(255 255 255 / 100%) 0%,
+                rgb(236 222 255 / 55%) 45%,
+                rgb(236 222 255 / 0%) 72%
+            );
+            filter: blur(0.5px);
+            animation: mw-ai-bubble-3 7s ease-in-out -1.5s infinite;
         }
     }
 
-    // The needle turning inside the sphere - a radar hand sweeping the centre,
-    // which is the movement the reference shows there. An earlier pass removed
-    // a spoke like this on the reading that the reference had none; the phone
-    // recording shows it plainly, tracking round the core while the sphere and
-    // its lettering stay put.
-    // The hand is the pseudo-element, not this box: it is pinned at the
-    // sphere's centre and rotated about that point, so only the line moves.
+    // The scan beam: a thin line of light crossing the sphere on a diagonal,
+    // entering beyond one edge and leaving beyond the other, fading at both
+    // ends, then again. It replaces the radar needle that turned about the
+    // centre - the reference scans across the sphere rather than round it.
+    // This box is the clip; the beam is the pseudo-element, which alone
+    // moves. It passes under the frame and the lettering, so "AI" is never
+    // struck through.
     &__ai-sweep {
         position: absolute;
         inset: 0;
-        z-index: 1;
+        z-index: 2;
         border-radius: 50%;
         overflow: hidden;
+        clip-path: circle(50%);
         pointer-events: none;
 
+        // Longer than the sphere is wide, so its ends are never seen inside
+        // it: the line always runs edge to edge, like a real scan line.
         &:before {
             content: '';
             position: absolute;
             top: 50%;
-            inset-inline-start: 50%;
-            width: 50%;
-            height: 1px;
-            transform-origin: 0 50%;
-            background: linear-gradient(90deg, rgb(250 242 251 / 78%), rgb(250 242 251 / 0%));
-            animation: mw-ai-needle $mw-ai-needle-idle linear infinite;
+            left: -25%;
+            width: 150%;
+            height: 2px;
+            margin-top: -1px;
+            background: linear-gradient(
+                90deg,
+                rgb(255 255 255 / 0%) 0%,
+                rgb(214 196 255 / 55%) 30%,
+                rgb(255 255 255 / 95%) 50%,
+                rgb(190 220 255 / 55%) 70%,
+                rgb(255 255 255 / 0%) 100%
+            );
+            box-shadow:
+                0 0 0.3rem rgb(214 196 255 / 85%),
+                0 0 0.8rem rgb(160 130 235 / 55%);
+            opacity: 0;
+            animation: mw-ai-scan $mw-ai-scan-idle ease-in-out infinite;
         }
     }
 
-    // Above the glass, the sheen and the needle, and animated by nothing. Every
-    // other layer on the core is absolutely positioned, and an absolutely
-    // positioned element paints over a bare text node.
+    // The targeting frame round the lettering: four corner brackets, not a box,
+    // over a faint lift in the glass - drawn as background layers on one
+    // element. 2.9 by 2.5rem inside a 4.6rem sphere: its corners are 1.9rem
+    // from the centre against a 2.3rem radius, so it sits well clear of the
+    // edge. Fixed, like the lettering it frames.
+    &__ai-frame {
+        $corner: rgb(246 238 255 / 82%);
+        $arm: 0.6rem;
+        $stroke: 1.5px;
+
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        width: 2.9rem;
+        height: 2.5rem;
+        margin: auto;
+        background:
+            linear-gradient($corner, $corner) top left / #{$arm} #{$stroke} no-repeat,
+            linear-gradient($corner, $corner) top left / #{$stroke} #{$arm} no-repeat,
+            linear-gradient($corner, $corner) top right / #{$arm} #{$stroke} no-repeat,
+            linear-gradient($corner, $corner) top right / #{$stroke} #{$arm} no-repeat,
+            linear-gradient($corner, $corner) bottom left / #{$arm} #{$stroke} no-repeat,
+            linear-gradient($corner, $corner) bottom left / #{$stroke} #{$arm} no-repeat,
+            linear-gradient($corner, $corner) bottom right / #{$arm} #{$stroke} no-repeat,
+            linear-gradient($corner, $corner) bottom right / #{$stroke} #{$arm} no-repeat,
+            linear-gradient(rgb(255 255 255 / 7%), rgb(255 255 255 / 7%));
+        filter: drop-shadow(0 0 0.2rem rgb(214 190 255 / 70%));
+        pointer-events: none;
+    }
+
+    // Above everything else on the core, and animated by nothing. Every other
+    // layer there is absolutely positioned, and an absolutely positioned
+    // element paints over a bare text node.
     &__ai-text {
         position: relative;
-        z-index: 2;
+        z-index: 4;
+    }
+
+    // Signal points travelling the rings. Each carrier is the size of one ring
+    // and turns about the orb's centre; the point is drawn at its top, so it
+    // runs exactly along that ring's line. Different rings, speeds, directions
+    // and starting angles (the negative delays), so the points pass, meet and
+    // part rather than marching in step.
+    &__ai-orbit {
+        position: absolute;
+        border-radius: 50%;
+        pointer-events: none;
+        animation: mw-ai-ring-spin var(--mw-orbit-period, 6s) linear infinite;
+
+        &:before {
+            content: '';
+            position: absolute;
+            top: -0.2rem;
+            left: 50%;
+            width: 0.4rem;
+            height: 0.4rem;
+            margin-left: -0.2rem;
+            border-radius: 50%;
+            background: var(--mw-orbit-colour);
+            box-shadow: 0 0 0.35rem var(--mw-orbit-colour);
+        }
+
+        // Inner ring, cyan, quickest.
+        &--1 {
+            --mw-orbit-colour: rgb(120 230 255 / 95%);
+            --mw-orbit-period: 3.2s;
+
+            inset: 0.9rem;
+        }
+
+        // Middle ring, violet, the other way round.
+        &--2 {
+            --mw-orbit-colour: rgb(190 150 255 / 95%);
+            --mw-orbit-period: 4.6s;
+
+            inset: 0.45rem;
+            animation-direction: reverse;
+            animation-delay: -1.5s;
+        }
+
+        // Middle ring, white, the other way round and slower - it gains on and
+        // falls behind the violet point on the same ring.
+        &--3 {
+            --mw-orbit-colour: rgb(250 248 255 / 95%);
+            --mw-orbit-period: 6.1s;
+
+            inset: 0.45rem;
+            animation-direction: reverse;
+            animation-delay: -4.2s;
+        }
+
+        // Outer ring, blue.
+        &--4 {
+            --mw-orbit-colour: rgb(120 150 255 / 95%);
+            --mw-orbit-period: 7.4s;
+
+            inset: 0;
+            animation-delay: -2.4s;
+        }
+
+        // Outer ring, lavender, slower still.
+        &--5 {
+            --mw-orbit-colour: rgb(214 190 255 / 90%);
+            --mw-orbit-period: 9.2s;
+
+            inset: 0;
+            animation-delay: -6.8s;
+        }
     }
 
     // Hover lifts the whole orb and warms its halo; press pushes it back in.
@@ -606,15 +845,31 @@ $mw-ai-needle-scanning: 1.6s;
         filter: drop-shadow(0 0 1.6rem rgb(187 152 207 / 78%));
     }
 
+    // Each ring roughly two and a half times faster, so they keep their speeds
+    // relative to one another - one duration for all three would have locked
+    // them together for the length of the scan.
     &__ai--scanning &__ai-ring {
-        animation-duration: 1.3s;
-        border-color: rgb(187 152 207 / 92%);
+        animation-duration: 1.5s;
+        border-color: rgb(187 170 255 / 92%);
     }
 
-    // The needle quickens with them, which is the difference between the orb
+    &__ai--scanning &__ai-ring--mid {
+        animation-duration: 2s;
+    }
+
+    &__ai--scanning &__ai-ring--wide {
+        animation-duration: 2.8s;
+    }
+
+    // The beam quickens with them, which is the difference between the orb
     // idling and the orb working.
     &__ai--scanning &__ai-sweep:before {
-        animation-duration: $mw-ai-needle-scanning;
+        animation-duration: $mw-ai-scan-active;
+    }
+
+    // Scaled rather than replaced, so the points keep their different speeds.
+    &__ai--scanning &__ai-orbit {
+        animation-duration: calc(var(--mw-orbit-period) * 0.45);
     }
 
     // Three thin concentric rings held at fixed radii, tight around the core.
@@ -630,57 +885,62 @@ $mw-ai-needle-scanning: 1.6s;
     // merely spun would have read as static no matter how smooth it was. The
     // gap in each ring is what makes the rotation visible.
     // ---
-    // All three share one period and one direction, so they hold their angular
-    // relationship and read as a single coordinated instrument. Their phases
-    // are offset with negative delays - which shifts the starting angle
-    // without delaying the start - so the arcs are distributed around the
-    // circle instead of stacking into one thick band.
+    // Each ring has its own period - 3.8s, 5s and 7s - and the middle one turns
+    // the other way, so the rings slide against each other like independent
+    // sensors. All three turned as one before, which read as a single rigid
+    // part. Negative delays spread their starting angles so the arcs begin
+    // distributed round the circle rather than stacked.
     // ---
-    // Radial spacing is fixed by `inset` and is untouched by the rotation, so
-    // the rings never drift apart or ripple outward.
+    // Blue-violet, in line with the reference's orbit system around a violet
+    // sphere. Radial spacing is fixed by `inset` and untouched by the rotation,
+    // so the rings never drift apart or ripple outward.
     &__ai-ring {
         position: absolute;
         inset: 0.9rem; // 5.4rem circle, just clear of the 4.6rem core
         border-radius: 50%;
+        pointer-events: none;
 
         // Three quarters lit, innermost and brightest.
         border: 1px solid transparent;
-        border-top-color: rgb(187 152 207 / 78%);
-        border-right-color: rgb(187 152 207 / 78%);
-        border-bottom-color: rgb(187 152 207 / 45%);
-        box-shadow: 0 0 0.4rem rgb(154 100 188 / 32%);
+        border-top-color: rgb(160 150 255 / 82%);
+        border-right-color: rgb(160 150 255 / 82%);
+        border-bottom-color: rgb(160 150 255 / 45%);
+        box-shadow: 0 0 0.4rem rgb(120 110 240 / 35%);
 
         // Rotation and glow are separate animations on separate properties, so
         // the breathing cannot disturb the turn.
         animation:
-            mw-ai-ring-spin $mw-ai-spin linear infinite,
-            mw-ai-ring-glow $mw-ai-spin ease-in-out infinite;
+            mw-ai-ring-spin $mw-ai-ring-inner linear infinite,
+            mw-ai-ring-glow $mw-ai-ring-inner ease-in-out infinite;
     }
 
     &__ai-ring--mid {
         inset: 0.45rem; // 6.3rem
 
         // Half lit.
-        border-top-color: rgb(187 152 207 / 52%);
-        border-right-color: rgb(187 152 207 / 52%);
+        border-top-color: rgb(140 140 255 / 58%);
+        border-right-color: rgb(140 140 255 / 58%);
         border-bottom-color: transparent;
-        box-shadow: 0 0 0.4rem rgb(154 100 188 / 20%);
+        box-shadow: 0 0 0.4rem rgb(110 110 240 / 22%);
+        animation-duration: $mw-ai-ring-mid, $mw-ai-ring-mid;
+        animation-direction: reverse, normal;
         animation-delay:
-            -1.17s,
-            -1.17s; // a third of the way round
+            -1.7s,
+            -1.7s;
     }
 
     &__ai-ring--wide {
         inset: 0; // 7.2rem, the button's own extent
 
         // A quarter lit, outermost and faintest.
-        border-top-color: rgb(187 152 207 / 34%);
+        border-top-color: rgb(120 140 255 / 42%);
         border-right-color: transparent;
         border-bottom-color: transparent;
-        box-shadow: 0 0 0.4rem rgb(154 100 188 / 12%);
+        box-shadow: 0 0 0.4rem rgb(100 120 240 / 14%);
+        animation-duration: $mw-ai-ring-wide, $mw-ai-ring-wide;
         animation-delay:
-            -2.33s,
-            -2.33s; // two thirds
+            -4.6s,
+            -4.6s;
     }
 
     // Roughly 1-2 o'clock on the core, overlapping its edge. The ring is the
@@ -694,16 +954,17 @@ $mw-ai-needle-scanning: 1.6s;
         width: 0.9rem;
         height: 0.9rem;
         border-radius: 50%;
-        background: $mw-ai-online;
-        border: 2px solid rgb(250 242 251 / 85%);
-        box-shadow: 0 0 0.4rem rgb(49 220 129 / 45%);
+
+        // Lit green at the centre, darker at the edge, inside a white ring.
+        background: radial-gradient(circle at 40% 35%, #8dffc0 0%, $mw-ai-online 45%, #148a4a 100%);
+        border: 2px solid rgb(250 242 251 / 90%);
+        box-shadow: 0 0 0.3rem rgb(49 220 129 / 45%);
 
         // Fixed to the core, not carried by the rings: it is a sibling of
         // them, so the rotation cannot reach it and it never travels round the
-        // circle. The only movement is a slow lift in opacity - not a blink,
-        // and not the expanding halo this used to fire, which read as a pulse
-        // against a system that is meant to be quiet.
-        animation: mw-ai-live 4s ease-in-out infinite;
+        // circle. Its glow swells and settles every two seconds - active and
+        // available - and nothing else about it moves.
+        animation: mw-ai-live 2s ease-in-out infinite;
     }
 }
 
@@ -748,66 +1009,158 @@ $mw-ai-needle-scanning: 1.6s;
     }
 }
 
-// The band of light crossing the sphere's face. Held off-face for the back
-// half of the cycle so the sweep is occasional rather than continuous.
-@keyframes mw-ai-hint-in {
-    from {
-        opacity: 0;
-        transform: translateY(-50%) translateX(0.8rem);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(-50%);
-    }
-}
-
-// The needle's turn. Linear, because a radar hand that eases is a hand that
-// hesitates.
-@keyframes mw-ai-needle {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-@keyframes mw-ai-core-sweep {
+// The beam's pass: from beyond the upper-left edge to beyond the lower-right,
+// on a diagonal, fading in as it enters and out as it leaves. At 3rem off
+// centre the tilted line is 2.65rem from the centre, outside the 2.3rem
+// sphere, so it genuinely enters and exits rather than appearing mid-face.
+@keyframes mw-ai-scan {
     0% {
-        background-position: 130% 0;
+        transform: translateY(-3rem) rotate(-28deg);
+        opacity: 0;
     }
 
-    55%,
+    15%,
+    85% {
+        opacity: 1;
+    }
+
     100% {
-        background-position: -130% 0;
+        transform: translateY(3rem) rotate(-28deg);
+        opacity: 0;
     }
 }
 
-// A slow halo out of the dot, not a blink - the reference asks for a status
-// light that does not flash.
-// A slow lift and settle in opacity. No scale, no travelling halo, nothing
-// that could be read as a blink.
-@keyframes mw-ai-live {
+// The three drifts inside the sphere. Translations are in percentages of the
+// bubble's own size; the comments give the resulting centre as a percentage
+// of the sphere. Different lengths and starting points (the negative delays),
+// so the light meets and parts rather than cycling in step.
+@keyframes mw-ai-bubble-1 {
+    // Centre 38,38 → 56,44 → 50,60 → 36,52.
     0%,
     100% {
-        opacity: 0.9;
+        transform: translate(0, 0) scale(0.9);
+        opacity: 0.35;
+    }
+
+    25% {
+        transform: translate(60%, 20%) scale(1);
+        opacity: 0.55;
     }
 
     50% {
+        transform: translate(40%, 73%) scale(1.1);
+        opacity: 0.6;
+    }
+
+    75% {
+        transform: translate(-7%, 47%) scale(0.95);
+        opacity: 0.4;
+    }
+}
+
+@keyframes mw-ai-bubble-2 {
+    // Centre 62,56 → 52,66 → 40,54 → 58,40.
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+        opacity: 0.3;
+    }
+
+    25% {
+        transform: translate(-50%, 50%) scale(1.1);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: translate(-110%, -10%) scale(0.9);
+        opacity: 0.4;
+    }
+
+    75% {
+        transform: translate(-20%, -80%) scale(1.05);
+        opacity: 0.55;
+    }
+}
+
+@keyframes mw-ai-bubble-3 {
+    // Centre 58,30 → 46,36 → 38,46 → 64,42.
+    0%,
+    100% {
+        transform: translate(0, 0) scale(0.9);
+        opacity: 0.35;
+    }
+
+    25% {
+        transform: translate(-100%, 50%) scale(1.15);
+        opacity: 0.6;
+    }
+
+    50% {
+        transform: translate(-167%, 133%) scale(1);
+        opacity: 0.45;
+    }
+
+    75% {
+        transform: translate(50%, 100%) scale(1.1);
+        opacity: 0.6;
+    }
+}
+
+// The card rising into place over the orb, and settling away again.
+@keyframes mw-ai-hint-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.97);
+    }
+
+    to {
         opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes mw-ai-hint-out {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+}
+
+// The status light's glow swelling and settling - online, available. The pip
+// itself neither moves nor changes size; only the light around it does.
+@keyframes mw-ai-live {
+    0%,
+    100% {
+        box-shadow: 0 0 0.3rem rgb(49 220 129 / 45%);
+    }
+
+    50% {
+        box-shadow:
+            0 0 0.8rem rgb(49 220 129 / 90%),
+            0 0 0.2rem rgb(141 255 192 / 90%);
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    // The orb stops at its resting state - three legible rings, a lit sphere,
-    // a steady dot and the needle parked where it is.
-    .mw-exec-bar__ai-ring,
+    // The orbit system keeps turning, far slower, so the orb still reads as
+    // live; everything travelling across or inside the sphere stops. Selectors
+    // carry the orb's class so they also outrank the quicker scanning speeds.
+    .mw-exec-bar__ai .mw-exec-bar__ai-ring,
+    .mw-exec-bar__ai .mw-exec-bar__ai-orbit {
+        animation-duration: 40s;
+    }
+
     .mw-exec-bar__ai-dot,
     .mw-exec-bar__ai-core:before,
-    .mw-exec-bar__ai-core:after,
-    .mw-exec-bar__ai-sweep:before {
+    .mw-exec-bar__ai-bubble,
+    .mw-exec-bar__ai-sweep:before,
+    .mw-exec-bar__ai-hint,
+    .mw-exec-bar__ai-hint--leaving {
         animation: none;
     }
 }
