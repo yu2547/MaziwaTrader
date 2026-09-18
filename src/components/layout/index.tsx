@@ -16,6 +16,7 @@ import { handleOidcAuthFailure } from '@/utils/auth-utils';
 import { requestOidcAuthentication } from '@deriv-com/auth-client';
 import { useDevice } from '@deriv-com/ui';
 import { crypto_currencies_display_order, fiat_currencies_display_order } from '../shared';
+import AssistantOrbs from './assistant-orbs';
 import ExecutionBar from './execution-bar';
 import Footer from './footer';
 import AppHeader from './header';
@@ -302,6 +303,12 @@ const Layout = observer(() => {
                 <>
                     {!isDTraderPage && <RunPanel />}
                     {!isDTraderPage && <ExecutionBar />}
+                    {/* Outside the DTrader exclusion above, deliberately. The
+                        run panel and the execution bar give DTrader its width
+                        back by not being there; the orbs are two floating
+                        spheres that take none, and the reference has them on
+                        that page as much as on any other. */}
+                    <AssistantOrbs />
                     {/* Opened by the trade-parameters block's VH Settings
                         button. Lives in the shell rather than the Bot Builder
                         page so it is mounted whenever a workspace can exist,

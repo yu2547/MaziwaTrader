@@ -1,0 +1,165 @@
+// Gemini's sphere. The AI orb's geometry in Gemini's colours, so the two read
+// as one family: same 7.2rem box - which is what use-draggable-orb.ts clamps
+// the drag to, and it must keep tracking this - same lit-from-within sphere,
+// same status dot.
+$gem-orb-deep: #3d0b0b; // the sphere's shaded lower edge
+$gem-orb-red: #d32f2f;
+$gem-orb-bright: #f0625f; // toward the lit side
+$gem-orb-highlight: #ffb3ad; // specular highlight
+$gem-orb-white: #fff5f5; // lettering
+$gem-orb-online: #31dc81; // status dot, the same green the AI orb uses
+
+.mw-gem-orb {
+    position: fixed;
+
+    // Directly above the AI orb, off the same corner: --mw-orb-bottom is where
+    // that one sits (execution-bar.scss publishes it, and moves it for the
+    // execution bar, the phone run sheet and the desktop drawer), plus one orb
+    // and a gap. Written as an offset rather than as its own set of clearances
+    // so the two spheres cannot drift apart.
+    inset-inline-end: var(--mw-orb-end, 1.6rem);
+    bottom: calc(var(--mw-orb-bottom, 5.2rem) + 7.2rem + 1rem);
+    z-index: 9;
+    width: 7.2rem;
+    height: 7.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    touch-action: none;
+
+    // The resting bloom, which is what makes the sphere read as lit from
+    // inside rather than printed on the page.
+    filter: drop-shadow(0 0 0.9rem rgb(211 47 47 / 45%));
+
+    // Compositor properties only, so the orb stays on the GPU and does not
+    // relayout while it is being dragged.
+    transition:
+        transform 160ms ease,
+        filter 200ms ease;
+
+    &__halo {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: radial-gradient(circle at 50% 50%, rgb(211 47 47 / 22%) 38%, rgb(211 47 47 / 0%) 70%);
+        border: 1px solid rgb(240 98 95 / 28%);
+    }
+
+    &__core {
+        position: relative;
+        width: 4.6rem;
+        height: 4.6rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at 34% 28%, $gem-orb-bright, $gem-orb-red 48%, $gem-orb-deep 100%);
+        box-shadow:
+            inset 0 -0.6rem 1rem rgb(20 4 4 / 55%),
+            0 0.2rem 0.8rem rgb(20 4 4 / 45%);
+
+        // The glass highlight, as its own layer so it sits under the lettering
+        // rather than over it.
+        &:before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle at 32% 24%, rgb(255 179 173 / 55%), rgb(255 179 173 / 0%) 46%);
+        }
+    }
+
+    // Held above the highlight, and never animated: the reference's lettering
+    // is still while everything around it moves.
+    &__text {
+        position: relative;
+        z-index: 1;
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: $gem-orb-white;
+        text-shadow: 0 1px 2px rgb(20 4 4 / 65%);
+    }
+
+    &__dot {
+        position: absolute;
+        top: 1rem;
+        inset-inline-end: 1rem;
+        width: 0.9rem;
+        height: 0.9rem;
+        border-radius: 50%;
+        background: $gem-orb-online;
+        box-shadow: 0 0 0.6rem rgb(49 220 129 / 75%);
+    }
+
+    &:hover {
+        transform: scale(1.04);
+        filter: drop-shadow(0 0 1.4rem rgb(240 98 95 / 60%));
+    }
+
+    &:active {
+        transform: scale(0.97);
+    }
+
+    // No transition while a drag is in flight - the orb has to sit under the
+    // finger, not ease toward it.
+    &--dragging {
+        transition: none;
+        cursor: grabbing;
+    }
+
+    &--open {
+        filter: drop-shadow(0 0 1.6rem rgb(240 98 95 / 70%));
+    }
+}
+
+// DTrader. The corner both orbs normally stack in is the ticket's buy buttons
+// on this page, at every width - measured, the right-hand button hit-tested to
+// Gemini's halo on a phone and to the AI orb's core at 1440px. A dragged orb is
+// unaffected by any of this: its inline position outranks it.
+// Single-column layouts (up to 1099px, where dtrader.scss stacks the chart
+// over the ticket): they move to where the reference keeps them, a cluster to
+// the right of the market card, clear of the chart - dtrader.scss leaves that
+// space open under the card for them. Gemini sits at the top right, the AI orb
+// down and to its left, overlapping it as in the reference; Gemini is later in
+// the page, so it is the one in front. 7.8rem is the header (4rem) and the
+// shell navigation under it.
+@media (width <= 1099px) {
+    body:has(.mw-dt) {
+        .mw-gem-orb {
+            top: 7.8rem;
+            bottom: auto;
+        }
+
+        // Low enough to clear the market card's bottom edge (12.9rem) as well as
+        // its side. At 11rem it sat beside the card on a 396px phone but
+        // clipped its right end - the dropdown caret - on a 360px one, where
+        // there is not room for the card and both orbs across.
+        .mw-exec-bar__ai {
+            top: 13.4rem;
+            bottom: auto;
+            inset-inline-end: 6.6rem;
+        }
+    }
+}
+
+// The two-column layout, where the ticket is a 30rem column down the right
+// with its buy buttons at the foot. The orbs keep their corner height but step
+// sideways out of that column onto the chart - the move they already make for
+// the desktop run panel (execution-bar.scss). Ticket width plus the page's
+// 1.6rem side padding, plus the orbs' own 1.6rem gap.
+@media (width >= 1100px) {
+    body:has(.mw-dt) {
+        --mw-orb-end: calc(30rem + 1.6rem + 1.6rem);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mw-gem-orb {
+        transition: none;
+    }
+}

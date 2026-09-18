@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import RiskDisclaimer from '@/components/layout/footer/RiskDisclaimer';
 import TradeAnimation from '@/components/trade-animation';
 import { useStore } from '@/hooks/useStore';
 import { StandaloneChevronUpBoldIcon } from '@deriv/quill-icons/Standalone';
 import { localize } from '@deriv-com/translations';
-import EntryScanner from './entry-scanner';
 import './execution-bar.scss';
 
 /**
@@ -30,65 +29,13 @@ import './execution-bar.scss';
  * have selected - buying straight from parameters rather than from a proposal
  * id - is rejected by the Options API on the OTP transport. It has been
  * removed rather than left as a control that does nothing.
+ *
+ * The floating AI and Gemini orbs used to hang off this component. They are in
+ * layout/assistant-orbs now, because this bar is not mounted on DTrader and
+ * they belong on every route.
  */
-const ORB_POS_KEY = 'mw_ai_orb_position';
-// Must track the orb's rendered width (7.2rem in execution-bar.scss at the
-// app's 10px root). It was 64 while the orb drew at 84, so every clamp allowed
-// it 20px past the right and bottom edges - the corner it is most often
-// dragged to, and the one where it then sat half off a narrow phone.
-const ORB_SIZE = 72;
-/**
- * How long the scanner is held mounted while it animates out. Deliberately
- * longer than the 200ms animation in execution-bar.scss: the closing class only
- * lands on the next render, so the animation starts a frame or two after this
- * timer does. Measured without the margin, the sheet was still at 59% opacity
- * when it unmounted - a visible pop at the end of the fade. The animation holds
- * its last frame (`forwards`), so the extra time costs nothing.
- */
-const AI_EXIT_MS = 260;
-const ORB_MARGIN = 8;
-/** Past this much movement a press is a drag, not a click. */
-const DRAG_SLOP = 4;
-
-type TPoint = { x: number; y: number };
-
-const readStoredPosition = (): TPoint | null => {
-    try {
-        const raw = sessionStorage.getItem(ORB_POS_KEY);
-        const parsed = raw ? JSON.parse(raw) : null;
-        return typeof parsed?.x === 'number' && typeof parsed?.y === 'number' ? parsed : null;
-    } catch {
-        return null;
-    }
-};
-
-const clampToViewport = ({ x, y }: TPoint): TPoint => ({
-    x: Math.min(Math.max(x, ORB_MARGIN), window.innerWidth - ORB_SIZE - ORB_MARGIN),
-    y: Math.min(Math.max(y, ORB_MARGIN), window.innerHeight - ORB_SIZE - ORB_MARGIN),
-});
-
 const ExecutionBar = observer(() => {
     const { run_panel } = useStore() ?? {};
-    const [is_ai_open, setIsAiOpen] = useState(false);
-    // Kept mounted for the length of its exit animation - see closeAi below.
-    const [is_ai_closing, setIsAiClosing] = useState(false);
-    const exit_timer = useRef<number | null>(null);
-    // Reported up by the scanner so the orb can show a scan is under way even
-    // with the modal dismissed behind it.
-    const [is_scanning, setIsScanning] = useState(false);
-    // Where the user last put the orb. Null means "wherever the stylesheet
-    // parks it", so an untouched orb keeps its default corner.
-    // Clamped on the way in, not just on resize: the stored point was written
-    // against whatever viewport the user last dragged it on, so restoring it on
-    // a narrower phone - or in portrait after landscape - put the orb partly or
-    // wholly off-screen, and the resize listener below only fires if the window
-    // then changes again.
-    const [orb_position, setOrbPosition] = useState<TPoint | null>(() => {
-        const stored = readStoredPosition();
-        return stored ? clampToViewport(stored) : null;
-    });
-    const [is_dragging, setIsDragging] = useState(false);
-    const drag = useRef({ active: false, moved: false, dx: 0, dy: 0 });
     // A callback ref rather than useRef: the bar does not render on the first
     // pass (the store is still being built, and the component returns null
     // until it exists), so an effect keyed on [] measured a ref that was still
@@ -117,114 +64,6 @@ const ExecutionBar = observer(() => {
             document.documentElement.style.removeProperty('--mw-exec-bar-height');
         };
     }, [bar_element]);
-
-    // A window that shrank past the orb would otherwise strand it off-screen.
-    useEffect(() => {
-        if (!orb_position) return undefined;
-        const onResize = () => setOrbPosition(current => (current ? clampToViewport(current) : current));
-        window.addEventListener('resize', onResize);
-        return () => window.removeEventListener('resize', onResize);
-    }, [orb_position]);
-
-    // The scanner animates in over 220ms but used to vanish on the frame it
-    // closed, because it is mounted conditionally and unmounting cannot be
-    // transitioned. It is held on screen for the length of its exit instead,
-    // with the closing class driving the reverse of the entrance, so opening
-    // and closing are the same movement in both directions.
-    const closeAi = useCallback(() => {
-        setIsAiClosing(true);
-        exit_timer.current = window.setTimeout(() => {
-            setIsAiOpen(false);
-            setIsAiClosing(false);
-        }, AI_EXIT_MS);
-    }, []);
-
-    // Reopening mid-exit has to cancel the pending unmount, or the scanner
-    // would close again a moment after the user asked for it back.
-    const openAi = useCallback(() => {
-        if (exit_timer.current) window.clearTimeout(exit_timer.current);
-        setIsAiClosing(false);
-        setIsAiOpen(true);
-    }, []);
-
-    useEffect(
-        () => () => {
-            if (exit_timer.current) window.clearTimeout(exit_timer.current);
-        },
-        []
-    );
-
-    // The Signals panel's "Launch AI" opens this scanner rather than starting
-    // one of its own. A window event rather than a store field because the orb
-    // owns this state and nothing else needs to read it - the panel only needs
-    // to ask, and this is the whole of the asking.
-    useEffect(() => {
-        const open = () => openAi();
-        window.addEventListener('mw:open-entry-scanner', open);
-        return () => window.removeEventListener('mw:open-entry-scanner', open);
-    }, [openAi]);
-
-    // The orb opens from pointerup, so that a press which moved counts as a
-    // drag rather than a click. Keyboard activation fires no pointer events at
-    // all - Enter and Space on a <button> raise only `click` - so that path
-    // left the orb focusable, labelled, and completely inert: tab to it, press
-    // Enter, nothing happens.
-    //
-    // Handled here rather than by adding onClick, because a click also arrives
-    // at the end of a real drag, and opening the scanner every time the user
-    // finished repositioning the orb is the bug the pointerup logic exists to
-    // avoid. preventDefault stops the browser's synthetic click on top of this.
-    const onOrbKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        openAi();
-    };
-
-    const onOrbPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
-        const box = event.currentTarget.getBoundingClientRect();
-        drag.current = { active: true, moved: false, dx: event.clientX - box.left, dy: event.clientY - box.top };
-        // Capture keeps the drag alive if the pointer outruns the orb, but it
-        // throws for a pointer the browser is not tracking. Losing capture
-        // only costs a rougher drag; letting it throw here would abort the
-        // handler and leave the orb unable to open at all.
-        try {
-            event.currentTarget.setPointerCapture(event.pointerId);
-        } catch {
-            // Drag still works, it just stops if the pointer leaves the orb.
-        }
-    };
-
-    const onOrbPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-        if (!drag.current.active) return;
-        const next = clampToViewport({ x: event.clientX - drag.current.dx, y: event.clientY - drag.current.dy });
-        const box = event.currentTarget.getBoundingClientRect();
-        if (Math.abs(next.x - box.left) > DRAG_SLOP || Math.abs(next.y - box.top) > DRAG_SLOP) {
-            drag.current.moved = true;
-            setIsDragging(true);
-        }
-        if (drag.current.moved) setOrbPosition(next);
-    };
-
-    const onOrbPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
-        if (!drag.current.active) return;
-        drag.current.active = false;
-        try {
-            event.currentTarget.releasePointerCapture(event.pointerId);
-        } catch {
-            // Nothing to release - not a reason to skip the click below.
-        }
-        setIsDragging(false);
-        // A press that never moved is a click - open the scanner. A press that
-        // moved was a drag, and should not also open it.
-        if (!drag.current.moved) {
-            openAi();
-            return;
-        }
-        setOrbPosition(current => {
-            if (current) sessionStorage.setItem(ORB_POS_KEY, JSON.stringify(current));
-            return current;
-        });
-    };
 
     if (!run_panel) return null;
 
@@ -278,51 +117,6 @@ const ExecutionBar = observer(() => {
             <div className='mw-exec-bar__disclaimer'>
                 <RiskDisclaimer />
             </div>
-
-            {/* Draggable: press and move to reposition, press and release to
-                open. Inline left/top only once it has been moved, so an
-                untouched orb keeps the corner the stylesheet gives it. */}
-            <button
-                type='button'
-                className={`mw-exec-bar__ai${is_dragging ? ' mw-exec-bar__ai--dragging' : ''}${
-                    is_scanning ? ' mw-exec-bar__ai--scanning' : ''
-                }`}
-                style={
-                    orb_position
-                        ? { left: orb_position.x, top: orb_position.y, right: 'auto', bottom: 'auto' }
-                        : undefined
-                }
-                onPointerDown={onOrbPointerDown}
-                onPointerMove={onOrbPointerMove}
-                onPointerUp={onOrbPointerUp}
-                onPointerCancel={onOrbPointerUp}
-                onKeyDown={onOrbKeyDown}
-                aria-expanded={is_ai_open}
-                aria-haspopup='dialog'
-                aria-label={localize('Entry Scanner')}
-            >
-                <span className='mw-exec-bar__ai-ring' aria-hidden='true' />
-                <span className='mw-exec-bar__ai-ring mw-exec-bar__ai-ring--mid' aria-hidden='true' />
-                <span className='mw-exec-bar__ai-ring mw-exec-bar__ai-ring--wide' aria-hidden='true' />
-                {/* The lettering is its own layer so it sits above the core's
-                    glass and scanning sheen - both are absolutely positioned
-                    pseudo-elements, which paint over a bare text node - and so
-                    nothing animating the core can reach the letters. */}
-                <span className='mw-exec-bar__ai-core'>
-                    <span className='mw-exec-bar__ai-text'>AI</span>
-                </span>
-                <span className='mw-exec-bar__ai-dot' aria-hidden='true' />
-            </button>
-
-            {/* Held mounted through its exit. The wrapper only carries the
-                closing flag - the scanner keeps its own props and state - and
-                the stylesheet runs the reverse of the entrance on the sheet
-                and the backdrop from there. */}
-            {(is_ai_open || is_ai_closing) && (
-                <div className={is_ai_closing ? 'mw-scanner-exit' : undefined}>
-                    <EntryScanner onClose={closeAi} onScanningChange={setIsScanning} />
-                </div>
-            )}
         </>
     );
 });

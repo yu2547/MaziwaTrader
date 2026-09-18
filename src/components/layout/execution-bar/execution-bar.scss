@@ -36,6 +36,82 @@ $mw-ai-online: #31dc81; // status dot
 // sweeping rather than a spinner waiting.
 $mw-ai-spin: 3.5s;
 
+// The needle inside the sphere. Unhurried while nothing is happening, and
+// quickened while a scan is actually running.
+$mw-ai-needle-idle: 6s;
+$mw-ai-needle-scanning: 1.6s;
+
+// The floating orbs' footing, published once and read by both of them.
+// There are two spheres now - the AI scanner and Gemini, stacked in the same
+// corner - and everything that moves one has to move the other by the same
+// amount or they overlap. Rather than write each clearance twice, the corner
+// itself is a custom property and the orbs offset from it: the AI orb sits on
+// it and Gemini one orb-height above.
+// Declared on :root and overridden on body, because the phone case below keys
+// on `body:has(...)` - body is an ancestor of both orbs, so the value reaches
+// them either way.
+:root {
+    --mw-orb-bottom: calc(3.6rem + 1.6rem);
+    --mw-orb-end: 1.6rem;
+}
+
+@media (width <= 768px) {
+    // Rides above whatever the bar actually measures rather than above a fixed
+    // guess at it - the bar is taller when a run is under way, and at those
+    // heights a fixed offset put the orb on top of the Run control it is
+    // supposed to sit clear of. The bar publishes its height from
+    // execution-bar/index.tsx; the fallback covers the frame before the first
+    // measurement.
+    body {
+        --mw-orb-bottom: calc(
+            var(--mw-exec-bar-height, #{$exec-bar-height}) + 1.2rem + env(safe-area-inset-bottom, 0px)
+        );
+    }
+
+    // Clearing the bar is not enough once the run panel is open on a phone.
+    // The sheet stands on top of the bar and ends with the statistics block, so
+    // the orb's usual corner is inside it: measured at 375x812, orb 656-740
+    // against a statistics block of 593-752, covering the Total profit/loss
+    // tile outright. The block spans the sheet, so no sideways nudge separates
+    // them - the orb has to move above it.
+    // It used to clear the whole sheet, which worked while that sheet was 70vh.
+    // Now that it spans the gap between the header and the execution bar
+    // (run-panel.scss), only ~6rem is left above it and the orb is 7.2rem, so
+    // clearing the sheet would put it through the header. It parks just above
+    // the statistics block instead - inside the panel, over the transaction
+    // list, which scrolls, so anything it covers there can be scrolled back
+    // into view. The totals cannot.
+    // The offset comes from --mw-run-stats-height, measured and published by
+    // StatisticsSummary, because the block is not a fixed size: the tiles grow
+    // when a figure wraps, and Total profit/loss wraps first on a narrow phone.
+    // The fallback matches its unwrapped height.
+    // Scoped with :has because run-panel__container--mobile is only in the DOM
+    // while the sheet is open (run-panel.tsx) - with it closed the orbs keep
+    // their normal corner above the bar.
+    body:has(.run-panel__container--mobile) {
+        $bar: var(--mw-exec-bar-height, #{$exec-bar-height});
+        $safe: env(safe-area-inset-bottom, 0px);
+        $stats: var(--mw-run-stats-height, 16rem);
+
+        --mw-orb-bottom: calc(#{$bar} + #{$safe} + #{$stats} + 1.2rem);
+    }
+}
+
+// The same collision exists on desktop, where the panel is a right-hand column
+// rather than a sheet: it slides to 1554-1920 at 1920x1080 and ends with Reset
+// at 1594-1912, while the orb's corner is 1820-1904 - so the orb sits on
+// Reset's right end. Vertically they cannot be separated, the panel runs the
+// full height of the column, so the orbs step sideways out of the column
+// instead, onto the workspace.
+// Keyed on the open drawer specifically: run-panel__container is on the drawer
+// whenever isDesktop (run-panel.tsx), open or shut, so matching that alone
+// would displace the orbs even with no panel there.
+@media (width > 768px) {
+    body:has(.run-panel__container.dc-drawer--open) {
+        --mw-orb-end: calc(#{$run-panel-width} + 1.6rem);
+    }
+}
+
 .mw-exec-bar {
     position: fixed;
     inset-inline-end: 0;
@@ -160,6 +236,43 @@ $mw-ai-spin: 3.5s;
         }
     }
 
+    // The hint beside the orb after a load. Placed from the orb's measured
+    // box (execution-bar/index.tsx), so it sits at the orb's left edge and on
+    // its centre line wherever the orb happens to be - hence the translate
+    // rather than offsets of its own.
+    &__ai-hint {
+        position: fixed;
+        z-index: 10;
+        transform: translateY(-50%);
+        width: max-content;
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        max-width: 19rem;
+        padding: 0.9rem 1.2rem;
+        border: 1px solid rgb(122 77 161 / 45%);
+        border-radius: 10px;
+        background: rgb(30 28 46 / 96%);
+        box-shadow: 0 10px 28px rgb(15 12 26 / 45%);
+        text-align: start;
+        cursor: pointer;
+        animation: mw-ai-hint-in 220ms ease-out;
+    }
+
+    &__ai-hint-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        line-height: 1.25;
+        color: $mw-ai-white;
+    }
+
+    &__ai-hint-text {
+        font-size: 1.15rem;
+        font-weight: 400;
+        line-height: 1.35;
+        color: rgb(250 242 251 / 72%);
+    }
+
     // Phone Risk Disclaimer. Fixed at one height in both states, as in the
     // reference: collapsed it sits just above the chevron row; open, that row
     // is gone and the pill lies over the statistics' lower-left corner, which
@@ -275,8 +388,11 @@ $mw-ai-spin: 3.5s;
     // looked like it was floating on mobile, where the panel is elsewhere.
     &__ai {
         position: fixed;
-        inset-inline-end: 1.6rem;
-        bottom: calc(3.6rem + 1.6rem);
+
+        // The shared corner. Every clearance that used to live on this rule is
+        // on the custom property now, so Gemini's sphere moves with it.
+        inset-inline-end: var(--mw-orb-end, 1.6rem);
+        bottom: var(--mw-orb-bottom, 5.2rem);
         z-index: 9;
 
         // The resting bloom. The orb is a dark sphere on a light page, so
@@ -322,62 +438,6 @@ $mw-ai-spin: 3.5s;
             // The drag already moves the orb; a hover scale on top of that
             // fights the pointer.
             transform: none;
-        }
-
-        // Rides above whatever the bar actually measures rather than above a
-        // fixed guess at it - the bar is taller when the speed switch wraps
-        // or a run is under way, and at those heights the fixed offset put
-        // the orb on top of the Run control it is supposed to sit clear of.
-        // The bar publishes its height from execution-bar/index.tsx; the
-        // fallback covers the frame before the first measurement.
-        @media (width <= 768px) {
-            bottom: calc(var(--mw-exec-bar-height, #{$exec-bar-height}) + 1.2rem + env(safe-area-inset-bottom, 0px));
-        }
-
-        // Clearing the bar is not enough once the run panel is open on a phone.
-        // The sheet stands on top of the bar and ends with the statistics
-        // block, so the orb's usual corner is inside it: measured at 375x812,
-        // orb 656-740 against a statistics block of 593-752, covering the
-        // Total profit/loss tile outright.
-        // The block spans the sheet, so no sideways nudge separates them - the
-        // orb has to move above it.
-        // It used to clear the whole sheet, which worked while that sheet was
-        // 70vh. Now that it spans the gap between the header and the execution
-        // bar (run-panel.scss), only ~6rem is left above it and the orb is
-        // 8.4rem, so clearing the sheet would put it through the header. It
-        // parks just above the statistics block instead - inside the panel,
-        // over the transaction list, which scrolls, so anything it covers there
-        // can be scrolled back into view. The totals cannot.
-        // The offset comes from --mw-run-stats-height, measured and published
-        // by StatisticsSummary, because the block is not a fixed size: the
-        // tiles grow when a figure wraps, and Total profit/loss wraps first on
-        // a narrow phone. The fallback matches its unwrapped height.
-        // Scoped with :has because run-panel__container--mobile is only in the
-        // DOM while the sheet is open (run-panel.tsx:308) - with it closed the
-        // orb keeps its normal corner above the bar.
-        @media (width <= 768px) {
-            body:has(.run-panel__container--mobile) & {
-                $bar: var(--mw-exec-bar-height, #{$exec-bar-height});
-                $stats: var(--mw-run-stats-height, 16rem);
-                $clearance: calc(#{$bar} + env(safe-area-inset-bottom, 0px) + #{$stats} + 1.2rem);
-
-                bottom: $clearance;
-            }
-        }
-
-        // The same collision exists on desktop, where the panel is a right-hand
-        // column rather than a sheet: it slides to 1554-1920 at 1920x1080 and
-        // ends with Reset at 1594-1912, while the orb's corner is 1820-1904 -
-        // so the orb sits on Reset's right end. Vertically they cannot be
-        // separated, the panel runs the full height of the column, so the orb
-        // steps sideways out of the column instead, onto the workspace.
-        // Keyed on the open drawer specifically: run-panel__container is on the
-        // drawer whenever isDesktop (run-panel.tsx:312), open or shut, so
-        // matching that alone would displace the orb even with no panel there.
-        @media (width > 768px) {
-            body:has(.run-panel__container.dc-drawer--open) & {
-                inset-inline-end: calc(#{$run-panel-width} + 1.6rem);
-            }
         }
     }
 
@@ -470,12 +530,40 @@ $mw-ai-spin: 3.5s;
         }
     }
 
-    // Above the glass and the sweep, and animated by nothing. Both layers on
-    // the core are absolutely positioned, and an absolutely positioned
-    // pseudo-element paints over a bare text node.
+    // The needle turning inside the sphere - a radar hand sweeping the centre,
+    // which is the movement the reference shows there. An earlier pass removed
+    // a spoke like this on the reading that the reference had none; the phone
+    // recording shows it plainly, tracking round the core while the sphere and
+    // its lettering stay put.
+    // The hand is the pseudo-element, not this box: it is pinned at the
+    // sphere's centre and rotated about that point, so only the line moves.
+    &__ai-sweep {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        border-radius: 50%;
+        overflow: hidden;
+        pointer-events: none;
+
+        &:before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            inset-inline-start: 50%;
+            width: 50%;
+            height: 1px;
+            transform-origin: 0 50%;
+            background: linear-gradient(90deg, rgb(250 242 251 / 78%), rgb(250 242 251 / 0%));
+            animation: mw-ai-needle $mw-ai-needle-idle linear infinite;
+        }
+    }
+
+    // Above the glass, the sheen and the needle, and animated by nothing. Every
+    // other layer on the core is absolutely positioned, and an absolutely
+    // positioned element paints over a bare text node.
     &__ai-text {
         position: relative;
-        z-index: 1;
+        z-index: 2;
     }
 
     // Hover lifts the whole orb and warms its halo; press pushes it back in.
@@ -521,6 +609,12 @@ $mw-ai-spin: 3.5s;
     &__ai--scanning &__ai-ring {
         animation-duration: 1.3s;
         border-color: rgb(187 152 207 / 92%);
+    }
+
+    // The needle quickens with them, which is the difference between the orb
+    // idling and the orb working.
+    &__ai--scanning &__ai-sweep:before {
+        animation-duration: $mw-ai-needle-scanning;
     }
 
     // Three thin concentric rings held at fixed radii, tight around the core.
@@ -656,6 +750,30 @@ $mw-ai-spin: 3.5s;
 
 // The band of light crossing the sphere's face. Held off-face for the back
 // half of the cycle so the sweep is occasional rather than continuous.
+@keyframes mw-ai-hint-in {
+    from {
+        opacity: 0;
+        transform: translateY(-50%) translateX(0.8rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(-50%);
+    }
+}
+
+// The needle's turn. Linear, because a radar hand that eases is a hand that
+// hesitates.
+@keyframes mw-ai-needle {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 @keyframes mw-ai-core-sweep {
     0% {
         background-position: 130% 0;
@@ -683,12 +801,13 @@ $mw-ai-spin: 3.5s;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    // Everything on the orb is a breathe now, so all of it simply stops at its
-    // resting state - three legible rings, a lit sphere and a steady dot. The
-    // beam and spoke this block used to hide no longer exist.
+    // The orb stops at its resting state - three legible rings, a lit sphere,
+    // a steady dot and the needle parked where it is.
     .mw-exec-bar__ai-ring,
     .mw-exec-bar__ai-dot,
-    .mw-exec-bar__ai-core:before {
+    .mw-exec-bar__ai-core:before,
+    .mw-exec-bar__ai-core:after,
+    .mw-exec-bar__ai-sweep:before {
         animation: none;
     }
 }
