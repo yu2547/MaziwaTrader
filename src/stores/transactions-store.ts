@@ -1,8 +1,8 @@
 import { action, computed, makeObservable, observable, reaction } from 'mobx';
 import { formatDate, isEnded } from '@/components/shared';
-import { LogTypes } from '@/external/bot-skeleton';
+import { api_base, LogTypes } from '@/external/bot-skeleton';
 import { ProposalOpenContract } from '@deriv/api-types';
-import { TPortfolioPosition, TStores } from '@deriv/stores/types';
+import { TStores } from '@deriv/stores/types';
 import { TContractInfo } from '../components/summary/summary-card.types';
 import { transaction_elements } from '../constants/transactions';
 import { getActiveAccountId } from '../utils/active-account-id';
@@ -17,6 +17,12 @@ type TTransaction = {
 type TElement = {
     [key: string]: TTransaction[];
 };
+
+/** How long a recovery read may go unanswered before it is left for the next trigger. */
+const RECOVERY_TIMEOUT_MS = 10000;
+
+/** How long after a run stops its still-pending rows are asked about. */
+const RECOVER_AFTER_STOP_MS = 5000;
 
 export default class TransactionsStore {
     root_store: RootStore;
@@ -34,7 +40,6 @@ export default class TransactionsStore {
             active_transaction_id: observable,
             recovered_completed_transactions: observable,
             recovered_transactions: observable,
-            is_called_proposal_open_contract: observable,
             is_transaction_details_modal_open: observable,
             transactions: computed,
             onBotContractEvent: action.bound,
@@ -43,7 +48,6 @@ export default class TransactionsStore {
             registerReactions: action.bound,
             recoverPendingContracts: action.bound,
             updateResultsCompletedContract: action.bound,
-            sortOutPositionsBeforeAction: action.bound,
             recoverPendingContractsById: action.bound,
         });
     }
@@ -53,8 +57,10 @@ export default class TransactionsStore {
     active_transaction_id: null | number = null;
     recovered_completed_transactions: number[] = [];
     recovered_transactions: number[] = [];
-    is_called_proposal_open_contract = false;
     is_transaction_details_modal_open = false;
+    // Contracts with a recovery read in flight, so two triggers close together
+    // do not ask for the same one twice. Bookkeeping only - nothing renders it.
+    recovering_contract_ids = new Set<number>();
 
     get transactions(): TTransaction[] {
         // `elements` is read before the account id, and unconditionally, on
@@ -314,18 +320,44 @@ export default class TransactionsStore {
             () => this.recoverPendingContracts()
         );
 
+        // Stopping a run with its contract still open ends the engine's interest
+        // in it, so its row would stay pending until the next run added one.
+        // Asked once, a moment after the stop, when a short contract has had
+        // time to settle; a longer one is picked up by the next trigger.
+        let recover_after_stop: ReturnType<typeof setTimeout> | undefined;
+        const disposeRecoverAfterStop = reaction(
+            () => this.root_store.run_panel.is_running,
+            is_running => {
+                if (recover_after_stop) clearTimeout(recover_after_stop);
+                if (is_running) return;
+                recover_after_stop = setTimeout(() => this.recoverPendingContracts(), RECOVER_AFTER_STOP_MS);
+            }
+        );
+
         return () => {
             disposeTransactionElementsListener();
             disposeRecoverContracts();
+            disposeRecoverAfterStop();
+            if (recover_after_stop) clearTimeout(recover_after_stop);
         };
     }
 
     recoverPendingContracts(contract = null) {
+        // While a run is going, its newest row is the contract the engine is
+        // holding right now - the engine's own watchdog sees that one through
+        // (OpenContract.js). Everything older and still pending is an orphan.
+        const [newest] = this.transactions;
+        const engine_contract_id =
+            this.root_store?.run_panel?.is_running && newest && typeof newest.data === 'object'
+                ? newest.data?.contract_id
+                : null;
+
         this.transactions.forEach(({ data: trx }) => {
             if (
                 typeof trx === 'string' ||
                 trx?.is_completed ||
                 !trx?.contract_id ||
+                trx.contract_id === engine_contract_id ||
                 this.recovered_transactions.includes(trx?.contract_id)
             )
                 return;
@@ -359,41 +391,63 @@ export default class TransactionsStore {
         }
     }
 
-    sortOutPositionsBeforeAction(positions: TPortfolioPosition[], element_id?: number) {
-        positions?.forEach(position => {
-            if (!element_id || (element_id && position.id === element_id)) {
-                const contract_details = position.contract_info;
-                this.updateResultsCompletedContract(contract_details);
-            }
-        });
-    }
-
+    /**
+     * Fills in a row whose contract was bought but whose result never reached
+     * this page - stopped mid-contract, or bought while the contract stream was
+     * not getting through.
+     *
+     * This used to read its contracts from a `positions` list hard-coded to []
+     * ("the portfolio is not available now"), so it could never recover
+     * anything: such a row kept its grey entry and exit spots for good, even
+     * though Deriv had settled the contract seconds after it was bought.
+     *
+     * It now asks Deriv for the contract by id on the live socket, and writes
+     * the answer back only once the contract has actually finished - the row
+     * shows Deriv's own entry, exit and profit, and nothing is filled in. An
+     * open contract, a refusal or no answer leaves the row as it is, and the
+     * next trigger (a new row, or opening the Transactions tab) asks again.
+     */
     async recoverPendingContractsById(contract_id: number, contract: ProposalOpenContract | null = null) {
-        // TODO: need to fix as the portfolio is not available now
-        // const positions = this.core.portfolio.positions;
-        const positions: unknown[] = [];
-
         if (contract) {
-            this.is_called_proposal_open_contract = true;
             if (contract.contract_id === contract_id) {
                 this.updateResultsCompletedContract(contract);
             }
+            return;
         }
 
-        if (!this.is_called_proposal_open_contract) {
-            const current_account = getActiveAccountId(this.core?.client);
-            if (current_account) {
-                if (!this.elements[current_account]?.length) {
-                    this.sortOutPositionsBeforeAction(positions);
-                }
+        const api = api_base.api;
+        if (!api || this.recovering_contract_ids.has(contract_id)) return;
+        this.recovering_contract_ids.add(contract_id);
 
-                const elements = this.elements[current_account];
-                const [element = null] = elements;
-                if (typeof element?.data === 'object' && !element?.data?.profit) {
-                    const element_id = element.data.contract_id;
-                    this.sortOutPositionsBeforeAction(positions, element_id);
-                }
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        try {
+            // Bounded: a request on a socket that has just died is never
+            // answered or rejected by @deriv/deriv-api.
+            const response = await Promise.race([
+                api.send({ proposal_open_contract: 1, contract_id }),
+                new Promise<null>(resolve => {
+                    timer = setTimeout(() => resolve(null), RECOVERY_TIMEOUT_MS);
+                }),
+            ]);
+            const recovered = (response as { proposal_open_contract?: ProposalOpenContract } | null)
+                ?.proposal_open_contract;
+            if (recovered?.contract_id && isEnded(recovered)) {
+                this.updateResultsCompletedContract(recovered);
             }
+        } catch (error) {
+            // Not swallowed: said in the console, where a stuck row gets
+            // investigated. The row itself is left pending rather than given a
+            // result Deriv did not send.
+            const detail = (error as { error?: { code?: string; message?: string } })?.error;
+            // eslint-disable-next-line no-console
+            console.warn(
+                `Could not recover contract ${contract_id}:`,
+                detail?.code ?? 'unknown',
+                detail?.message ?? error
+            );
+        } finally {
+            if (timer) clearTimeout(timer);
+            this.recovering_contract_ids.delete(contract_id);
         }
     }
 }

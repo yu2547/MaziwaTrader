@@ -130,6 +130,20 @@ export default class TradeEngine extends Balance(Purchase(Sell(OpenContract(Prop
         api_base.onReconnected(() => {
             this.observe();
             this.$scope.ticksService?.restoreSubscriptions?.();
+
+            // The new socket's all-contracts subscription reports only contracts
+            // that are still open. One that settled while the socket was being
+            // replaced - a one-tick contract easily does - is never reported on
+            // it at all, so it is read back directly rather than waited for.
+            if (this.contractId) this.queryOpenContract(this.contractId);
+
+            // Prices are subscriptions too, and they died with the old socket.
+            // Nothing re-requested them, so a run between trades sat on "Bot is
+            // starting" until the proposal watchdog reported it. Only for a run
+            // that has actually asked for prices.
+            if (this.is_proposal_subscription_required && this.proposal_templates) {
+                this.renewProposalsOnPurchase();
+            }
         });
     }
 

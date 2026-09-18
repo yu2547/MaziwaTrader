@@ -53,6 +53,9 @@ export default Engine =>
 
                 this.contractId = buy.contract_id;
                 this.store.dispatch(purchaseSuccessful());
+                // From here the run waits on this contract's result - which
+                // must arrive whatever happens to the stream carrying it.
+                this.startContractWatchdog();
 
                 if (this.is_proposal_subscription_required) {
                     this.renewProposalsOnPurchase();

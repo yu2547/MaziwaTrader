@@ -429,7 +429,9 @@ class APIBase {
         // re-send each one, in the order they were originally registered.
         if (this.subscription_manager.hasEntries()) {
             this.connection_manager.setState(CONNECTION_STATE.RESTORING_SUBSCRIPTIONS);
-            await this.subscription_manager.restoreAll();
+            // Keyed on the socket, so a restore for this one is never mistaken
+            // for a duplicate of one still waiting on a socket that has died.
+            await this.subscription_manager.restoreAll(this.api);
             return;
         }
 
