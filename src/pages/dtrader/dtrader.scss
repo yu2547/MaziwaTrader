@@ -1010,6 +1010,11 @@ $dt-orange: #ff6337;
     color: var(--text-general);
     font-size: 1.35rem;
     font-variant-numeric: tabular-nums;
+
+    // The app's button reset sets text-align: start, and nothing here undid it,
+    // so every digit sat 1px from its cell's left edge - measured, at every
+    // width. Deriv centres them.
+    text-align: center;
     cursor: pointer;
 
     &:hover {
@@ -1280,6 +1285,10 @@ $dt-orange: #ff6337;
     background: var(--general-section-1);
     color: var(--text-general);
     font-size: 1.35rem;
+
+    // Same button reset as the prediction digits: without this the value sat
+    // against the chip's left edge.
+    text-align: center;
     cursor: pointer;
 
     &:hover {
@@ -1769,5 +1778,392 @@ $dt-orange: #ff6337;
     &:disabled {
         opacity: 0.35;
         cursor: not-allowed;
+    }
+}
+
+// ---
+// Pieces that only the phone layout below shows. Declared here, off, so the
+// wide layout is exactly what it was.
+.mw-dt__digit-banner,
+.mw-dt__compact,
+.mw-dt__action-in-payout {
+    display: none;
+}
+
+// The Risk Disclaimer closes the ticket wherever the footer that normally
+// carries it is not drawn - the footer only renders from 1280px up, and the
+// execution bar that carries it on other routes is not mounted on this one.
+.mw-dt__disclaimer {
+    display: flex;
+    padding-top: 0.2rem;
+
+    @media (width >= 1280px) {
+        display: none;
+    }
+}
+
+// Leaves the space to the right of the market card clear, and tall enough for
+// the AI and Gemini orbs, which park there on the single-column layout
+// (assistant-orbs.scss) as they do in the reference. Their usual corner is the
+// bottom right, and on this page that is the Fall / Put button - measured, the
+// right-hand buy button hit-tested to Gemini's orb. A margin rather than a
+// min-height, so the market list still opens directly under the card: its
+// `top: 100%` is measured from the padding box.
+@media (width <= 1099px) {
+    .mw-dt__market {
+        margin-block-end: 6.9rem;
+    }
+}
+
+// ---
+// The phone. Measured against a phone recording of the reference at the same
+// 396px width: this page's type ran one to two pixels large everywhere - the
+// market name 15px against 14, the trade type 15 against 14, "Learn about this
+// trade type" 12 against 10, the payout 12 against 10.5 - and the ticket was a
+// stack of boxes where the reference has a few compact rows. Everything below
+// is scoped to phone widths; the wide layout is untouched.
+@media (width <= 768px) {
+    .mw-dt__body {
+        gap: 0.8rem;
+        padding: 0.8rem 1.2rem 0;
+    }
+
+    .mw-dt__chart-side {
+        gap: 0.8rem;
+    }
+
+    // The market card that sits over the chart. Narrower than on the wide
+    // layout so the orbs beside it do not overlap it.
+    .mw-dt__market-chip {
+        gap: 0.8rem;
+        max-width: 24rem;
+        padding: 0.6rem 1rem;
+    }
+
+    .mw-dt__market-badge {
+        width: 2.8rem;
+        height: 2.8rem;
+
+        svg {
+            width: 2.8rem;
+            height: 2.8rem;
+        }
+    }
+
+    .mw-dt__market-text {
+        b {
+            font-size: 1.4rem;
+        }
+
+        i {
+            font-size: 1.1rem;
+        }
+    }
+
+    // The slot the chart and the rings share. 28rem left a 110px blank under
+    // the smaller rings; this is the reference's chart height, give or take.
+    .mw-dt__stage {
+        min-height: 24rem;
+    }
+
+    // The digit rings: a column, so the banner sits above them rather than
+    // beside them, and smaller rings with the figures scaled to match.
+    .mw-dt__stage-digits {
+        flex-direction: column;
+        gap: 1.2rem;
+        padding: 0.4rem 3.2rem 1.2rem;
+    }
+
+    .mw-dt__digit-banner {
+        display: block;
+        margin: 0;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        background: $dt-blue;
+        color: #fff;
+        font-size: 1.05rem;
+        line-height: 1.35;
+        text-align: center;
+    }
+
+    .mw-dt__digits {
+        gap: 1.6rem 0.6rem;
+    }
+
+    .mw-dt__digit {
+        max-width: 5rem;
+
+        b {
+            font-size: 1.4rem;
+        }
+
+        i {
+            font-size: 0.95rem;
+        }
+    }
+
+    // The ticket as the reference has it: a sheet across the full width with a
+    // grabber on its top edge, rather than a bordered card inset from the
+    // sides. The negative margin is exactly the body's side padding, so it
+    // meets both edges and no further.
+    .mw-dt__ticket {
+        position: relative;
+        gap: 0.8rem;
+        margin-inline: -1.2rem;
+        padding: 1.6rem 1.2rem 1.2rem;
+        border-width: 1px 0 0;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -0.4rem 1.2rem rgb(0 0 0 / 6%);
+
+        &:before {
+            content: '';
+            position: absolute;
+            inset-block-start: 0.6rem;
+            inset-inline-start: 50%;
+            width: 3.6rem;
+            height: 0.4rem;
+            border-radius: 2px;
+            background: var(--general-section-1);
+            transform: translateX(-50%);
+        }
+    }
+
+    .mw-dt__learn {
+        font-size: 1rem;
+    }
+
+    .mw-dt__learn-text {
+        font-size: 1.1rem;
+    }
+
+    .mw-dt__type-head {
+        gap: 0.8rem;
+        padding: 0.7rem 1rem;
+        border-color: transparent;
+        background: var(--general-section-1);
+
+        b {
+            font-size: 1.35rem;
+        }
+
+        span {
+            font-size: 1.4rem;
+        }
+    }
+
+    .mw-dt__types-icons svg {
+        width: 2rem;
+        height: 2rem;
+    }
+
+    // The reference has no label over the digit grid; the grid carries the
+    // same name for assistive technology (index.tsx).
+    .mw-dt__pred-label {
+        display: none;
+    }
+
+    .mw-dt__pred-grid {
+        gap: 0.4rem;
+    }
+
+    .mw-dt__pred-digit {
+        min-height: 3rem;
+        font-size: 1.3rem;
+    }
+
+    .mw-dt__chip {
+        min-height: 2.8rem;
+        font-size: 1.15rem;
+    }
+
+    .mw-dt__field {
+        padding: 0.7rem 1rem;
+
+        > span,
+        i {
+            font-size: 1.1rem;
+        }
+
+        input,
+        select {
+            font-size: 1.3rem;
+        }
+    }
+
+    .mw-dt__toggle {
+        min-height: 3.4rem;
+        padding: 0.5rem 1rem;
+        font-size: 1.15rem;
+    }
+
+    // Duration and stake: the stacked wide-layout controls give way to the one
+    // compact row.
+    .mw-dt__duration,
+    .mw-dt__stake {
+        display: none;
+    }
+
+    .mw-dt__compact {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        align-items: center;
+        gap: 0.8rem;
+        min-height: 4rem;
+        padding: 0.4rem 1rem;
+        border-radius: 8px;
+        background: var(--general-section-1);
+
+        // Duration, as a plain value on the left: the picker's own box and its
+        // label go, but the label stays readable to assistive technology - it
+        // is the only thing that says what the value is.
+        .mw-dt__picker {
+            justify-self: start;
+            padding: 0.4rem 0;
+            border: none;
+            background: transparent;
+
+            span {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                overflow: hidden;
+                clip-path: inset(50%);
+                white-space: nowrap;
+            }
+
+            b {
+                font-size: 1.25rem;
+                font-weight: 400;
+                color: var(--text-general);
+            }
+        }
+
+        // Nothing on the left when the contract has no duration, so the stake
+        // takes the left edge instead of floating in a centre with nothing
+        // either side.
+        &--no-duration {
+            grid-template-columns: minmax(0, 1fr) auto;
+
+            .mw-dt__compact-stake {
+                justify-self: start;
+            }
+        }
+    }
+
+    .mw-dt__compact-stake {
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: 0.4rem;
+
+        input {
+            // Sized to its own figure where the browser can, so "100.00" and
+            // "0.35" both sit centred with the currency right after them. The
+            // fallback width holds "100.00" at this size - a tabular digit at
+            // 1.4rem is about 0.85rem wide.
+            field-sizing: content;
+            min-width: 2.6rem;
+            max-width: 8.6rem;
+            width: 5.6rem;
+            padding: 0;
+            border: none;
+            background: transparent;
+            color: var(--text-prominent);
+            font-size: 1.4rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            text-align: right;
+            outline: none;
+            appearance: textfield;
+
+            &::-webkit-outer-spin-button,
+            &::-webkit-inner-spin-button {
+                appearance: none;
+                margin: 0;
+            }
+        }
+
+        i {
+            font-style: normal;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-prominent);
+        }
+    }
+
+    .mw-dt__compact-label {
+        justify-self: end;
+        font-size: 1.2rem;
+        color: var(--text-less-prominent);
+    }
+
+    .mw-dt__quote {
+        gap: 0.3rem;
+
+        dt {
+            font-size: 1.1rem;
+        }
+
+        dd {
+            font-size: 1.15rem;
+        }
+    }
+
+    // The buttons carry their payout inside, on a second line under the side,
+    // so the line above them goes.
+    .mw-dt__action-payout {
+        display: none;
+    }
+
+    .mw-dt__action-btn {
+        flex-wrap: wrap;
+        row-gap: 0.4rem;
+        min-height: 5.6rem;
+        padding: 0.7rem 1rem;
+
+        span {
+            font-size: 1.35rem;
+        }
+
+        b {
+            font-size: 1.05rem;
+        }
+    }
+
+    .mw-dt__action-in-payout {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.6rem;
+        flex-basis: 100%;
+        font-style: normal;
+
+        span {
+            flex: none;
+            font-size: 1rem;
+            font-weight: 400;
+            color: rgb(255 255 255 / 85%);
+        }
+
+        span + span {
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: #fff;
+        }
+    }
+
+    .mw-dt__action-error,
+    .mw-dt__stats {
+        font-size: 1rem;
+    }
+
+    .mw-dt__ok,
+    .mw-dt__error {
+        padding: 0.6rem 1rem;
+        font-size: 1.1rem;
+    }
+
+    .risk-disclaimer-pill {
+        padding: 0.4rem 1rem;
+        font-size: 1.1rem;
     }
 }

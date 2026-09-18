@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
+import RiskDisclaimer from '@/components/layout/footer/RiskDisclaimer';
 import { redirectToLogin } from '@/components/shared';
 import { TradeTypeIcon } from '@/components/trade-type/trade-type-icon';
 import { observer as globalObserver } from '@/external/bot-skeleton';
@@ -37,6 +38,7 @@ const DIGIT_WINDOW = 1000;
 // The values Deriv puts on its own pads. Anything outside what the contract
 // allows is dropped from the pad rather than offered and then refused.
 const MINUTE_PRESETS = [1, 2, 3, 5, 10, 15, 30, 60];
+const TICK_PRESETS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 const DIGITS = Array.from({ length: 10 }, (_, digit) => digit);
 
@@ -358,6 +360,19 @@ const DTrader = observer(() => {
 
                         {type.shows_digit_stats && (
                             <div className='mw-dt__stage-digits'>
+                                {/* The count is the window actually held, not
+                                    the one asked for - it reads 1000 once the
+                                    history is in, and says less until then. */}
+                                {digits.length > 0 && (
+                                    <p className='mw-dt__digit-banner'>
+                                        {localize('Last digit stats for latest {{count}} ticks for {{market}}', {
+                                            count: digits.length,
+                                            market:
+                                                symbols.find(item => item.underlying_symbol === symbol)
+                                                    ?.underlying_symbol_name ?? symbol,
+                                        })}
+                                    </p>
+                                )}
                                 <DigitCircles
                                     distribution={distribution}
                                     latest={latest_digit}
@@ -468,8 +483,17 @@ const DTrader = observer(() => {
 
                     {type.fields.includes('digit') && (
                         <div className='mw-dt__pred'>
-                            <span className='mw-dt__pred-label'>{localize('Last Digit Prediction')}</span>
-                            <div className='mw-dt__pred-grid'>
+                            <span className='mw-dt__pred-label' aria-hidden='true'>
+                                {localize('Last Digit Prediction')}
+                            </span>
+                            {/* Named on the group itself, so the grid still says
+                                what it is on a phone, where the visible label
+                                above is dropped to match the reference. */}
+                            <div
+                                className='mw-dt__pred-grid'
+                                role='group'
+                                aria-label={localize('Last Digit Prediction')}
+                            >
                                 {DIGITS.map(digit => (
                                     <button
                                         key={digit}
@@ -573,6 +597,63 @@ const DTrader = observer(() => {
                             </select>
                         </label>
                     )}
+
+                    {/* The phone's version of duration and stake: the one line
+                        the reference gives them - duration on the left, the
+                        stake bold in the middle, its label on the right. The
+                        stacked tabs, slider and stepper above and below are the
+                        wide layout's; the stylesheet shows one or the other,
+                        never both, so each value has exactly one control on
+                        screen. Duration opens the same pad the minutes picker
+                        uses, with ticks and minutes on it. */}
+                    <div
+                        className={`mw-dt__compact${
+                            type.fields.includes('duration') ? '' : ' mw-dt__compact--no-duration'
+                        }`}
+                    >
+                        {type.fields.includes('duration') && (
+                            <ValuePicker
+                                display={durationLabel(params.duration, params.duration_unit)}
+                                label={localize('Duration')}
+                                max={duration_bounds.max}
+                                min={duration_bounds.min}
+                                onChange={duration => update({ duration })}
+                                onUnitChange={value => {
+                                    // Taken from the contract's own list rather
+                                    // than cast: a unit it does not offer is
+                                    // ignored, not sent to be refused.
+                                    const unit = bounds.units.find(item => item === value);
+                                    if (!unit) return;
+                                    const limit = unit === 'm' ? bounds.minutes : bounds.ticks;
+                                    update({ duration: limit?.min ?? 1, duration_unit: unit });
+                                }}
+                                presetLabel={preset => durationLabel(preset, params.duration_unit)}
+                                presets={params.duration_unit === 'm' ? MINUTE_PRESETS : TICK_PRESETS}
+                                unit={params.duration_unit}
+                                units={bounds.units.map(unit => ({
+                                    label: unit === 'm' ? localize('Minutes') : localize('Ticks'),
+                                    value: unit,
+                                }))}
+                                value={params.duration}
+                            />
+                        )}
+                        <label className='mw-dt__compact-stake'>
+                            <input
+                                type='number'
+                                inputMode='decimal'
+                                min={stake_limits.min}
+                                max={stake_limits.max}
+                                step={0.01}
+                                value={params.stake}
+                                aria-label={localize('Stake')}
+                                onChange={event => update({ stake: Number(event.target.value) })}
+                            />
+                            <i>{currency}</i>
+                        </label>
+                        <span className='mw-dt__compact-label' aria-hidden='true'>
+                            {localize('Stake')}
+                        </span>
+                    </div>
 
                     {/* Deriv states the stake it will accept for this exact
                         contract - a minute-long accumulator will not go below
@@ -727,6 +808,15 @@ const DTrader = observer(() => {
                                                   : localize('Log in')}
                                         </span>
                                         {percent && !digit_error && <b>{percent}</b>}
+                                        {/* The phone carries the payout inside
+                                            the button, on its own line under the
+                                            side, as the reference does; the line
+                                            above the button is the wide
+                                            layout's. Same figure either way. */}
+                                        <em className='mw-dt__action-in-payout'>
+                                            <span>{localize('Payout')}</span>
+                                            <span>{payout > 0 ? `${payout.toFixed(2)} ${currency}` : '-'}</span>
+                                        </em>
                                     </button>
                                     {message && <p className='mw-dt__action-error'>{message}</p>}
                                 </div>
@@ -747,6 +837,15 @@ const DTrader = observer(() => {
                             </div>
                         </div>
                     )}
+
+                    {/* The execution bar that carries the Risk Disclaimer on
+                        other routes is not mounted here, and the footer only
+                        draws from 1280px up - so below that this page had none
+                        at all. It closes the ticket, where the reference puts
+                        it; hidden in dtrader.scss wherever the footer has one. */}
+                    <div className='mw-dt__disclaimer'>
+                        <RiskDisclaimer />
+                    </div>
                 </aside>
             </div>
 
