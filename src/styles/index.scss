@@ -18,6 +18,24 @@ body {
     background: var(--general-main-1);
 }
 
+// Phones read in Roboto, the typeface of the phone reference screenshots -
+// narrower than Inter and the letters Android draws its own interface in.
+// Sizes, weights and spacing are unchanged: measured against those
+// screenshots, the app already matches them, typeface aside.
+// Four things keep Inter, because each has a look of its own: the loading
+// screen (finished, and not to be touched), the landing page, and the AI and
+// Gemini panels. The two orbs' lettering names Inter itself. `body` in front
+// so this outranks the landing page's own `font-family: inherit`.
+@media (width <= 600px) {
+    body {
+        font-family: 'Roboto', 'Arial', sans-serif;
+    }
+
+    body :is(.mw-loading, .mw-landing, .mw-exec-bar__ai-hint, .mw-scanner, .mw-scanner-exit, .mw-gem) {
+        font-family: 'Inter', 'Roboto', 'Arial', sans-serif;
+    }
+}
+
 .icon-general-fill-path {
     path {
         fill: var(--text-general);

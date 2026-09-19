@@ -102,3 +102,54 @@
         }
     }
 }
+
+// Phones, measured from the phone reference screenshots. Wider screens keep
+// everything above as it is.
+@media (width <= 600px) {
+    // Lifted off the page by a soft shadow, as the reference has it.
+    .risk-disclaimer-pill {
+        box-shadow: 0 0.2rem 0.6rem rgb(0 0 0 / 18%);
+    }
+
+    // Never taller than the space the overlay leaves inside the screen: 100vh
+    // on a phone is the height with the address bar hidden, so while the bar
+    // shows, a long disclaimer on a short phone ran past the top and bottom.
+    // Past that height the card scrolls inside itself.
+    .risk-disclaimer-modal {
+        max-height: 100%;
+        padding: 2.2rem 2rem;
+
+        // The reference leaves a wide space between the title and the text.
+        &__header {
+            margin-bottom: 4.2rem;
+
+            h2 {
+                font-size: 1.6rem;
+            }
+        }
+
+        // A full 44px to tap. The negative margins give back the extra size,
+        // so the header row and the title keep their places, and set the ✕
+        // nearer the corner as the reference has it - its box still ends
+        // inside the card, so the card never scrolls sideways.
+        &__close {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 4.4rem;
+            height: 4.4rem;
+            margin: -1rem -1.8rem -1rem 0;
+            padding: 0;
+        }
+
+        // The blue heading a size above the text it leads, as in the reference.
+        &__body strong {
+            font-size: 1.75rem;
+        }
+
+        &__confirm {
+            min-width: 16rem;
+            padding: 0.9rem 2.4rem;
+        }
+    }
+}

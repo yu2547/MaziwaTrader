@@ -219,6 +219,13 @@
 // Phones only - the width the app treats as mobile everywhere else. Tablets
 // and anything wider keep the layout above, untouched.
 @media (width <= 600px) {
+    // The greeting at the phone reference's size. At 30px it ran most of the
+    // way across a phone and was the loudest thing on the page; the reference
+    // has it at about 22px, half the screen's width.
+    .mw-dashboard-hero__greeting {
+        font-size: 2.4rem;
+    }
+
     // Two by two, as the reference has the four Quick Actions on a phone - a
     // single column made them four full-width slabs, and the page a long
     // scroll before it reached the bots.
