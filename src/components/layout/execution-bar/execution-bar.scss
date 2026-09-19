@@ -632,19 +632,19 @@ $mw-ai-square-period: 4.4s;
 
     // The scan field: a faded square with four corner brackets, sliding left
     // and right across the lettering while the hand turns. Just larger than
-    // the lettering, as in the reference - "AI" is 17px wide at 46px, and the
-    // field 21 by 20px. Moved 7.2px each way it covers the A at the left end
-    // of its travel, its right edge at the gap before the I, and the I at the
-    // right end, its left edge at the same gap - and stays wholly inside the
-    // sphere throughout, its farthest corner 20px from the centre against a
-    // 23px radius. The clip above is kept as a guard.
+    // the lettering, as in the reference, which puts it at about 58% of the
+    // sphere - "AI" is 24px wide and 17px tall in its black weight at 46px, and
+    // the field 27 by 26px. Moved 5.5px each way it lies over the A at the left
+    // end of its travel and over the I at the right, and stays wholly inside
+    // the sphere throughout, its farthest corner 23px from the centre - on the
+    // edge, not past it. The clip above is kept as a guard.
     // The fill and the brackets are separate layers so the brackets draw over
     // the fill; both travel with this element.
     &__ai-frame {
         position: absolute;
         inset: 0;
-        width: 2.1rem;
-        height: 2rem;
+        width: 2.7rem;
+        height: 2.6rem;
         margin: auto;
         animation: mw-ai-square $mw-ai-square-period ease-in-out infinite;
         will-change: transform, opacity;
@@ -685,9 +685,18 @@ $mw-ai-square-period: 4.4s;
     // Above everything else on the core, and animated by nothing. Every other
     // layer there is absolutely positioned, and an absolutely positioned
     // element paints over a bare text node.
+    // The reference's lettering: Inter at its black weight (900, loaded for this
+    // in index.html), set tight and large - caps about a third of the sphere's
+    // height and the pair about half its width, where the 16px bold it had
+    // before read small and light inside the sphere.
     &__ai-text {
         position: relative;
         z-index: 4;
+        font-family: 'Inter', 'Roboto', 'Arial', sans-serif;
+        font-size: 2.25rem;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: -0.02em;
     }
 
     // Signal points travelling the rings. Each carrier is the size of one ring
@@ -987,7 +996,7 @@ $mw-ai-square-period: 4.4s;
 @keyframes mw-ai-square {
     0%,
     100% {
-        transform: translateX(-0.72rem);
+        transform: translateX(-0.55rem);
         opacity: 0.55;
     }
 
@@ -997,7 +1006,7 @@ $mw-ai-square-period: 4.4s;
     }
 
     50% {
-        transform: translateX(0.72rem);
+        transform: translateX(0.55rem);
         opacity: 0.55;
     }
 }
