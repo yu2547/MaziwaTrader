@@ -608,8 +608,11 @@ $mw-ai-square-period: 4.4s;
             height: 50%;
             margin-left: -0.5px;
             transform-origin: 50% 100%;
-            background: linear-gradient(0deg, rgb(250 242 251 / 12%) 0%, rgb(250 242 251 / 85%) 100%);
-            box-shadow: 0 0 0.25rem rgb(214 196 255 / 75%);
+
+            // Faded but still there, as in the reference: a quiet line, not a
+            // bright one. It was 85% at the tip with a strong glow.
+            background: linear-gradient(0deg, rgb(250 242 251 / 10%) 0%, rgb(250 242 251 / 55%) 100%);
+            box-shadow: 0 0 0.2rem rgb(214 196 255 / 40%);
             filter: blur(0.25px);
             animation: mw-ai-hand $mw-ai-hand-idle linear infinite;
         }
@@ -628,20 +631,20 @@ $mw-ai-square-period: 4.4s;
     }
 
     // The scan field: a faded square with four corner brackets, sliding left
-    // and right across the lettering while the hand turns. Sized from the
-    // measured glyphs so each end of its travel lands where the reference
-    // puts it: at 46px the sphere's radius is 23px and "AI" spans 8.5px either
-    // side of the centre, so a field 31.5px wide moved 7.2px left runs from
-    // the sphere's edge to the right side of the I, and moved 7.2px right runs
-    // from the left side of the A to the other edge. Centred, its corners sit
-    // inside the circle.
+    // and right across the lettering while the hand turns. Just larger than
+    // the lettering, as in the reference - "AI" is 17px wide at 46px, and the
+    // field 21 by 20px. Moved 7.2px each way it covers the A at the left end
+    // of its travel, its right edge at the gap before the I, and the I at the
+    // right end, its left edge at the same gap - and stays wholly inside the
+    // sphere throughout, its farthest corner 20px from the centre against a
+    // 23px radius. The clip above is kept as a guard.
     // The fill and the brackets are separate layers so the brackets draw over
     // the fill; both travel with this element.
     &__ai-frame {
         position: absolute;
         inset: 0;
-        width: 3.15rem;
-        height: 2.8rem;
+        width: 2.1rem;
+        height: 2rem;
         margin: auto;
         animation: mw-ai-square $mw-ai-square-period ease-in-out infinite;
         will-change: transform, opacity;
@@ -651,16 +654,18 @@ $mw-ai-square-period: 4.4s;
             content: '';
             position: absolute;
             inset: 0;
-            border-radius: 0.35rem;
+            border-radius: 0.25rem;
             background: rgb(200 175 255 / 18%);
             filter: blur(0.5px);
         }
 
-        // The corner brackets, drawn as eight background layers.
+        // The corner brackets, drawn as eight background layers. Short, thin,
+        // faint and unlit, as the reference has them: a hint of a frame you
+        // have to look for, rather than a bright one that competes with "AI".
         &:after {
-            $corner: rgb(246 238 255 / 78%);
-            $arm: 0.6rem;
-            $stroke: 1.5px;
+            $corner: rgb(246 238 255 / 40%);
+            $arm: 0.35rem;
+            $stroke: 1px;
 
             content: '';
             position: absolute;
@@ -674,7 +679,6 @@ $mw-ai-square-period: 4.4s;
                 linear-gradient($corner, $corner) bottom left / #{$stroke} #{$arm} no-repeat,
                 linear-gradient($corner, $corner) bottom right / #{$arm} #{$stroke} no-repeat,
                 linear-gradient($corner, $corner) bottom right / #{$stroke} #{$arm} no-repeat;
-            filter: drop-shadow(0 0 0.2rem rgb(214 190 255 / 70%));
         }
     }
 
@@ -979,8 +983,7 @@ $mw-ai-square-period: 4.4s;
 // lettering at speed, like a pendulum, rather than pausing in the middle.
 // Opacity is keyed separately, highest as it crosses the centre and faded
 // toward the ends.
-// Left: the field's right edge on the right side of the I. Right: its left
-// edge on the left side of the A.
+// Left: the field over the A. Right: the field over the I.
 @keyframes mw-ai-square {
     0%,
     100% {
