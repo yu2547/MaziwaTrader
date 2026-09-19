@@ -9,6 +9,12 @@ $gem-orb-highlight: #ffb3ad; // specular highlight
 $gem-orb-white: #fff5f5; // lettering
 $gem-orb-online: #31dc81; // status dot, the same green the AI orb uses
 
+// How fast the light inside the sphere drifts, as one number: every bubble's
+// duration and starting offset below is multiplied by it, so their paths and
+// the way they meet and part are unchanged - only quicker or slower. Below 1
+// is faster. 0.7 is about 30% quicker than the original pace.
+$gem-bubble-pace: 0.7;
+
 .mw-gem-orb {
     position: fixed;
 
@@ -124,7 +130,7 @@ $gem-orb-online: #31dc81; // status dot, the same green the AI orb uses
                 rgb(255 185 190 / 0%) 70%
             );
             filter: blur(1.5px);
-            animation: mw-gem-bubble-1 7.5s ease-in-out infinite;
+            animation: mw-gem-bubble-1 (7.5s * $gem-bubble-pace) ease-in-out infinite;
         }
 
         // Medium, pale pink, centre right.
@@ -140,7 +146,7 @@ $gem-orb-online: #31dc81; // status dot, the same green the AI orb uses
                 rgb(255 150 160 / 0%) 72%
             );
             filter: blur(1px);
-            animation: mw-gem-bubble-2 9s ease-in-out -3s infinite;
+            animation: mw-gem-bubble-2 (9s * $gem-bubble-pace) ease-in-out (-3s * $gem-bubble-pace) infinite;
         }
 
         // Large, warm orange, low in the sphere - the reference's warm glow.
@@ -156,7 +162,7 @@ $gem-orb-online: #31dc81; // status dot, the same green the AI orb uses
                 rgb(255 140 70 / 0%) 72%
             );
             filter: blur(1.5px);
-            animation: mw-gem-bubble-3 10.5s ease-in-out -6s infinite;
+            animation: mw-gem-bubble-3 (10.5s * $gem-bubble-pace) ease-in-out (-6s * $gem-bubble-pace) infinite;
         }
 
         // Small, white, upper right.
@@ -172,7 +178,7 @@ $gem-orb-online: #31dc81; // status dot, the same green the AI orb uses
                 rgb(255 220 220 / 0%) 72%
             );
             filter: blur(0.5px);
-            animation: mw-gem-bubble-4 6.8s ease-in-out -1.5s infinite;
+            animation: mw-gem-bubble-4 (6.8s * $gem-bubble-pace) ease-in-out (-1.5s * $gem-bubble-pace) infinite;
         }
 
         // Small, orange-pink, lower left.
@@ -188,7 +194,7 @@ $gem-orb-online: #31dc81; // status dot, the same green the AI orb uses
                 rgb(255 120 100 / 0%) 72%
             );
             filter: blur(0.5px);
-            animation: mw-gem-bubble-5 8.3s ease-in-out -4.5s infinite;
+            animation: mw-gem-bubble-5 (8.3s * $gem-bubble-pace) ease-in-out (-4.5s * $gem-bubble-pace) infinite;
         }
     }
 
