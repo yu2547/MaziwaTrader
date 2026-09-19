@@ -40,10 +40,14 @@ $mw-ai-ring-inner: 3.8s;
 $mw-ai-ring-mid: 5s;
 $mw-ai-ring-wide: 7s;
 
-// The scan beam crossing the sphere. Unhurried while nothing is happening,
-// and quickened while a scan is actually running.
-$mw-ai-scan-idle: 2.8s;
-$mw-ai-scan-active: 1.4s;
+// The scanning hand's revolution. Unhurried while nothing is happening, and
+// quickened while a scan is actually running.
+$mw-ai-hand-idle: 3.5s;
+$mw-ai-hand-active: 1.6s;
+
+// The scan field's round trip, left to right and back - slower than the hand,
+// so the two never fall into step.
+$mw-ai-square-period: 4.4s;
 
 // The floating orbs' footing, published once and read by both of them.
 // There are two spheres now - the AI scanner and Gemini, stacked in the same
@@ -554,9 +558,9 @@ $mw-ai-scan-active: 1.4s;
         // The diagonal glass streak, upper-left to lower-right. A separate
         // layer so it can catch the light at its own angle instead of being
         // folded into the radial gradient, which can only be concentric.
-        // Over the inner light, as glass is; under the beam, the frame and the
-        // lettering. The core is its own stacking context (z-index above), so
-        // these orders hold among its layers and nothing outside can intrude.
+        // Under the hand, the scan field and the lettering. The core is its own
+        // stacking context (z-index above), so these orders hold among its
+        // layers and nothing outside can intrude.
         &:before {
             content: '';
             position: absolute;
@@ -572,94 +576,18 @@ $mw-ai-scan-active: 1.4s;
             );
             pointer-events: none;
 
-            // The breathing lives here rather than on the core itself, so the
-            // sphere appears to pulse while the "AI" lettering never resizes.
-            // The core used to run a 1 -> 1.06 scale, which left the text
-            // subtly growing and shrinking the whole time the app was open.
+            // The glass brightens and settles in place. Light only: the core
+            // used to run a 1 -> 1.06 scale, and later this layer a 1.015 one,
+            // and a sphere that is meant to be still should not grow at all.
             animation: mw-ai-breathe 2.6s ease-in-out infinite;
         }
     }
 
-    // Soft light drifting inside the sphere. Its own layer, clipped to the circle
-    // twice over - overflow with the radius, and clip-path, which also holds for
-    // layers the browser has moved onto the GPU - so nothing that drifts can
-    // cross the orb's edge.
-    &__ai-field {
-        position: absolute;
-        inset: 0;
-        z-index: 0;
-        border-radius: 50%;
-        overflow: hidden;
-        clip-path: circle(50%);
-        pointer-events: none;
-    }
-
-    // Low and soft: internal energy under the glass rather than objects on it.
-    // Sized and placed in percentages of the sphere, and each drift is in
-    // percentages of the bubble itself, so the field scales with the orb. The
-    // paths were laid out as bubble centres and checked to stay inside.
-    &__ai-bubble {
-        position: absolute;
-        border-radius: 50%;
-        opacity: 0.45;
-        will-change: transform, opacity;
-
-        // Large, lavender to white, upper left.
-        &--1 {
-            left: 23%;
-            top: 23%;
-            width: 30%;
-            height: 30%;
-            background: radial-gradient(
-                circle,
-                rgb(248 236 255 / 90%) 0%,
-                rgb(206 170 240 / 50%) 40%,
-                rgb(206 170 240 / 0%) 70%
-            );
-            filter: blur(1.5px);
-            animation: mw-ai-bubble-1 8s ease-in-out infinite;
-        }
-
-        // Medium, violet, lower right.
-        &--2 {
-            left: 52%;
-            top: 46%;
-            width: 20%;
-            height: 20%;
-            background: radial-gradient(
-                circle,
-                rgb(232 200 255 / 90%) 0%,
-                rgb(170 120 230 / 50%) 42%,
-                rgb(170 120 230 / 0%) 72%
-            );
-            filter: blur(1px);
-            animation: mw-ai-bubble-2 9.5s ease-in-out -3.5s infinite;
-        }
-
-        // Small, white, upper right.
-        &--3 {
-            left: 52%;
-            top: 24%;
-            width: 12%;
-            height: 12%;
-            background: radial-gradient(
-                circle,
-                rgb(255 255 255 / 100%) 0%,
-                rgb(236 222 255 / 55%) 45%,
-                rgb(236 222 255 / 0%) 72%
-            );
-            filter: blur(0.5px);
-            animation: mw-ai-bubble-3 7s ease-in-out -1.5s infinite;
-        }
-    }
-
-    // The scan beam: a thin line of light crossing the sphere on a diagonal,
-    // entering beyond one edge and leaving beyond the other, fading at both
-    // ends, then again. It replaces the radar needle that turned about the
-    // centre - the reference scans across the sphere rather than round it.
-    // This box is the clip; the beam is the pseudo-element, which alone
-    // moves. It passes under the frame and the lettering, so "AI" is never
-    // struck through.
+    // The scanning hand: one thin line from the centre to the rim, turning a
+    // full 360 degrees clockwise like the hand of a clock - linear, so it never
+    // hesitates or jumps between angles. Brightest at its tip and fading
+    // toward the centre, so where it crosses under the lettering it is faint.
+    // This box is the clip; the hand is the pseudo-element, which alone turns.
     &__ai-sweep {
         position: absolute;
         inset: 0;
@@ -669,60 +597,85 @@ $mw-ai-scan-active: 1.4s;
         clip-path: circle(50%);
         pointer-events: none;
 
-        // Longer than the sphere is wide, so its ends are never seen inside
-        // it: the line always runs edge to edge, like a real scan line.
+        // Standing on the centre, pointing to twelve, and turned about its
+        // own foot - the centre of the sphere.
         &:before {
             content: '';
             position: absolute;
-            top: 50%;
-            left: -25%;
-            width: 150%;
-            height: 2px;
-            margin-top: -1px;
-            background: linear-gradient(
-                90deg,
-                rgb(255 255 255 / 0%) 0%,
-                rgb(214 196 255 / 55%) 30%,
-                rgb(255 255 255 / 95%) 50%,
-                rgb(190 220 255 / 55%) 70%,
-                rgb(255 255 255 / 0%) 100%
-            );
-            box-shadow:
-                0 0 0.3rem rgb(214 196 255 / 85%),
-                0 0 0.8rem rgb(160 130 235 / 55%);
-            opacity: 0;
-            animation: mw-ai-scan $mw-ai-scan-idle ease-in-out infinite;
+            left: 50%;
+            bottom: 50%;
+            width: 1px;
+            height: 50%;
+            margin-left: -0.5px;
+            transform-origin: 50% 100%;
+            background: linear-gradient(0deg, rgb(250 242 251 / 12%) 0%, rgb(250 242 251 / 85%) 100%);
+            box-shadow: 0 0 0.25rem rgb(214 196 255 / 75%);
+            filter: blur(0.25px);
+            animation: mw-ai-hand $mw-ai-hand-idle linear infinite;
         }
     }
 
-    // The targeting frame round the lettering: four corner brackets, not a box,
-    // over a faint lift in the glass - drawn as background layers on one
-    // element. 2.9 by 2.5rem inside a 4.6rem sphere: its corners are 1.9rem
-    // from the centre against a 2.3rem radius, so it sits well clear of the
-    // edge. Fixed, like the lettering it frames.
-    &__ai-frame {
-        $corner: rgb(246 238 255 / 82%);
-        $arm: 0.6rem;
-        $stroke: 1.5px;
-
+    // The scan field's clip. The field slides until it meets the sphere's edge,
+    // and is cut there rather than spilling past it.
+    &__ai-scan {
         position: absolute;
         inset: 0;
         z-index: 3;
-        width: 2.9rem;
-        height: 2.5rem;
-        margin: auto;
-        background:
-            linear-gradient($corner, $corner) top left / #{$arm} #{$stroke} no-repeat,
-            linear-gradient($corner, $corner) top left / #{$stroke} #{$arm} no-repeat,
-            linear-gradient($corner, $corner) top right / #{$arm} #{$stroke} no-repeat,
-            linear-gradient($corner, $corner) top right / #{$stroke} #{$arm} no-repeat,
-            linear-gradient($corner, $corner) bottom left / #{$arm} #{$stroke} no-repeat,
-            linear-gradient($corner, $corner) bottom left / #{$stroke} #{$arm} no-repeat,
-            linear-gradient($corner, $corner) bottom right / #{$arm} #{$stroke} no-repeat,
-            linear-gradient($corner, $corner) bottom right / #{$stroke} #{$arm} no-repeat,
-            linear-gradient(rgb(255 255 255 / 7%), rgb(255 255 255 / 7%));
-        filter: drop-shadow(0 0 0.2rem rgb(214 190 255 / 70%));
+        border-radius: 50%;
+        overflow: hidden;
+        clip-path: circle(50%);
         pointer-events: none;
+    }
+
+    // The scan field: a faded square with four corner brackets, sliding left
+    // and right across the lettering while the hand turns. Sized from the
+    // measured glyphs so each end of its travel lands where the reference
+    // puts it: at 46px the sphere's radius is 23px and "AI" spans 8.5px either
+    // side of the centre, so a field 31.5px wide moved 7.2px left runs from
+    // the sphere's edge to the right side of the I, and moved 7.2px right runs
+    // from the left side of the A to the other edge. Centred, its corners sit
+    // inside the circle.
+    // The fill and the brackets are separate layers so the brackets draw over
+    // the fill; both travel with this element.
+    &__ai-frame {
+        position: absolute;
+        inset: 0;
+        width: 3.15rem;
+        height: 2.8rem;
+        margin: auto;
+        animation: mw-ai-square $mw-ai-square-period ease-in-out infinite;
+        will-change: transform, opacity;
+
+        // The faded field itself - lavender, low, soft-edged.
+        &:before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 0.35rem;
+            background: rgb(200 175 255 / 18%);
+            filter: blur(0.5px);
+        }
+
+        // The corner brackets, drawn as eight background layers.
+        &:after {
+            $corner: rgb(246 238 255 / 78%);
+            $arm: 0.6rem;
+            $stroke: 1.5px;
+
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient($corner, $corner) top left / #{$arm} #{$stroke} no-repeat,
+                linear-gradient($corner, $corner) top left / #{$stroke} #{$arm} no-repeat,
+                linear-gradient($corner, $corner) top right / #{$arm} #{$stroke} no-repeat,
+                linear-gradient($corner, $corner) top right / #{$stroke} #{$arm} no-repeat,
+                linear-gradient($corner, $corner) bottom left / #{$arm} #{$stroke} no-repeat,
+                linear-gradient($corner, $corner) bottom left / #{$stroke} #{$arm} no-repeat,
+                linear-gradient($corner, $corner) bottom right / #{$arm} #{$stroke} no-repeat,
+                linear-gradient($corner, $corner) bottom right / #{$stroke} #{$arm} no-repeat;
+            filter: drop-shadow(0 0 0.2rem rgb(214 190 255 / 70%));
+        }
     }
 
     // Above everything else on the core, and animated by nothing. Every other
@@ -744,17 +697,19 @@ $mw-ai-scan-active: 1.4s;
         pointer-events: none;
         animation: mw-ai-ring-spin var(--mw-orbit-period, 6s) linear infinite;
 
+        // 3px - small signal points that reinforce the search without
+        // competing with the hand and the field inside.
         &:before {
             content: '';
             position: absolute;
-            top: -0.2rem;
+            top: -0.15rem;
             left: 50%;
-            width: 0.4rem;
-            height: 0.4rem;
-            margin-left: -0.2rem;
+            width: 0.3rem;
+            height: 0.3rem;
+            margin-left: -0.15rem;
             border-radius: 50%;
             background: var(--mw-orbit-colour);
-            box-shadow: 0 0 0.35rem var(--mw-orbit-colour);
+            box-shadow: 0 0 0.3rem var(--mw-orbit-colour);
         }
 
         // Inner ring, cyan, quickest.
@@ -861,10 +816,10 @@ $mw-ai-scan-active: 1.4s;
         animation-duration: 2.8s;
     }
 
-    // The beam quickens with them, which is the difference between the orb
+    // The hand quickens with them, which is the difference between the orb
     // idling and the orb working.
     &__ai--scanning &__ai-sweep:before {
-        animation-duration: $mw-ai-scan-active;
+        animation-duration: $mw-ai-hand-active;
     }
 
     // Scaled rather than replaced, so the points keep their different speeds.
@@ -968,17 +923,15 @@ $mw-ai-scan-active: 1.4s;
     }
 }
 
-// The glass layer's breathing: 1.5%, which at a 46px sphere is under a pixel -
-// enough to feel alive, not enough to read as movement.
+// The glass layer's breathing: its light rises and settles, and nothing about
+// its size changes.
 @keyframes mw-ai-breathe {
     0%,
     100% {
-        transform: scale(1);
         opacity: 1;
     }
 
     50% {
-        transform: scale(1.015);
         opacity: 0.88;
     }
 }
@@ -1009,100 +962,40 @@ $mw-ai-scan-active: 1.4s;
     }
 }
 
-// The beam's pass: from beyond the upper-left edge to beyond the lower-right,
-// on a diagonal, fading in as it enters and out as it leaves. At 3rem off
-// centre the tilted line is 2.65rem from the centre, outside the 2.3rem
-// sphere, so it genuinely enters and exits rather than appearing mid-face.
-@keyframes mw-ai-scan {
-    0% {
-        transform: translateY(-3rem) rotate(-28deg);
-        opacity: 0;
+// The hand's turn: twelve, round through three, six and nine, back to twelve.
+// Linear, because a hand that eases is a hand that hesitates.
+@keyframes mw-ai-hand {
+    from {
+        transform: rotate(0deg);
     }
 
-    15%,
-    85% {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+// The scan field's slide: left to right and back. Position is keyed only at
+// the two ends, so with ease-in-out it slows into each end and crosses the
+// lettering at speed, like a pendulum, rather than pausing in the middle.
+// Opacity is keyed separately, highest as it crosses the centre and faded
+// toward the ends.
+// Left: the field's right edge on the right side of the I. Right: its left
+// edge on the left side of the A.
+@keyframes mw-ai-square {
+    0%,
+    100% {
+        transform: translateX(-0.72rem);
+        opacity: 0.55;
+    }
+
+    25%,
+    75% {
         opacity: 1;
     }
 
-    100% {
-        transform: translateY(3rem) rotate(-28deg);
-        opacity: 0;
-    }
-}
-
-// The three drifts inside the sphere. Translations are in percentages of the
-// bubble's own size; the comments give the resulting centre as a percentage
-// of the sphere. Different lengths and starting points (the negative delays),
-// so the light meets and parts rather than cycling in step.
-@keyframes mw-ai-bubble-1 {
-    // Centre 38,38 → 56,44 → 50,60 → 36,52.
-    0%,
-    100% {
-        transform: translate(0, 0) scale(0.9);
-        opacity: 0.35;
-    }
-
-    25% {
-        transform: translate(60%, 20%) scale(1);
+    50% {
+        transform: translateX(0.72rem);
         opacity: 0.55;
-    }
-
-    50% {
-        transform: translate(40%, 73%) scale(1.1);
-        opacity: 0.6;
-    }
-
-    75% {
-        transform: translate(-7%, 47%) scale(0.95);
-        opacity: 0.4;
-    }
-}
-
-@keyframes mw-ai-bubble-2 {
-    // Centre 62,56 → 52,66 → 40,54 → 58,40.
-    0%,
-    100% {
-        transform: translate(0, 0) scale(1);
-        opacity: 0.3;
-    }
-
-    25% {
-        transform: translate(-50%, 50%) scale(1.1);
-        opacity: 0.5;
-    }
-
-    50% {
-        transform: translate(-110%, -10%) scale(0.9);
-        opacity: 0.4;
-    }
-
-    75% {
-        transform: translate(-20%, -80%) scale(1.05);
-        opacity: 0.55;
-    }
-}
-
-@keyframes mw-ai-bubble-3 {
-    // Centre 58,30 → 46,36 → 38,46 → 64,42.
-    0%,
-    100% {
-        transform: translate(0, 0) scale(0.9);
-        opacity: 0.35;
-    }
-
-    25% {
-        transform: translate(-100%, 50%) scale(1.15);
-        opacity: 0.6;
-    }
-
-    50% {
-        transform: translate(-167%, 133%) scale(1);
-        opacity: 0.45;
-    }
-
-    75% {
-        transform: translate(50%, 100%) scale(1.1);
-        opacity: 0.6;
     }
 }
 
@@ -1148,8 +1041,9 @@ $mw-ai-scan-active: 1.4s;
 
 @media (prefers-reduced-motion: reduce) {
     // The orbit system keeps turning, far slower, so the orb still reads as
-    // live; everything travelling across or inside the sphere stops. Selectors
-    // carry the orb's class so they also outrank the quicker scanning speeds.
+    // live; everything travelling across or inside the sphere stops - the
+    // field rests centred, the hand at twelve. Selectors carry the orb's class
+    // so they also outrank the quicker scanning speeds.
     .mw-exec-bar__ai .mw-exec-bar__ai-ring,
     .mw-exec-bar__ai .mw-exec-bar__ai-orbit {
         animation-duration: 40s;
@@ -1157,7 +1051,7 @@ $mw-ai-scan-active: 1.4s;
 
     .mw-exec-bar__ai-dot,
     .mw-exec-bar__ai-core:before,
-    .mw-exec-bar__ai-bubble,
+    .mw-exec-bar__ai-frame,
     .mw-exec-bar__ai-sweep:before,
     .mw-exec-bar__ai-hint,
     .mw-exec-bar__ai-hint--leaving {

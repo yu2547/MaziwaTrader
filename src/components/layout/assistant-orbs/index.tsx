@@ -190,13 +190,14 @@ const AssistantOrbs = () => {
                     absolutely positioned, which paints over a bare text node -
                     and so nothing animating the core can reach the letters. */}
                 <span className='mw-exec-bar__ai-core'>
-                    <span className='mw-exec-bar__ai-field' aria-hidden='true'>
-                        <span className='mw-exec-bar__ai-bubble mw-exec-bar__ai-bubble--1' />
-                        <span className='mw-exec-bar__ai-bubble mw-exec-bar__ai-bubble--2' />
-                        <span className='mw-exec-bar__ai-bubble mw-exec-bar__ai-bubble--3' />
-                    </span>
                     <span className='mw-exec-bar__ai-sweep' aria-hidden='true' />
-                    <span className='mw-exec-bar__ai-frame' aria-hidden='true' />
+                    {/* The scan field slides across the lettering, so it has a
+                        clipped layer of its own: at each end of its travel it
+                        meets the sphere's edge and is cut by it, rather than
+                        spilling out. */}
+                    <span className='mw-exec-bar__ai-scan' aria-hidden='true'>
+                        <span className='mw-exec-bar__ai-frame' />
+                    </span>
                     <span className='mw-exec-bar__ai-text'>AI</span>
                 </span>
                 <span className='mw-exec-bar__ai-dot' aria-hidden='true' />
