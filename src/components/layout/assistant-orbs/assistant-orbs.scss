@@ -12,8 +12,9 @@ $gem-orb-online: #31dc81; // status dot, the same green the AI orb uses
 // How fast the light inside the sphere drifts, as one number: every bubble's
 // duration and starting offset below is multiplied by it, so their paths and
 // the way they meet and part are unchanged - only quicker or slower. Below 1
-// is faster. 0.7 is about 30% quicker than the original pace.
-$gem-bubble-pace: 0.7;
+// is faster. 0.55 is about 45% quicker than the original pace (it went 0.7
+// first, and was asked for a little quicker again).
+$gem-bubble-pace: 0.55;
 
 .mw-gem-orb {
     position: fixed;
@@ -202,12 +203,19 @@ $gem-bubble-pace: 0.7;
     // lettering is still while everything behind it moves. The dark shadow
     // keeps it readable over the brightest bubble; the faint white glow is the
     // reference's.
+    // The same black-weight Inter as the AI orb's "AI" (index.html loads 900),
+    // sized from the reference close-up: its "GEMINI" is about 79% of the
+    // sphere's width with caps about 15% of its height. At 13px on the 60px
+    // sphere that is 80% and 16%, set solid - the weight's own sidebearings
+    // give the reference's narrow gaps between letters.
     &__text {
         position: relative;
         z-index: 2;
-        font-size: 1.1rem;
-        font-weight: 700;
-        letter-spacing: 0.04em;
+        font-family: 'Inter', 'Roboto', 'Arial', sans-serif;
+        font-size: 1.3rem;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: 0;
         color: $gem-orb-white;
         text-shadow:
             0 1px 2px rgb(20 4 4 / 65%),
