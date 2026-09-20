@@ -9,10 +9,27 @@
     --mw-gold: #e8b64c;
     --mw-green: #2be08e;
     --mw-red: #ff4d5e;
+    --mw-violet: #a855f7;
+
+    // The sketch's call to action: coral into purple into blue, left to
+    // right. Named once here because the header's Login button uses the
+    // same ramp, so the two can never drift apart.
+    --mw-cta: linear-gradient(90deg, #ff3b5c 0%, #a855f7 52%, #2f6bff 100%);
+
+    // How wide content is ever allowed to get, and the gutter either side of
+    // it. Everything on the page is laid out inside this, so a 1920px screen
+    // gets wide margins rather than text stretched across the display.
+    --mw-shell: 120rem;
+    --mw-gutter: clamp(1.6rem, 4vw, 3.2rem);
+
+    // The vertical rhythm between sections, one value that grows with the
+    // screen: tight on a phone, generous on a desktop.
+    --mw-section-gap: clamp(4.8rem, 7vw, 9rem);
 
     position: relative;
     min-height: 100vh;
     width: 100%;
+
     // Not overflow-x: hidden - setting only one axis makes the other
     // compute to auto per spec, which silently turns this into a scroll
     // container and breaks position: sticky on the nav below (it sticks
@@ -26,5 +43,17 @@
     &__content {
         position: relative;
         z-index: 1;
+        display: flex;
+        flex-direction: column;
+        gap: var(--mw-section-gap);
+        padding-bottom: var(--mw-section-gap);
+    }
+
+    // The one container every section's content sits in.
+    &__shell {
+        width: 100%;
+        max-width: var(--mw-shell);
+        margin: 0 auto;
+        padding-inline: var(--mw-gutter);
     }
 }

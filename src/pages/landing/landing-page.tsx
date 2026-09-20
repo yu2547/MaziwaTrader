@@ -1,21 +1,29 @@
 import AnimatedBackground from './components/animated-background';
 import FeaturesSection from './components/features-section';
 import HeroSection from './components/hero-section';
+import HighlightBadges from './components/highlight-badges';
 import LandingFooter from './components/landing-footer';
 import LandingNav from './components/landing-nav';
-import LiveStats from './components/live-stats';
+import LiveMarkets from './components/live-markets';
 import './landing-page.scss';
 
+// The order is the approved sketch's, top to bottom: header, hero (logo,
+// pill, headline, supporting line, call to action, feature checks), the
+// horizontally scrolling cards, the four highlights, the live market panel,
+// then the brand footer. One composition for every screen - each section
+// lays itself out for the width it is given rather than there being a phone
+// page and a desktop page.
 const LandingPage = () => {
     return (
         <div className='mw-landing'>
             <AnimatedBackground />
             <LandingNav />
-            <div className='mw-landing__content'>
+            <main className='mw-landing__content'>
                 <HeroSection />
-                <LiveStats />
                 <FeaturesSection />
-            </div>
+                <HighlightBadges />
+                <LiveMarkets />
+            </main>
             <LandingFooter />
         </div>
     );

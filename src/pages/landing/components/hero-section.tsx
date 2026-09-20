@@ -1,7 +1,7 @@
 import MarketSceneCanvas from '@/components/market-scene/market-scene-canvas';
 import { redirectToLogin, redirectToSignUp } from '@/components/shared';
 import { useTranslations } from '@deriv-com/translations';
-import HeroMarketCards from './hero-market-cards';
+import { ArrowRightIcon, CheckCircleIcon } from './feature-icons';
 import './hero-section.scss';
 
 // The hero background reuses the exact same cinematic engine as the loading
@@ -12,6 +12,11 @@ const HERO_ENERGY = 0.82;
 
 const HeroSection = () => {
     const { localize } = useTranslations();
+
+    // What the app actually does: bots you build and run, the public market
+    // feed the page itself is showing below, and synthetic indices that
+    // trade around the clock.
+    const checks = [localize('Smart Bots'), localize('Real Market Data'), localize('Trade Anytime')];
 
     return (
         <section className='mw-hero' id='hero'>
@@ -24,49 +29,53 @@ const HeroSection = () => {
                 />
             </div>
 
-            <div className='mw-hero__grid'>
-                <div className='mw-hero__copy'>
-                    <span className='mw-hero__badge'>{localize('Free Deriv Bots, Automation & Trading Tools')}</span>
-                    <h1 className='mw-hero__headline'>
-                        <span>{localize('Trade Smarter.')}</span>
-                        <span className='mw-hero__headline-accent'>{localize('Execute Faster.')}</span>
-                    </h1>
-                    <p className='mw-hero__subheading'>
-                        {localize(
-                            'Professional trading tools, advanced analytics, and intelligent automation built for Deriv traders.'
-                        )}
-                    </p>
-
-                    <div className='mw-hero__actions'>
-                        <button
-                            type='button'
-                            className='mw-hero__btn mw-hero__btn--primary'
-                            onClick={() => redirectToLogin(false)}
-                        >
-                            {localize('Start Trading')}
-                        </button>
-                        <button type='button' className='mw-hero__btn mw-hero__btn--glass' onClick={redirectToSignUp}>
-                            {localize('Sign Up')}
-                        </button>
-                    </div>
-
-                    <div className='mw-hero__trust'>
-                        <span>{localize('Secure & Reliable')}</span>
-                        <span>{localize('Fast Execution')}</span>
-                        <span>{localize('Built for Traders')}</span>
+            <div className='mw-hero__inner mw-landing__shell'>
+                <div className='mw-hero__logo-stage'>
+                    <div className='mw-hero__logo-wrap'>
+                        <div className='mw-hero__logo-glow' aria-hidden='true' />
+                        <img src='/maziwatrader-logo-v3.png' alt='MaziwaTrader' className='mw-hero__logo' />
+                        <div className='mw-hero__logo-sweep' aria-hidden='true' />
                     </div>
                 </div>
 
-                <div className='mw-hero__visual'>
-                    <div className='mw-hero__logo-stage'>
-                        <div className='mw-hero__logo-wrap'>
-                            <div className='mw-hero__logo-glow' aria-hidden='true' />
-                            <img src='/maziwatrader-logo-v3.png' alt='MaziwaTrader' className='mw-hero__logo' />
-                            <div className='mw-hero__logo-sweep' aria-hidden='true' />
-                        </div>
-                    </div>
-                    <HeroMarketCards />
-                </div>
+                <span className='mw-hero__pill'>
+                    <i className='mw-hero__pill-dot' aria-hidden='true' />
+                    {localize('Smart Trading. A Brighter Tomorrow.')}
+                </span>
+
+                <h1 className='mw-hero__headline'>
+                    <span>{localize('Trade Smarter')}</span>
+                    <span>
+                        {localize('with')} <span className='mw-hero__headline-accent'>{localize('AI Power')}</span>
+                        <i className='mw-hero__caret' aria-hidden='true' />
+                    </span>
+                </h1>
+
+                <p className='mw-hero__sub'>{localize('Automate. Analyse. Trade. Stay Ahead.')}</p>
+
+                <button type='button' className='mw-hero__cta' onClick={() => redirectToLogin(false)}>
+                    {localize('Start Trading Now')}
+                    <ArrowRightIcon className='mw-hero__cta-arrow' />
+                </button>
+
+                {/* The sign-up path the page has always had, kept as a quiet
+                    second line so the one loud action stays the call to
+                    action itself. */}
+                <p className='mw-hero__signup'>
+                    {localize('New here?')}{' '}
+                    <button type='button' className='mw-hero__signup-link' onClick={redirectToSignUp}>
+                        {localize('Create an account')}
+                    </button>
+                </p>
+
+                <ul className='mw-hero__checks'>
+                    {checks.map(label => (
+                        <li className='mw-hero__check' key={label}>
+                            <CheckCircleIcon className='mw-hero__check-icon' />
+                            {label}
+                        </li>
+                    ))}
+                </ul>
             </div>
         </section>
     );

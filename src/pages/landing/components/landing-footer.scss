@@ -1,12 +1,28 @@
 .mw-footer {
     position: relative;
     z-index: 1;
-    padding: 2.4rem 2rem;
+    padding: clamp(2.4rem, 4vw, 4rem) var(--mw-gutter, 2rem);
     border-top: 1px solid rgb(255 255 255 / 8%);
     text-align: center;
 
-    &__copy {
+    // Letter-spaced and quiet, the way the mark itself sets the name.
+    &__brand {
         margin: 0;
+        font-size: clamp(1.4rem, 2vw, 1.7rem);
+        font-weight: 700;
+        letter-spacing: 0.34em;
+        color: rgb(255 255 255 / 72%);
+    }
+
+    &__tagline {
+        margin: 0.6rem 0 0;
+        font-size: clamp(1.1rem, 1.5vw, 1.3rem);
+        letter-spacing: 0.24em;
+        color: rgb(255 255 255 / 44%);
+    }
+
+    &__copy {
+        margin: 1.6rem 0 0;
         font-size: 1.2rem;
         color: rgb(255 255 255 / 52%);
     }

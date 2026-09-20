@@ -53,6 +53,50 @@ export const RiskCalculatorIcon = ({ className }: TIconProps) => (
     </svg>
 );
 
+export const ShieldIcon = ({ className }: TIconProps) => (
+    <svg className={className} viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+        <path
+            d='M12 3l7 3v5.5c0 4.2-2.9 7.6-7 9.5-4.1-1.9-7-5.3-7-9.5V6z'
+            stroke='currentColor'
+            strokeWidth='1.5'
+            strokeLinejoin='round'
+        />
+        <path d='M9 12l2 2 4-4' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round' strokeLinejoin='round' />
+    </svg>
+);
+
+export const BoltIcon = ({ className }: TIconProps) => (
+    <svg className={className} viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+        <path d='M13 2L5 13h6l-1 9 8-11h-6z' stroke='currentColor' strokeWidth='1.5' strokeLinejoin='round' />
+    </svg>
+);
+
+// The tick beside each hero feature, and the arrow on the call to action.
+export const CheckCircleIcon = ({ className }: TIconProps) => (
+    <svg className={className} viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+        <circle cx='12' cy='12' r='9.25' fill='currentColor' />
+        <path
+            d='M8 12.3l2.6 2.6L16 9.5'
+            stroke='#0a1024'
+            strokeWidth='2'
+            strokeLinecap='round'
+            strokeLinejoin='round'
+        />
+    </svg>
+);
+
+export const ArrowRightIcon = ({ className }: TIconProps) => (
+    <svg className={className} viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
+        <path
+            d='M4 12h15M13 6l6 6-6 6'
+            stroke='currentColor'
+            strokeWidth='2'
+            strokeLinecap='round'
+            strokeLinejoin='round'
+        />
+    </svg>
+);
+
 export const ReportsIcon = ({ className }: TIconProps) => (
     <svg className={className} viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'>
         <path d='M7 3h7l4 4v14H7z' stroke='currentColor' strokeWidth='1.5' strokeLinejoin='round' />

@@ -1,0 +1,79 @@
+// Four lit rings in a row on a desktop, two by two on a phone.
+.mw-highlights {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(1.6rem, 3vw, 3.2rem);
+    justify-items: center;
+
+    &__item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.2rem;
+        text-align: center;
+    }
+
+    // The ring is the border; the glow is its own shadow, inside and out, so
+    // the circle reads as lit rather than outlined.
+    &__ring {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        width: clamp(10rem, 22vw, 13rem);
+        aspect-ratio: 1;
+        border-radius: 50%;
+        border: 2px solid var(--ring-color, #fff);
+        background: radial-gradient(circle at 50% 40%, rgb(255 255 255 / 7%), rgb(9 16 34 / 85%) 70%);
+        box-shadow:
+            0 0 2.4rem var(--ring-glow, transparent),
+            0 0 3.2rem var(--ring-glow, transparent) inset;
+
+        &--red {
+            --ring-color: #ff3b5c;
+            --ring-glow: rgb(255 59 92 / 22%);
+        }
+
+        &--blue {
+            --ring-color: #33e5ff;
+            --ring-glow: rgb(51 229 255 / 22%);
+        }
+
+        &--gold {
+            --ring-color: #e8b64c;
+            --ring-glow: rgb(232 182 76 / 22%);
+        }
+
+        &--violet {
+            --ring-color: #a855f7;
+            --ring-glow: rgb(168 85 247 / 24%);
+        }
+    }
+
+    &__icon {
+        width: clamp(2rem, 4vw, 2.4rem);
+        height: clamp(2rem, 4vw, 2.4rem);
+        color: var(--ring-color, #fff);
+    }
+
+    &__value {
+        font-size: clamp(1.6rem, 2.6vw, 2rem);
+        font-weight: 800;
+        color: #fff;
+        line-height: 1;
+    }
+
+    &__label {
+        font-size: clamp(1.3rem, 1.7vw, 1.5rem);
+        color: rgb(255 255 255 / 72%);
+    }
+}
+
+@media (width <= 720px) {
+    .mw-highlights {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 2.4rem 1.6rem;
+    }
+}

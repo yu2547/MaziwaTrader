@@ -1,27 +1,65 @@
 .mw-features {
-    padding: 5.6rem 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
-
     &__title {
         text-align: center;
-        font-size: clamp(2.4rem, 3.6vw, 3.2rem);
+        font-size: clamp(2.2rem, 3.4vw, 3.2rem);
         font-weight: 700;
         color: #fff;
-        margin: 0 0 3.6rem;
+        margin: 0 0 clamp(2.4rem, 3.5vw, 3.6rem);
     }
 
-    &__grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
+    // The scroller itself spans the window, so cards can run off both edges
+    // the way the sketch shows them, while the track's own padding keeps the
+    // first card in line with every other section's left edge.
+    &__rail {
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-snap-type: x mandatory;
+
+        // Lines the first card up with every other section, and keeps the
+        // page gutter once the screen is narrower than the content width.
+        // It sits on the scroller rather than on the track inside it: a
+        // percentage on the track would have to resolve against a width the
+        // track itself defines, which browsers treat as zero.
+        padding-inline: calc(max(0px, (100% - var(--mw-shell, 120rem)) / 2) + var(--mw-gutter, 2.4rem));
+
+        // Snapping measures from the scrollport's edge, not from that
+        // padding, so without this the first card would snap flush to the
+        // window and undo the alignment above.
+        scroll-padding-inline: calc(max(0px, (100% - var(--mw-shell, 120rem)) / 2) + var(--mw-gutter, 2.4rem));
+        scrollbar-width: none;
+
+        &::-webkit-scrollbar {
+            display: none;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--mw-cyan, #33e5ff);
+            outline-offset: -2px;
+            border-radius: 1.6rem;
+        }
+    }
+
+    &__track {
+        display: flex;
         gap: 1.6rem;
+        width: max-content;
+
+        // Room for the cards' hover lift and shadow, which would otherwise
+        // be clipped by the scroller.
+        padding-block: 0.6rem 1.4rem;
     }
 
     &__card {
         position: relative;
         display: flex;
+        flex: 0 0 auto;
         flex-direction: column;
         gap: 1rem;
+
+        // One card and a slice of the next on a phone; three and a slice on
+        // a desktop, which is what tells the reader the row scrolls.
+        width: clamp(25rem, 76vw, 34rem);
+        scroll-snap-align: start;
         padding: 2rem;
         border-radius: 16px;
         background: rgb(255 255 255 / 4%);
@@ -32,28 +70,27 @@
             background 0.3s ease,
             box-shadow 0.3s ease;
 
-        // Same blue/gold lighting language as the loading screen and hero.
         // A layered shadow (soft contact + wider ambient glow) so the lift
         // reads as a real card rising off the surface, not just a harder
         // drop-shadow.
         &:hover {
             transform: translateY(-6px);
-            border-color: rgb(232 182 76 / 45%);
+            border-color: rgb(51 229 255 / 45%);
             background: rgb(255 255 255 / 7%);
             box-shadow:
                 0 1px 0 rgb(255 255 255 / 8%) inset,
                 0 10px 20px rgb(0 0 0 / 25%),
                 0 20px 44px rgb(47 125 255 / 16%),
-                0 6px 20px rgb(232 182 76 / 14%);
+                0 6px 20px rgb(51 229 255 / 14%);
 
             .mw-features__icon {
                 transform: scale(1.08) rotate(-4deg);
-                background: linear-gradient(135deg, rgb(232 182 76 / 40%), rgb(47 125 255 / 34%));
+                background: linear-gradient(135deg, rgb(51 229 255 / 40%), rgb(47 125 255 / 34%));
             }
         }
 
         &:focus-within {
-            outline: 2px solid var(--mw-gold, #e8b64c);
+            outline: 2px solid var(--mw-cyan, #33e5ff);
             outline-offset: 2px;
         }
     }
@@ -65,8 +102,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, rgb(232 182 76 / 25%), rgb(47 125 255 / 22%));
-        color: var(--mw-gold);
+        background: linear-gradient(135deg, rgb(51 229 255 / 25%), rgb(47 125 255 / 22%));
+        color: var(--mw-cyan, #33e5ff);
         transition:
             transform 0.3s ease,
             background 0.3s ease;
@@ -79,7 +116,7 @@
 
     &__card-title {
         font-size: 1.7rem;
-        font-weight: 600;
+        font-weight: 700;
         color: #fff;
         margin: 0;
     }
@@ -97,16 +134,8 @@
     .mw-features__icon {
         transition: none;
     }
-}
 
-@media (width <= 1024px) {
-    .mw-features__grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (width <= 560px) {
-    .mw-features__grid {
-        grid-template-columns: 1fr;
+    .mw-features__rail {
+        scroll-behavior: auto;
     }
 }

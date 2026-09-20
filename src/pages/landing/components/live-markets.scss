@@ -1,0 +1,148 @@
+.mw-live {
+    &__panel {
+        border-radius: 2rem;
+        border: 1px solid rgb(255 255 255 / 10%);
+        background: linear-gradient(180deg, rgb(12 20 42 / 88%), rgb(8 13 28 / 88%));
+        box-shadow:
+            0 1px 0 rgb(255 255 255 / 6%) inset,
+            0 2.4rem 5.6rem rgb(0 0 0 / 35%);
+        overflow: hidden;
+    }
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.6rem clamp(1.6rem, 2.5vw, 2.4rem);
+        border-bottom: 1px solid rgb(255 255 255 / 8%);
+    }
+
+    &__dot {
+        width: 1rem;
+        height: 1rem;
+        flex: none;
+        border-radius: 50%;
+        background: rgb(255 255 255 / 25%);
+
+        // Lit only while the feed is actually connected, so the light is a
+        // fact about the connection rather than decoration.
+        &--on {
+            background: var(--mw-green, #2be08e);
+            box-shadow: 0 0 0.8rem rgb(43 224 142 / 70%);
+        }
+    }
+
+    &__title {
+        margin: 0;
+        font-size: clamp(1.6rem, 2.2vw, 1.9rem);
+        font-weight: 700;
+        color: #fff;
+    }
+
+    &__state {
+        margin-inline-start: auto;
+        font-size: 1.3rem;
+        color: rgb(255 255 255 / 55%);
+    }
+
+    &__rows {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    // Market name takes the slack; the numbers hold their own columns so
+    // they line up down the panel.
+    &__row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+        align-items: center;
+        gap: clamp(0.8rem, 2vw, 2rem);
+        padding: 1.4rem clamp(1.6rem, 2.5vw, 2.4rem);
+        border-bottom: 1px solid rgb(255 255 255 / 6%);
+
+        &:last-child {
+            border-bottom: none;
+        }
+    }
+
+    &__market {
+        min-width: 0;
+        font-size: clamp(1.3rem, 1.8vw, 1.6rem);
+        font-weight: 600;
+        color: #fff;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__chip {
+        padding: 0.4rem 1rem;
+        border-radius: 999px;
+        font-size: 1.15rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: rgb(255 255 255 / 70%);
+        background: rgb(255 255 255 / 8%);
+
+        &--up {
+            color: #0a1024;
+            background: var(--mw-green, #2be08e);
+        }
+
+        &--down {
+            color: #fff;
+            background: var(--mw-red, #ff4d5e);
+        }
+    }
+
+    &__price,
+    &__change {
+        font-size: clamp(1.3rem, 1.8vw, 1.5rem);
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__price {
+        color: rgb(255 255 255 / 88%);
+    }
+
+    &__change {
+        min-width: 6rem;
+        text-align: end;
+        font-weight: 700;
+        color: rgb(255 255 255 / 45%);
+
+        &--up {
+            color: var(--mw-green, #2be08e);
+        }
+
+        &--down {
+            color: var(--mw-red, #ff4d5e);
+        }
+    }
+
+    &__age {
+        min-width: 6rem;
+        text-align: end;
+        font-size: 1.2rem;
+        font-variant-numeric: tabular-nums;
+        color: rgb(255 255 255 / 45%);
+    }
+}
+
+// Phones: the chip carries the direction, so the change column steps back to
+// keep the row on one line.
+@media (width <= 600px) {
+    .mw-live__row {
+        gap: 0.8rem;
+        padding-inline: 1.4rem;
+    }
+
+    .mw-live__change {
+        display: none;
+    }
+
+    .mw-live__state {
+        display: none;
+    }
+}

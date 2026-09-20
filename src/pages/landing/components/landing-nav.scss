@@ -2,19 +2,27 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 2.4rem;
-    padding: 1.4rem 3.2rem;
     background: rgb(6 11 24 / 45%);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid rgb(255 255 255 / 5%);
     transition:
         background 0.3s ease,
         backdrop-filter 0.3s ease,
-        border-color 0.3s ease,
-        padding 0.3s ease;
+        border-color 0.3s ease;
+
+    // The bar spans the window; its contents stop at the page's own width,
+    // so the brand and the button sit in line with every section below.
+    &__inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.6rem;
+        width: 100%;
+        max-width: var(--mw-shell, 120rem);
+        margin: 0 auto;
+        padding: 1.2rem var(--mw-gutter, 2.4rem);
+        transition: padding 0.3s ease;
+    }
 
     // Deepens once the hero has scrolled past - a subtle cue the chrome is
     // "aware" of the page, rather than a static bar sitting on top of it.
@@ -22,85 +30,72 @@
         background: rgb(6 11 24 / 82%);
         backdrop-filter: blur(18px);
         border-bottom-color: rgb(255 255 255 / 9%);
-        padding-top: 1.1rem;
-        padding-bottom: 1.1rem;
         box-shadow: 0 8px 24px rgb(0 0 0 / 25%);
+
+        .mw-nav__inner {
+            padding-block: 0.9rem;
+        }
     }
 
     &__brand {
         display: flex;
         align-items: center;
         gap: 1rem;
-        flex-shrink: 0;
+        min-width: 0;
+        flex-shrink: 1;
     }
 
+    // A window onto the winged mark inside the logo art. Measured from the
+    // file itself, which is 1536 by 1024: the mark sits between 16% and 78%
+    // across and 8% and 56% down, above the baked-in wordmark. The picture
+    // is sized to 1/0.62 of this frame and offset by those fractions, which
+    // lands the mark exactly inside it. Every ratio below follows from those
+    // numbers - change the frame width alone and the crop still holds.
+    &__mark {
+        --mw-mark: 5.4rem;
+
+        // A span, so it needs saying: an inline box would ignore the size
+        // below and clip nothing.
+        display: block;
+        position: relative;
+        width: var(--mw-mark);
+        height: calc(var(--mw-mark) / 1.94);
+        flex: none;
+        overflow: hidden;
+    }
+
+    // The art carries its own dark backing rather than a cut-out, so it is
+    // screen-blended here as it is everywhere else it appears - which also
+    // dissolves the corners of the frame into the header.
     &__logo {
-        width: 36px;
-        height: 36px;
-        object-fit: contain;
-        border-radius: 8px;
+        position: absolute;
+        top: calc(var(--mw-mark) * -0.086);
+        left: calc(var(--mw-mark) * -0.258);
+        width: calc(var(--mw-mark) * 1.613);
+        height: auto;
+
+        // The app's reset caps every image at its box (max-block-size and
+        // max-inline-size: 100%), which would squash this one back into the
+        // frame instead of letting the frame crop it.
+        max-width: none;
+        max-height: none;
+        mix-blend-mode: screen;
     }
 
     &__wordmark {
-        font-size: 1.5rem;
-        font-weight: 700;
-        letter-spacing: 0.05em;
+        font-size: clamp(1.4rem, 2.6vw, 1.8rem);
+        font-weight: 800;
+        letter-spacing: 0.08em;
         color: #fff;
         white-space: nowrap;
-    }
-
-    &__links {
-        display: flex;
-        align-items: center;
-        gap: 2.4rem;
-        flex-wrap: wrap;
-    }
-
-    &__link {
-        position: relative;
-        padding-bottom: 0.3rem;
-        font-size: 1.4rem;
-        font-weight: 500;
-        color: rgb(255 255 255 / 72%);
-        text-decoration: none;
-        transition: color 0.2s ease;
-
-        // Underline grows from the center on hover/active rather than a
-        // hard color-only swap - a small, premium detail.
-        &::after {
-            content: '';
-            position: absolute;
-            left: 50%;
-            bottom: 0;
-            width: 0;
-            height: 2px;
-            border-radius: 2px;
-            background: linear-gradient(90deg, var(--mw-gold, #e8b64c), var(--mw-blue, #2f7dff));
-            transform: translateX(-50%);
-            transition: width 0.25s ease;
-        }
-
-        &:hover {
-            color: #fff;
-
-            &::after {
-                width: 100%;
-            }
-        }
-
-        &[aria-current='page'] {
-            color: #fff;
-
-            &::after {
-                width: 100%;
-            }
-        }
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     &__actions {
         display: flex;
         align-items: center;
-        gap: 1.2rem;
+        gap: 1rem;
         flex-shrink: 0;
     }
 
@@ -110,8 +105,8 @@
         background: rgb(255 255 255 / 5%);
         color: rgb(255 255 255 / 85%);
         border-radius: 999px;
-        width: 36px;
-        height: 36px;
+        width: 3.6rem;
+        height: 3.6rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -122,21 +117,23 @@
             transform 0.2s ease;
 
         &:hover {
-            border-color: rgb(232 182 76 / 50%);
+            border-color: rgb(51 229 255 / 50%);
             background: rgb(255 255 255 / 8%);
             transform: translateY(-1px);
         }
     }
 
-    &__signup {
+    // The same colour ramp as the hero's call to action, so the page has one
+    // action colour rather than two.
+    &__login {
         appearance: none;
         border: none;
         border-radius: 999px;
-        padding: 0.9rem 2.2rem;
-        font-size: 1.4rem;
-        font-weight: 600;
-        color: #06111f;
-        background: linear-gradient(120deg, #e8b64c, #2f7dff);
+        padding: 1rem 2.4rem;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #fff;
+        background: var(--mw-cta, linear-gradient(90deg, #ff3b5c, #a855f7, #2f6bff));
         cursor: pointer;
         transition:
             transform 0.2s ease,
@@ -144,52 +141,8 @@
 
         &:hover {
             transform: translateY(-1px);
-            box-shadow: 0 8px 22px rgb(47 125 255 / 35%);
+            box-shadow: 0 8px 22px rgb(47 107 255 / 40%);
         }
-    }
-
-    &__burger {
-        display: none;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        gap: 4px;
-        appearance: none;
-        border: 1px solid rgb(255 255 255 / 14%);
-        background: rgb(255 255 255 / 5%);
-        border-radius: 8px;
-        width: 36px;
-        height: 36px;
-        cursor: pointer;
-
-        span {
-            display: block;
-            width: 16px;
-            height: 2px;
-            border-radius: 2px;
-            background: #fff;
-            transition:
-                transform 0.25s ease,
-                opacity 0.2s ease;
-        }
-
-        &--open {
-            span:first-child {
-                transform: translateY(6px) rotate(45deg);
-            }
-
-            span:nth-child(2) {
-                opacity: 0;
-            }
-
-            span:last-child {
-                transform: translateY(-6px) rotate(-45deg);
-            }
-        }
-    }
-
-    &__mobile {
-        display: none;
     }
 }
 
@@ -197,81 +150,35 @@
 // deliberately not the browser default outline (too thin against this dark
 // glass background) but still a clear, always-present ring, not just a
 // color swap that vanishes at low contrast.
-.mw-nav__link:focus-visible,
 .mw-nav__theme:focus-visible,
-.mw-nav__signup:focus-visible,
-.mw-nav__burger:focus-visible,
-.mw-nav__mobile-link:focus-visible {
-    outline: 2px solid var(--mw-gold, #e8b64c);
+.mw-nav__login:focus-visible {
+    outline: 2px solid var(--mw-cyan, #33e5ff);
     outline-offset: 3px;
-    border-radius: 4px;
+    border-radius: 999px;
 }
 
 @media (prefers-reduced-motion: reduce) {
     .mw-nav,
+    .mw-nav__inner,
     .mw-nav__theme,
-    .mw-nav__signup,
-    .mw-nav__link,
-    .mw-nav__link::after,
-    .mw-nav__burger span,
-    .mw-nav__mobile {
+    .mw-nav__login {
         transition: none;
     }
 }
 
-@media (width <= 960px) {
-    .mw-nav__links {
-        display: none;
-    }
-
-    .mw-nav__burger {
-        display: inline-flex;
-    }
-
-    .mw-nav__mobile {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        display: flex;
-        flex-direction: column;
-        background: rgb(6 11 24 / 96%);
-        backdrop-filter: blur(18px);
-        border-bottom: 1px solid rgb(255 255 255 / 8%);
-        max-height: 0;
-        overflow: hidden;
-        opacity: 0;
-        transition:
-            max-height 0.3s ease,
-            opacity 0.25s ease;
-
-        &--open {
-            max-height: 400px;
-            opacity: 1;
-        }
-    }
-
-    .mw-nav__mobile-link {
-        padding: 1.4rem 2.4rem;
-        font-size: 1.5rem;
-        color: rgb(255 255 255 / 78%);
-        text-decoration: none;
-        border-bottom: 1px solid rgb(255 255 255 / 5%);
-
-        &:hover {
-            color: #fff;
-            background: rgb(255 255 255 / 4%);
-        }
-    }
-}
-
+// Phones: a smaller mark and a shorter button, the same two-part header.
 @media (width <= 600px) {
-    .mw-nav {
-        padding: 1.2rem 1.6rem;
-        gap: 1.2rem;
+    .mw-nav__mark {
+        --mw-mark: 4.4rem;
     }
 
-    .mw-nav__wordmark {
-        display: none;
+    .mw-nav__login {
+        padding: 0.9rem 1.8rem;
+        font-size: 1.4rem;
+    }
+
+    .mw-nav__theme {
+        width: 3.2rem;
+        height: 3.2rem;
     }
 }
