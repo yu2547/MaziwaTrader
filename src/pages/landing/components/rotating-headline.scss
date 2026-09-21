@@ -1,0 +1,122 @@
+.mw-rotator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(1.2rem, 1.8vw, 1.8rem);
+    width: 100%;
+    text-align: center;
+
+    // Every slide's headline and every description sits in the same single
+    // grid cell as the others, so each box takes the size of its largest
+    // occupant - the space is reserved at every width, and nothing below it
+    // moves when a shorter phrase is on screen.
+    &__headline,
+    &__descriptions {
+        display: grid;
+        width: 100%;
+    }
+
+    &__layer {
+        grid-area: 1 / 1;
+        align-self: center;
+    }
+
+    // Present for their size only.
+    &__sizer {
+        visibility: hidden;
+    }
+
+    // The typed headline hangs from the top of the reserved space rather
+    // than sitting in its middle. Centred, a phrase that wraps onto a second
+    // line mid-typing pushed its first line up by half a line (17px on a
+    // phone), and deleting dropped it back; anchored to the top, the first
+    // line stays put and the second simply appears beneath it. Where every
+    // phrase fits on one line - all desktop widths - the box is one line
+    // tall and this changes nothing.
+    &__typed {
+        align-self: start;
+    }
+
+    &__headline {
+        max-width: 110rem;
+        font-size: clamp(3.2rem, 6.4vw, 6.4rem);
+        line-height: 1.08;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: #fff;
+    }
+
+    &__accent {
+        background: linear-gradient(100deg, var(--mw-cyan, #33e5ff), #4d97ff);
+        background-clip: text;
+        color: transparent;
+    }
+
+    // Thin and quiet - a hint of the cursor, as in the reference, not a
+    // block. In the sizers too, so a line that ends in the caret is measured
+    // with it and can never wrap past the reserved space.
+    &__caret {
+        display: inline-block;
+        width: 0.25rem;
+        height: 0.85em;
+        margin-inline-start: 0.1em;
+        vertical-align: -0.06em;
+        background: rgb(255 255 255 / 75%);
+
+        &--live {
+            animation: mw-rotator-caret 1.1s steps(1) infinite;
+        }
+    }
+
+    &__descriptions {
+        max-width: 64rem;
+    }
+
+    &__description {
+        margin: 0;
+        font-size: clamp(1.5rem, 2vw, 2rem);
+        line-height: 1.5;
+        color: rgb(255 255 255 / 78%);
+        opacity: 0;
+        transition: opacity 200ms ease;
+
+        &--active {
+            opacity: 1;
+        }
+    }
+
+    // Read by screen readers, not seen.
+    &__sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+    }
+}
+
+@keyframes mw-rotator-caret {
+    0%,
+    49% {
+        opacity: 1;
+    }
+
+    50%,
+    100% {
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mw-rotator__caret--live {
+        animation: none;
+    }
+
+    .mw-rotator__description {
+        transition: none;
+    }
+}

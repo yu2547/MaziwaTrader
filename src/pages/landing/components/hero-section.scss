@@ -123,47 +123,8 @@
         box-shadow: 0 0 0.8rem rgb(51 229 255 / 80%);
     }
 
-    &__headline {
-        margin: 0;
-        font-size: clamp(3.2rem, 6.4vw, 6.4rem);
-        line-height: 1.06;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        color: #fff;
-
-        // Direct children only - each is one line of the headline. The
-        // accent inside the second line has to stay inline with "with".
-        & > span {
-            display: block;
-        }
-    }
-
-    &__headline-accent {
-        background: linear-gradient(100deg, var(--mw-cyan, #33e5ff), #4d97ff);
-        background-clip: text;
-        color: transparent;
-    }
-
-    // The sketch's cursor after the headline. A blinking bar in CSS rather
-    // than a typing effect in JavaScript - no per-frame work, and the
-    // headline is readable the instant it paints.
-    &__caret {
-        display: inline-block;
-        width: 0.3rem;
-        height: 0.9em;
-        margin-inline-start: 0.12em;
-        vertical-align: -0.08em;
-        background: rgb(255 255 255 / 85%);
-        animation: mw-hero-caret 1.1s steps(1) infinite;
-    }
-
-    &__sub {
-        margin: 0;
-        max-width: 60rem;
-        font-size: clamp(1.5rem, 2.1vw, 2.1rem);
-        line-height: 1.5;
-        color: rgb(255 255 255 / 78%);
-    }
+    // The headline and the line beneath it are the rotator's own
+    // (rotating-headline.scss).
 
     &__cta {
         position: relative;
@@ -215,24 +176,28 @@
         flex: none;
     }
 
+    // The second action: smaller than the call to action and glass rather
+    // than solid, so the eye still lands on Start Trading first. The same
+    // colour ramp runs round its edge.
     &__signup {
-        margin: 0;
-        font-size: 1.4rem;
-        color: rgb(255 255 255 / 60%);
-    }
-
-    &__signup-link {
         appearance: none;
-        border: none;
-        background: none;
-        padding: 0;
-        font: inherit;
+        padding: 1rem 3.2rem;
+        border: 1.5px solid transparent;
+        border-radius: 999px;
+        background:
+            linear-gradient(rgb(12 18 38 / 92%), rgb(12 18 38 / 92%)) padding-box,
+            var(--mw-cta, linear-gradient(90deg, #ff3b5c, #a855f7, #2f6bff)) border-box;
+        color: #fff;
+        font-size: 1.5rem;
         font-weight: 700;
-        color: var(--mw-cyan, #33e5ff);
         cursor: pointer;
+        transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease;
 
         &:hover {
-            text-decoration: underline;
+            transform: translateY(-1px);
+            box-shadow: 0 0.8rem 2.2rem rgb(120 60 255 / 30%);
         }
     }
 
@@ -263,7 +228,7 @@
     }
 
     &__cta:focus-visible,
-    &__signup-link:focus-visible {
+    &__signup:focus-visible {
         outline: 2px solid var(--mw-cyan, #33e5ff);
         outline-offset: 3px;
     }
@@ -337,26 +302,14 @@
     }
 }
 
-@keyframes mw-hero-caret {
-    0%,
-    49% {
-        opacity: 1;
-    }
-
-    50%,
-    100% {
-        opacity: 0;
-    }
-}
-
 @media (prefers-reduced-motion: reduce) {
     .mw-hero__scene,
     .mw-hero__logo-wrap,
     .mw-hero__logo-glow,
     .mw-hero__logo-sweep,
-    .mw-hero__caret,
     .mw-hero__cta,
-    .mw-hero__cta:after {
+    .mw-hero__cta:after,
+    .mw-hero__signup {
         animation: none;
         transition: none;
     }
@@ -376,10 +329,6 @@
 
     .mw-hero__inner {
         gap: 1.4rem;
-    }
-
-    .mw-hero__sub {
-        max-width: 34rem;
     }
 
     .mw-hero__checks {

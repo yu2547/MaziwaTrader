@@ -2,6 +2,7 @@ import MarketSceneCanvas from '@/components/market-scene/market-scene-canvas';
 import { redirectToLogin, redirectToSignUp } from '@/components/shared';
 import { useTranslations } from '@deriv-com/translations';
 import { ArrowRightIcon, CheckCircleIcon } from './feature-icons';
+import RotatingHeadline from './rotating-headline';
 import './hero-section.scss';
 
 // The hero background reuses the exact same cinematic engine as the loading
@@ -10,7 +11,12 @@ import './hero-section.scss';
 // load progress, since there's no loading sequence on this page.
 const HERO_ENERGY = 0.82;
 
-const HeroSection = () => {
+type THeroSectionProps = {
+    // Whether the loading screen has finished and the hero can be seen.
+    is_revealed: boolean;
+};
+
+const HeroSection = ({ is_revealed }: THeroSectionProps) => {
     const { localize } = useTranslations();
 
     // What the app actually does: bots you build and run, the public market
@@ -43,30 +49,19 @@ const HeroSection = () => {
                     {localize('Smart Trading. A Brighter Tomorrow.')}
                 </span>
 
-                <h1 className='mw-hero__headline'>
-                    <span>{localize('Trade Smarter')}</span>
-                    <span>
-                        {localize('with')} <span className='mw-hero__headline-accent'>{localize('AI Power')}</span>
-                        <i className='mw-hero__caret' aria-hidden='true' />
-                    </span>
-                </h1>
-
-                <p className='mw-hero__sub'>{localize('Automate. Analyse. Trade. Stay Ahead.')}</p>
+                <RotatingHeadline is_active={is_revealed} />
 
                 <button type='button' className='mw-hero__cta' onClick={() => redirectToLogin(false)}>
                     {localize('Start Trading Now')}
                     <ArrowRightIcon className='mw-hero__cta-arrow' />
                 </button>
 
-                {/* The sign-up path the page has always had, kept as a quiet
-                    second line so the one loud action stays the call to
-                    action itself. */}
-                <p className='mw-hero__signup'>
-                    {localize('New here?')}{' '}
-                    <button type='button' className='mw-hero__signup-link' onClick={redirectToSignUp}>
-                        {localize('Create an account')}
-                    </button>
-                </p>
+                {/* The sign-up path the page has always had - Deriv's own
+                    registration - as a second, smaller button under the call
+                    to action. */}
+                <button type='button' className='mw-hero__signup' onClick={redirectToSignUp}>
+                    {localize('Sign Up')}
+                </button>
 
                 <ul className='mw-hero__checks'>
                     {checks.map(label => (

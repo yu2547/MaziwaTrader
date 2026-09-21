@@ -13,13 +13,20 @@ import './landing-page.scss';
 // then the brand footer. One composition for every screen - each section
 // lays itself out for the width it is given rather than there being a phone
 // page and a desktop page.
-const LandingPage = () => {
+type TLandingPageProps = {
+    // The page mounts under the loading screen, before anyone can see it.
+    // This turns true once that screen has gone, so the hero's headline
+    // starts cycling only when it is actually on show.
+    is_revealed?: boolean;
+};
+
+const LandingPage = ({ is_revealed = true }: TLandingPageProps) => {
     return (
         <div className='mw-landing'>
             <AnimatedBackground />
             <LandingNav />
             <main className='mw-landing__content'>
-                <HeroSection />
+                <HeroSection is_revealed={is_revealed} />
                 <FeaturesSection />
                 <HighlightBadges />
                 <LiveMarkets />

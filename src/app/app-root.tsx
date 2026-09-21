@@ -97,7 +97,7 @@ const AppRoot = () => {
         <>
             {is_ready &&
                 (is_landing_page ? (
-                    <LandingPage />
+                    <LandingPage is_revealed={!show_loading_screen} />
                 ) : (
                     <Suspense fallback={<ChunkLoader message={localize('Loading...')} />}>
                         <ErrorBoundary root_store={store}>
