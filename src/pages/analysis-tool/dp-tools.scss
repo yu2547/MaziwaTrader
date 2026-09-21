@@ -35,7 +35,7 @@
     }
 
     &__menu-title {
-        font-size: 22px;
+        font-size: 2.2rem;
         font-weight: 700;
     }
 
@@ -43,7 +43,7 @@
         border: none;
         background: transparent;
         color: #fff;
-        font-size: 22px;
+        font-size: 2.2rem;
         cursor: pointer;
     }
 
@@ -52,7 +52,7 @@
         border: none;
         background: transparent;
         color: #fff;
-        font-size: 20px;
+        font-size: 2rem;
         font-weight: 600;
         text-align: left;
         cursor: pointer;
@@ -104,7 +104,7 @@
 
     &__title {
         margin: 6px 0 0;
-        font-size: 26px;
+        font-size: 2.6rem;
         font-weight: 700;
         letter-spacing: 0.08em;
         text-align: center;
@@ -114,7 +114,7 @@
 
     &__subtitle {
         margin: 0;
-        font-size: 14px;
+        font-size: 1.4rem;
         text-align: center;
         color: rgb(233 240 250 / 78%);
     }
@@ -140,7 +140,7 @@
             border-radius: 10px;
             background: rgb(255 255 255 / 8%);
             color: #fff;
-            font-size: 15px;
+            font-size: 1.5rem;
         }
 
         option {
@@ -152,7 +152,7 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        font-size: 15px;
+        font-size: 1.5rem;
         font-weight: 600;
 
         &:before {
@@ -173,14 +173,14 @@
 
     &__sequence-title {
         margin: 0 0 6px;
-        font-size: 15px;
+        font-size: 1.5rem;
         font-weight: 700;
         color: #8fc6ff;
     }
 
     &__sequence-body {
         margin: 0;
-        font-size: 13px;
+        font-size: 1.3rem;
         line-height: 1.55;
         overflow-wrap: anywhere;
     }
@@ -199,7 +199,7 @@
         overflow: hidden;
         padding: 14px;
         border-radius: 10px;
-        font-size: 15px;
+        font-size: 1.5rem;
         font-weight: 700;
         text-align: center;
         color: #fff;
@@ -247,7 +247,7 @@
         }
 
         &--summary {
-            font-size: 16px;
+            font-size: 1.6rem;
             font-weight: 700;
             text-align: center;
         }
@@ -255,7 +255,7 @@
 
     &__eyebrow {
         margin: 0;
-        font-size: 14px;
+        font-size: 1.4rem;
         font-weight: 600;
         letter-spacing: 0.12em;
         text-transform: uppercase;
@@ -264,7 +264,7 @@
 
     &__price {
         margin: 6px 0 0;
-        font-size: 26px;
+        font-size: 2.6rem;
         font-weight: 700;
         font-variant-numeric: tabular-nums;
     }
@@ -276,7 +276,7 @@
         margin: 0 0 14px;
         padding-bottom: 12px;
         border-bottom: 1px solid #edf1f6;
-        font-size: 17px;
+        font-size: 1.7rem;
         font-weight: 700;
 
         &:before {
@@ -299,7 +299,7 @@
     }
 
     &__digit {
-        font-size: 16px;
+        font-size: 1.6rem;
         font-weight: 700;
         font-variant-numeric: tabular-nums;
 
@@ -328,7 +328,7 @@
         flex-direction: column;
         justify-content: space-between;
         padding-bottom: 22px;
-        font-size: 12px;
+        font-size: 1.2rem;
         text-align: right;
         color: #7d8fa3;
     }
@@ -378,7 +378,7 @@
     &__bar-value {
         position: absolute;
         inset-inline: 0;
-        font-size: 13px;
+        font-size: 1.3rem;
         font-weight: 600;
         text-align: center;
         white-space: nowrap;
@@ -397,7 +397,7 @@
     }
 
     &__col-label {
-        font-size: 13px;
+        font-size: 1.3rem;
         text-align: center;
         color: #5b6b80;
     }
@@ -418,7 +418,7 @@
     }
 
     &__freq-count {
-        font-size: 11px;
+        font-size: 1.1rem;
         text-align: center;
         color: #5b6b80;
     }
@@ -430,13 +430,13 @@
     }
 
     &__muted {
-        font-size: 13px;
+        font-size: 1.3rem;
         color: #7d8fa3;
     }
 
     &__note {
         margin: 0;
-        font-size: 12px;
+        font-size: 1.2rem;
         text-align: center;
         color: #7d8fa3;
     }
@@ -462,7 +462,7 @@
         }
 
         &__menu-item {
-            font-size: 18px;
+            font-size: 1.8rem;
         }
 
         &__burger {

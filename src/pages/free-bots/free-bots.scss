@@ -10,7 +10,7 @@
     }
 
     &__title {
-        font-size: 32px;
+        font-size: 3.2rem;
         font-weight: 700;
         margin-bottom: 12px;
         color: var(--text-general);
@@ -20,7 +20,7 @@
     }
 
     &__subtitle {
-        font-size: 16px;
+        font-size: 1.6rem;
         color: var(--text-less-prominent);
         max-width: 600px;
         margin: 0 auto;
@@ -55,7 +55,7 @@
         background: transparent;
         border: none;
         outline: none;
-        font-size: 14px;
+        font-size: 1.4rem;
         color: var(--text-general);
 
         &::placeholder {
@@ -69,7 +69,7 @@
         background: transparent;
         color: var(--text-less-prominent);
         cursor: pointer;
-        font-size: 13px;
+        font-size: 1.3rem;
         padding: 2px 4px;
         line-height: 1;
 
@@ -85,13 +85,13 @@
 
         &-icon {
             display: block;
-            font-size: 32px;
+            font-size: 3.2rem;
             margin-bottom: 12px;
         }
 
         p {
             margin: 0;
-            font-size: 14px;
+            font-size: 1.4rem;
         }
     }
 
@@ -174,12 +174,12 @@
     }
 
     &__card-icon {
-        font-size: 32px;
+        font-size: 3.2rem;
         line-height: 1;
     }
 
     &__card-category {
-        font-size: 12px;
+        font-size: 1.2rem;
         padding: 4px 10px;
         border-radius: 12px;
         background: var(--general-section-1);
@@ -191,7 +191,7 @@
     // desktop card is only a little wider than the phone one, so the same
     // ratio would shrink it past readability.
     &__card-title {
-        font-size: 16px;
+        font-size: 1.6rem;
         font-weight: 600;
         color: var(--text-general);
         margin-bottom: 8px;
@@ -199,7 +199,7 @@
     }
 
     &__card-description {
-        font-size: 13px;
+        font-size: 1.3rem;
         color: var(--text-less-prominent);
         line-height: 1.6;
         margin-bottom: 20px;
@@ -239,7 +239,7 @@
         box-shadow:
             inset 0 0 0 1px rgb(150 120 255 / 40%),
             0 4px 16px rgb(58 31 110 / 40%);
-        font-size: 14px;
+        font-size: 1.4rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s ease;
@@ -308,7 +308,7 @@
         margin-top: 16px;
 
         p {
-            font-size: 13px;
+            font-size: 1.3rem;
             color: var(--text-less-prominent);
             margin: 0;
         }
@@ -324,11 +324,11 @@
         padding: 16px;
 
         &__title {
-            font-size: 24px;
+            font-size: 2.4rem;
         }
 
         &__subtitle {
-            font-size: 14px;
+            font-size: 1.4rem;
         }
 
         &__grid {
@@ -416,14 +416,14 @@
         &__ribbon {
             padding: 6px 14px;
             border-radius: 0 18px 0 14px;
-            font-size: 12px;
+            font-size: 1.2rem;
         }
 
         &__rating {
             justify-content: center;
             gap: 3px;
             margin: 8px 0;
-            font-size: 15px;
+            font-size: 1.5rem;
         }
 
         // Type sizes come from the reference, measured as a fraction of card
@@ -436,7 +436,7 @@
             grid-column: 2;
             grid-row: 1;
             margin: 0;
-            font-size: 15px;
+            font-size: 1.5rem;
             font-weight: 700;
             line-height: 1.25;
             text-align: left;
@@ -454,7 +454,7 @@
             height: auto;
             margin: 0 auto 12px;
             overflow: hidden;
-            font-size: 12px;
+            font-size: 1.2rem;
             line-height: 1.45;
             text-align: center;
             -webkit-line-clamp: 3;
@@ -466,7 +466,7 @@
             min-height: 44px;
             margin-top: 0;
             border-radius: 16px;
-            font-size: 13px;
+            font-size: 1.3rem;
             font-weight: 700;
         }
     }
@@ -485,11 +485,11 @@
         }
 
         &__card-title {
-            font-size: 14px;
+            font-size: 1.4rem;
         }
 
         &__card-description {
-            font-size: 12px;
+            font-size: 1.2rem;
         }
     }
 }

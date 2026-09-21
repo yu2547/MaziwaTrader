@@ -25,12 +25,12 @@
         height: 52px;
         border-radius: 50%;
         background: radial-gradient(circle at 35% 30%, #ff8a3d 0%, #e0392b 70%);
-        font-size: 24px;
+        font-size: 2.4rem;
     }
 
     &__banner-text {
         margin: 0;
-        font-size: 15px;
+        font-size: 1.5rem;
         line-height: 1.5;
         color: rgb(232 237 247 / 82%);
 
@@ -48,7 +48,7 @@
         border-radius: 12px;
         background: rgb(255 255 255 / 4%);
         color: #e8edf7;
-        font-size: 14px;
+        font-size: 1.4rem;
         outline: none;
 
         &::placeholder {
@@ -73,7 +73,7 @@
         border-radius: 999px;
         background: transparent;
         color: #e8edf7;
-        font-size: 13px;
+        font-size: 1.3rem;
         font-weight: 600;
         cursor: pointer;
 
@@ -109,7 +109,7 @@
     &__badge {
         padding: 4px 12px;
         border-radius: 999px;
-        font-size: 11px;
+        font-size: 1.1rem;
         font-weight: 800;
         letter-spacing: 0.06em;
         text-transform: uppercase;
@@ -127,7 +127,7 @@
 
     &__card-title {
         margin: 0 0 8px;
-        font-size: 17px;
+        font-size: 1.7rem;
         font-weight: 700;
         color: #fff;
     }
@@ -135,7 +135,7 @@
     &__card-description {
         flex-grow: 1;
         margin: 0 0 18px;
-        font-size: 13px;
+        font-size: 1.3rem;
         line-height: 1.55;
         color: rgb(232 237 247 / 66%);
     }
@@ -152,7 +152,7 @@
         border-radius: 10px;
         background: linear-gradient(90deg, #ff7a3d 0%, #e0392b 100%);
         color: #fff;
-        font-size: 14px;
+        font-size: 1.4rem;
         font-weight: 700;
         cursor: pointer;
 
@@ -170,7 +170,7 @@
     &__muted {
         margin: 18px 0;
         color: rgb(232 237 247 / 55%);
-        font-size: 13px;
+        font-size: 1.3rem;
     }
 
     &__error {
@@ -179,7 +179,7 @@
         border-radius: 8px;
         background: rgb(224 57 43 / 18%);
         color: #ff9a86;
-        font-size: 13px;
+        font-size: 1.3rem;
     }
 
     // The opened bot.
@@ -198,7 +198,7 @@
 
     &__detail-title {
         margin: 0;
-        font-size: 28px;
+        font-size: 2.8rem;
         font-weight: 800;
         text-transform: uppercase;
         color: #d9342b;
@@ -206,7 +206,7 @@
 
     &__status {
         margin: 6px 0 0;
-        font-size: 13px;
+        font-size: 1.3rem;
         font-weight: 700;
         text-transform: uppercase;
         color: #0f8a4a;
@@ -219,7 +219,7 @@
         border-radius: 8px;
         background: #12a05c;
         color: #fff;
-        font-size: 16px;
+        font-size: 1.6rem;
         font-weight: 700;
         cursor: pointer;
 
@@ -236,7 +236,7 @@
         border-radius: 8px;
         background: #0b5c31;
         color: #fff;
-        font-size: 13px;
+        font-size: 1.3rem;
         font-weight: 700;
         cursor: pointer;
     }
@@ -257,7 +257,7 @@
         border: none;
         border-radius: 8px;
         color: #fff;
-        font-size: 15px;
+        font-size: 1.5rem;
         font-weight: 700;
         text-decoration: none;
         text-transform: uppercase;
@@ -292,7 +292,7 @@
         border: none;
         background: #eaf6ee;
         color: #0b5c31;
-        font-size: 15px;
+        font-size: 1.5rem;
         font-weight: 800;
         text-transform: uppercase;
         cursor: pointer;
@@ -309,7 +309,7 @@
         gap: 16px;
         padding: 12px 0;
         border-bottom: 1px solid var(--border-divider);
-        font-size: 13px;
+        font-size: 1.3rem;
 
         &:last-child {
             border-bottom: none;
@@ -322,7 +322,7 @@
 
     &__note {
         margin: 18px 0 0;
-        font-size: 13px;
+        font-size: 1.3rem;
         line-height: 1.6;
         color: var(--text-less-prominent);
     }
@@ -335,7 +335,7 @@
         }
 
         &__detail-title {
-            font-size: 22px;
+            font-size: 2.2rem;
         }
 
         &__action {

@@ -17,7 +17,7 @@
         border-radius: 10px;
         background: var(--general-main-1);
         color: var(--text-general);
-        font-size: 13px;
+        font-size: 1.3rem;
         font-weight: 600;
         cursor: pointer;
 
@@ -29,7 +29,7 @@
 
     &__title {
         margin: 0 0 18px;
-        font-size: 26px;
+        font-size: 2.6rem;
         font-weight: 800;
         color: #22c07a;
     }
@@ -48,7 +48,7 @@
         display: inline-flex;
         align-items: center;
         gap: 10px;
-        font-size: 13px;
+        font-size: 1.3rem;
 
         input,
         select {
@@ -58,7 +58,7 @@
             border-radius: 8px;
             background: var(--general-main-1);
             color: var(--text-general);
-            font-size: 14px;
+            font-size: 1.4rem;
         }
 
         &--right {
@@ -75,7 +75,7 @@
         border-radius: 10px;
         background: #cdb6f5;
         color: #2c1a56;
-        font-size: 18px;
+        font-size: 1.8rem;
         font-weight: 700;
     }
 
@@ -103,7 +103,7 @@
     }
 
     &__bar-value {
-        font-size: 11px;
+        font-size: 1.1rem;
         color: var(--text-less-prominent);
     }
 
@@ -124,7 +124,7 @@
     }
 
     &__bar-digit {
-        font-size: 14px;
+        font-size: 1.4rem;
         font-weight: 700;
     }
 
@@ -141,7 +141,7 @@
         border: none;
         border-radius: 8px;
         color: #fff;
-        font-size: 15px;
+        font-size: 1.5rem;
         font-weight: 700;
         cursor: pointer;
 
@@ -162,7 +162,7 @@
 
     &__section-title {
         margin: 0 0 16px;
-        font-size: 18px;
+        font-size: 1.8rem;
         font-weight: 700;
     }
 
@@ -195,7 +195,7 @@
         display: inline-flex;
         align-items: center;
         gap: 10px;
-        font-size: 13px;
+        font-size: 1.3rem;
         font-weight: 600;
 
         input {
@@ -224,7 +224,7 @@
 
     &__entry-title {
         margin: 0 0 16px;
-        font-size: 17px;
+        font-size: 1.7rem;
         font-weight: 700;
     }
 
@@ -237,7 +237,7 @@
 
     &__hint {
         color: var(--text-less-prominent);
-        font-size: 13px;
+        font-size: 1.3rem;
     }
 
     &__entry-state {
@@ -253,7 +253,7 @@
             padding: 6px 12px;
             border-radius: 6px;
             background: var(--general-section-1);
-            font-size: 14px;
+            font-size: 1.4rem;
             letter-spacing: 0.14em;
         }
     }
@@ -263,7 +263,7 @@
         border-radius: 6px;
         background: rgb(224 57 43 / 12%);
         color: #d9342b;
-        font-size: 12px;
+        font-size: 1.2rem;
         font-weight: 600;
 
         &--ok {
@@ -305,7 +305,7 @@
     }
 
     &__cell-digit {
-        font-size: 22px;
+        font-size: 2.2rem;
         font-weight: 700;
     }
 
@@ -317,14 +317,14 @@
         border-radius: 6px;
         background: var(--general-section-1);
         color: var(--text-general);
-        font-size: 12px;
+        font-size: 1.2rem;
         text-align: center;
     }
 
     &__total {
         margin: 18px 0 4px;
         text-align: center;
-        font-size: 16px;
+        font-size: 1.6rem;
 
         strong {
             color: #7b3fe4;
@@ -333,7 +333,7 @@
 
     &__muted {
         color: var(--text-less-prominent);
-        font-size: 13px;
+        font-size: 1.3rem;
 
         &--center {
             text-align: center;
@@ -346,7 +346,7 @@
         border-radius: 8px;
         background: rgb(224 57 43 / 12%);
         color: #d9342b;
-        font-size: 13px;
+        font-size: 1.3rem;
         text-align: center;
     }
 
@@ -363,7 +363,7 @@
         border: none;
         border-radius: 8px;
         color: #fff;
-        font-size: 16px;
+        font-size: 1.6rem;
         font-weight: 700;
         text-transform: uppercase;
         cursor: pointer;

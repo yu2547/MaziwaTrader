@@ -1,3 +1,4 @@
+@use 'sass:math';
 @use 'components/shared/styles/themes' as *;
 
 // Interface fonts are loaded by <link> tags in index.html rather than @import
@@ -33,6 +34,75 @@ body {
 
     body :is(.mw-loading, .mw-landing, .mw-exec-bar__ai-hint, .mw-scanner, .mw-scanner-exit, .mw-gem) {
         font-family: 'Inter', 'Roboto', 'Arial', sans-serif;
+    }
+}
+
+// Phones show everything 15% smaller - writing, spacing, buttons and icons
+// together, the way zooming out one step does, so proportions hold and more
+// fits on each screen. It is done at the root: the app sizes itself in rem, and
+// 1rem is 62.5% of the browser's base (10px); on a phone it becomes 85% of that
+// (8.5px). Taps, dragging and the bot builder's workspace are untouched, since
+// nothing is transformed - things are simply laid out smaller.
+// Two things keep their size exactly, pinned below: the loading screen, which
+// is finished and not to be changed, and the two floating orbs.
+$phone-scale: 0.85;
+
+@media (width <= 600px) {
+    html:root {
+        font-size: 62.5% * $phone-scale;
+    }
+
+    // The loading screen's nine rem values, divided back out so each lands on
+    // the size it has always had. Everything else in it is in px or vw.
+    .mw-loading {
+        .mw-loading__content {
+            gap: calc(1.8rem / #{$phone-scale});
+            padding: calc(2rem / #{$phone-scale});
+        }
+
+        .mw-loading__tick {
+            font-size: calc(1rem / #{$phone-scale});
+        }
+
+        .mw-loading__counter {
+            gap: calc(0.2rem / #{$phone-scale});
+        }
+
+        .mw-loading__counter-label {
+            font-size: calc(1.2rem / #{$phone-scale});
+        }
+
+        .mw-loading__counter-value {
+            font-size: clamp(calc(3.6rem / #{$phone-scale}), 7vw, calc(5.2rem / #{$phone-scale}));
+        }
+
+        .mw-loading__status {
+            font-size: calc(1.4rem / #{$phone-scale});
+        }
+    }
+
+    // The orbs at their own size. Each button keeps its 7.2rem box, which is
+    // also what the drag clamp in use-draggable-orb.ts assumes (72px), and
+    // everything drawn inside it is zoomed back by the same factor. The buttons
+    // themselves are not zoomed: their position is set in px by the drag code,
+    // and a zoomed element would move away from the finger. Where they sit - the
+    // corner offsets, anchored to the Run bar - still shrinks with the page, so
+    // they stay the same distance from the bar they sit above.
+    body .mw-gem-orb,
+    body .mw-exec-bar__ai {
+        width: calc(7.2rem / #{$phone-scale});
+        height: calc(7.2rem / #{$phone-scale});
+    }
+
+    body .mw-gem-orb > *,
+    body .mw-exec-bar__ai > * {
+        zoom: math.div(1, $phone-scale);
+    }
+
+    // Gemini stacks one orb-height above the AI orb, so that height is the
+    // pinned one too - otherwise the two would overlap by the 15% difference.
+    body .mw-gem-orb {
+        bottom: calc(var(--mw-orb-bottom, 5.2rem) + 7.2rem / #{$phone-scale} + 1rem);
     }
 }
 

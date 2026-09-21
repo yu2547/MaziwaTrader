@@ -26,7 +26,7 @@
         border: none;
         outline: none;
         background: transparent;
-        font-size: 15px;
+        font-size: 1.5rem;
         color: var(--text-general);
 
         &::placeholder {
@@ -39,7 +39,7 @@
         border: none;
         background: transparent;
         color: var(--text-less-prominent);
-        font-size: 14px;
+        font-size: 1.4rem;
         cursor: pointer;
         line-height: 1;
     }
@@ -77,7 +77,7 @@
         border: 1px solid var(--border-normal);
         background: var(--general-main-1);
         color: var(--text-general);
-        font-size: 13px;
+        font-size: 1.3rem;
         font-weight: 600;
         cursor: pointer;
         transition:
@@ -107,7 +107,7 @@
         border-radius: 999px;
         background: var(--general-section-1);
         color: var(--text-general);
-        font-size: 12px;
+        font-size: 1.2rem;
         font-weight: 700;
     }
 
@@ -122,14 +122,14 @@
         border-radius: 8px;
         background: var(--general-section-1);
         color: var(--text-loss-danger);
-        font-size: 13px;
+        font-size: 1.3rem;
     }
 
     &__empty {
         padding: 40px 0;
         text-align: center;
         color: var(--text-less-prominent);
-        font-size: 14px;
+        font-size: 1.4rem;
     }
 
     &__shelf {
@@ -156,7 +156,7 @@
     &__shelf-name {
         flex: 1;
         margin: 0;
-        font-size: 15px;
+        font-size: 1.5rem;
         font-weight: 800;
         letter-spacing: 0.04em;
         text-transform: uppercase;
@@ -168,7 +168,7 @@
         border-radius: 999px;
         background: var(--general-section-1);
         color: var(--text-general);
-        font-size: 12px;
+        font-size: 1.2rem;
         font-weight: 700;
     }
 
@@ -204,7 +204,7 @@
         border-bottom-left-radius: 10px;
         background: var(--shelf);
         color: #fff;
-        font-size: 10px;
+        font-size: 1rem;
         font-weight: 800;
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -235,7 +235,7 @@
         height: 46px;
         border-radius: 12px;
         background: var(--shelf);
-        font-size: 20px;
+        font-size: 2rem;
         line-height: 1;
     }
 
@@ -245,7 +245,7 @@
 
     &__card-eyebrow {
         margin: 2px 0 4px;
-        font-size: 10px;
+        font-size: 1rem;
         font-weight: 800;
         letter-spacing: 0.12em;
         text-transform: uppercase;
@@ -254,7 +254,7 @@
 
     &__card-title {
         margin: 0;
-        font-size: 17px;
+        font-size: 1.7rem;
         font-weight: 800;
         line-height: 1.25;
         color: var(--shelf);
@@ -264,7 +264,7 @@
     &__card-description {
         flex-grow: 1;
         margin: 0 0 14px;
-        font-size: 12px;
+        font-size: 1.2rem;
         line-height: 1.5;
         color: var(--text-less-prominent);
     }
@@ -276,7 +276,7 @@
         border-radius: 12px;
         background: var(--shelf);
         color: #fff;
-        font-size: 13px;
+        font-size: 1.3rem;
         font-weight: 800;
         letter-spacing: 0.04em;
         text-transform: uppercase;

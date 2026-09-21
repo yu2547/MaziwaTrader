@@ -111,6 +111,21 @@
     }
 }
 
+// Phones: one line, the way the reference sets it. Measured in this font, the
+// longest phrase needs no more than 5.6% of the screen's width per pixel of
+// type to fit across it with its caret, so the headline takes exactly that -
+// about 18px on a 320px phone and 24px on a 430px one, the reference's size -
+// and the description sits a step below it.
+@media (width <= 600px) {
+    .mw-rotator__headline {
+        font-size: clamp(1.8rem, 5.6vw, 3.2rem);
+    }
+
+    .mw-rotator__description {
+        font-size: clamp(1.5rem, 3.6vw, 1.8rem);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .mw-rotator__caret--live {
         animation: none;
