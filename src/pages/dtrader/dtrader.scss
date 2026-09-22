@@ -970,6 +970,24 @@ $dt-orange: #ff6337;
 
 // Deriv's own trade-type artwork: one tile per side, which is what it shows
 // against each type in this list and on the buttons that buy them.
+// The trade type and, on a phone, the growth rate beside it. On the wide
+// layout the rate keeps its own row below and this is just the type.
+.mw-dt__type-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.8rem;
+
+    .mw-dt__type-head {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+// Shown on phones only - the rates' own row below carries them elsewhere.
+.mw-dt__growth {
+    display: none;
+}
+
 .mw-dt__types-icons {
     display: inline-flex;
     align-items: center;
@@ -1851,8 +1869,38 @@ $dt-orange: #ff6337;
 // wide layout is exactly what it was.
 .mw-dt__digit-banner,
 .mw-dt__compact,
+.mw-dt__compact-step,
 .mw-dt__action-in-payout {
     display: none;
+}
+
+// The take-profit switch and the amount it reveals. Both layouts use it; the
+// phone block below only resizes it.
+.mw-dt__tp {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.mw-dt__tp-head {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-height: 4rem;
+    padding: 0.6rem 1.2rem;
+    border: 1px solid var(--general-section-1);
+    border-radius: 8px;
+    background: var(--general-section-1);
+    font-size: 1.25rem;
+    color: var(--text-prominent);
+    cursor: pointer;
+
+    input {
+        width: 1.8rem;
+        height: 1.8rem;
+        accent-color: $dt-green;
+        cursor: pointer;
+    }
 }
 
 // The Risk Disclaimer closes the ticket wherever the footer that normally
@@ -2143,14 +2191,13 @@ $dt-orange: #ff6337;
             }
         }
 
-        // Nothing on the left when the contract has no duration, so the stake
-        // takes the left edge instead of floating in a centre with nothing
-        // either side.
+        // With no duration on the left, the row is the reference's: minus,
+        // the stake, plus, then its label.
         &--no-duration {
-            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-columns: auto minmax(0, 1fr) auto auto;
 
             .mw-dt__compact-stake {
-                justify-self: start;
+                justify-self: center;
             }
         }
     }
@@ -2200,6 +2247,63 @@ $dt-orange: #ff6337;
         justify-self: end;
         font-size: 1.2rem;
         color: var(--text-less-prominent);
+    }
+
+    // The minus and plus either side of the stake, as the reference sets them:
+    // large, quiet glyphs rather than buttons with a box of their own.
+    .mw-dt__compact-step {
+        display: grid;
+        place-items: center;
+        width: 3.2rem;
+        height: 3.2rem;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--text-general);
+        font-size: 2rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    // The growth rate as the reference has it: a chip beside the trade type
+    // carrying the rate itself, in place of the row of five below.
+    .mw-dt__growth {
+        display: flex;
+        align-items: center;
+        padding: 0 1rem;
+        border-radius: 8px;
+        background: var(--general-section-1);
+
+        span {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+
+        select {
+            border: none;
+            background: transparent;
+            color: var(--text-prominent);
+            font-size: 1.35rem;
+            font-weight: 700;
+            cursor: pointer;
+            appearance: none;
+            text-align: center;
+        }
+    }
+
+    // Its row of five is the wide layout's. Only this one: a multiplier's
+    // chips have no compact control to replace them.
+    .mw-dt__field--growth {
+        display: none;
+    }
+
+    .mw-dt__tp-head {
+        min-height: 3.6rem;
+        font-size: 1.2rem;
     }
 
     .mw-dt__quote {

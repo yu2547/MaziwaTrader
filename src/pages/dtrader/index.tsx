@@ -482,15 +482,37 @@ const DTrader = observer(() => {
                         <p className='mw-dt__learn-text'>{localize(TRADE_DESCRIPTIONS[type.id] ?? '')}</p>
                     )}
 
-                    <button type='button' className='mw-dt__type-head' onClick={() => setIsTypesOpen(true)}>
-                        <span className='mw-dt__types-icons'>
-                            {type.sides.map(side => (
-                                <TradeTypeIcon key={side.contract_type} type={side.contract_type} size='sm' />
-                            ))}
-                        </span>
-                        <b>{localize(type.label)}</b>
-                        <span aria-hidden='true'>›</span>
-                    </button>
+                    {/* The trade type, and beside it the rate it grows at -
+                        the pair the reference puts on one line. The rates also
+                        have their own row below for the wide layout; the
+                        stylesheet shows one or the other, never both. */}
+                    <div className='mw-dt__type-row'>
+                        <button type='button' className='mw-dt__type-head' onClick={() => setIsTypesOpen(true)}>
+                            <span className='mw-dt__types-icons'>
+                                {type.sides.map(side => (
+                                    <TradeTypeIcon key={side.contract_type} type={side.contract_type} size='sm' />
+                                ))}
+                            </span>
+                            <b>{localize(type.label)}</b>
+                            <span aria-hidden='true'>›</span>
+                        </button>
+
+                        {type.fields.includes('growth_rate') && (
+                            <label className='mw-dt__growth'>
+                                <span>{localize('Growth rate')}</span>
+                                <select
+                                    value={params.growth_rate}
+                                    onChange={event => update({ growth_rate: Number(event.target.value) })}
+                                >
+                                    {GROWTH_RATES.map(rate => (
+                                        <option key={rate} value={rate}>
+                                            {`${(rate * 100).toFixed(0)}%`}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        )}
+                    </div>
 
                     {type.fields.includes('duration') && (
                         <div className='mw-dt__duration'>
@@ -575,7 +597,7 @@ const DTrader = observer(() => {
                     )}
 
                     {type.fields.includes('growth_rate') && (
-                        <div className='mw-dt__field mw-dt__field--block'>
+                        <div className='mw-dt__field mw-dt__field--block mw-dt__field--growth'>
                             <span>{localize('Growth rate')}</span>
                             <div className='mw-dt__chips'>
                                 {GROWTH_RATES.map(rate => (
@@ -700,6 +722,20 @@ const DTrader = observer(() => {
                                 value={params.duration}
                             />
                         )}
+                        {/* The reference sets the stake between a minus and a
+                            plus on the contracts that have no duration beside
+                            it - an accumulator, a multiplier - and those are
+                            the only ones with the room for them. */}
+                        {!type.fields.includes('duration') && (
+                            <button
+                                type='button'
+                                className='mw-dt__compact-step'
+                                aria-label={localize('Less')}
+                                onClick={() => stepStake(-1)}
+                            >
+                                −
+                            </button>
+                        )}
                         <label className='mw-dt__compact-stake'>
                             <input
                                 type='number'
@@ -713,6 +749,16 @@ const DTrader = observer(() => {
                             />
                             <i>{currency}</i>
                         </label>
+                        {!type.fields.includes('duration') && (
+                            <button
+                                type='button'
+                                className='mw-dt__compact-step'
+                                aria-label={localize('More')}
+                                onClick={() => stepStake(1)}
+                            >
+                                +
+                            </button>
+                        )}
                         <span className='mw-dt__compact-label' aria-hidden='true'>
                             {localize('Stake')}
                         </span>
@@ -755,19 +801,35 @@ const DTrader = observer(() => {
                         </div>
                     </div>
 
+                    {/* Take profit is off until it is ticked, as the reference
+                        has it: unticked it is left out of the contract
+                        altogether rather than sent as an empty amount, and the
+                        amount only appears once there is one to set. */}
                     {type.fields.includes('take_profit') && (
-                        <label className='mw-dt__field'>
-                            <span>{localize('Take profit')}</span>
-                            <input
-                                type='number'
-                                min={0}
-                                step={0.01}
-                                placeholder='-'
-                                value={params.take_profit}
-                                onChange={event => update({ take_profit: event.target.value })}
-                            />
-                            <i>{currency}</i>
-                        </label>
+                        <div className='mw-dt__tp'>
+                            <label className='mw-dt__tp-head'>
+                                <input
+                                    type='checkbox'
+                                    checked={params.take_profit !== ''}
+                                    onChange={event => update({ take_profit: event.target.checked ? '10' : '' })}
+                                />
+                                <span>{localize('Take profit')}</span>
+                            </label>
+
+                            {params.take_profit !== '' && (
+                                <label className='mw-dt__field mw-dt__tp-amount'>
+                                    <span>{localize('Amount')}</span>
+                                    <input
+                                        type='number'
+                                        min={0}
+                                        step={0.01}
+                                        value={params.take_profit}
+                                        onChange={event => update({ take_profit: event.target.value })}
+                                    />
+                                    <i>{currency}</i>
+                                </label>
+                            )}
+                        </div>
                     )}
 
                     {type.id === 'rise_fall' && (
