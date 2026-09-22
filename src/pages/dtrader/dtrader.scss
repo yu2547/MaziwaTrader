@@ -1,3 +1,5 @@
+@use 'components/shared/styles/constants';
+
 // Theme tokens: this page carries the app's own chart, which follows the app's
 // theme, so a ground of its own would fight it. The four literals below are the
 // ones Deriv keeps constant in both themes - the two trade directions, the
@@ -1223,6 +1225,12 @@ $dt-orange: #ff6337;
     border: 1px solid var(--general-section-1);
     border-radius: 12px;
     background: var(--general-main-1);
+
+    // Said rather than inherited: this pad opens as a portal on document.body,
+    // outside the page, so it was taking the app's text colour while standing
+    // on the page's ground. In either theme this is the colour it was already
+    // getting; where the page sets its own ground, it is the one that matches.
+    color: var(--text-prominent);
     box-shadow: 0 12px 32px rgb(0 0 0 / 24%);
 }
 
@@ -1812,6 +1820,36 @@ $dt-orange: #ff6337;
 @media (width <= 1099px) {
     .mw-dt__market {
         margin-block-end: 6.9rem;
+    }
+}
+
+// ---
+// Dark on a phone, whichever theme the app is in, because the reference's
+// DTrader is dark and this page is the only one asked to be.
+// Six tokens carry the whole page - the five the app's own dark theme sets, and
+// the chart's line - and every rule in this file draws from them, so taking
+// their dark values on this page's roots is the whole of it. They are the same
+// values _themes.scss gives .theme--dark, named from the same constants rather
+// than copied, so the two cannot drift apart.
+// Three roots: the page, and the two sheets - markets, trade types, and the
+// duration pad - which open as portals on document.body and would otherwise sit
+// outside anything the page could set. Nothing beyond DTrader can see these,
+// and from 769px up the page follows the app's theme exactly as before.
+@media (width <= 768px) {
+    .mw-dt,
+    .mw-dt__sheet,
+    .mw-dt__pad {
+        --general-main-1: #{constants.$color-black};
+        --general-section-1: #{constants.$color-black-3};
+        --text-prominent: #{constants.$color-white};
+        --text-general: #{constants.$color-grey};
+        --text-less-prominent: #{constants.$color-grey-7};
+    }
+
+    // #7d7d7d is the light theme's line; on this ground it is barely there.
+    // The same lift .theme--dark gives it above.
+    .mw-dt__chart {
+        --mw-dt-line: #9aa0a6;
     }
 }
 
