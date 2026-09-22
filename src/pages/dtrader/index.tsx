@@ -51,7 +51,10 @@ const DTrader = observer(() => {
     const [symbols, setSymbols] = useState<TActiveSymbol[]>([]);
     const [symbol, setSymbol] = useState(DEFAULT_SYMBOL);
     const [contracts_for, setContractsFor] = useState<TContractForSymbol[]>([]);
-    const [type_id, setTypeId] = useState('rise_fall');
+    // Accumulators, as the reference opens on - and on the market it opens on,
+    // Volatility 100 (1s). A market that cannot trade them moves the ticket to
+    // one it can (the effect below), so this is a starting point, not a lock.
+    const [type_id, setTypeId] = useState('accumulators');
     const [params, setParams] = useState<TTradeParams>(DEFAULT_PARAMS);
 
     const [prices, setPrices] = useState<number[]>([]);
@@ -221,6 +224,45 @@ const DTrader = observer(() => {
     const details = proposal?.contract_details;
     const limits = proposal?.validation_params;
 
+    /**
+     * The band this contract stays inside, as Deriv priced it - the two lines
+     * the reference draws out from the spot. Both come off the quote, so they
+     * move with the market and with the ticket; a contract without a band (a
+     * rise/fall, a digit) has none and the chart draws none.
+     */
+    /**
+     * A band Deriv states as two price levels - a barrier that stays where it
+     * was set, whatever the market does after. Drawn as given.
+     */
+    const barriers = useMemo(() => {
+        const high = Number(details?.high_barrier);
+        const low = Number(details?.low_barrier);
+        if (Number.isFinite(high) && Number.isFinite(low)) return { high, low };
+
+        const spot_distance = Number(details?.barrier_spot_distance);
+        const quoted_spot = Number(proposal?.spot);
+        if (Number.isFinite(spot_distance) && spot_distance > 0 && Number.isFinite(quoted_spot)) {
+            return { high: quoted_spot + spot_distance, low: quoted_spot - spot_distance };
+        }
+
+        return null;
+    }, [details?.barrier_spot_distance, details?.high_barrier, details?.low_barrier, proposal?.spot]);
+
+    /**
+     * An accumulator's band is not a fixed pair of prices: it is a share of
+     * the spot, "± 0.03797%", measured afresh against each tick - which is why
+     * the reference's two lines travel with the market rather than sitting
+     * where the last quote left them. Only the distance is worked out here;
+     * the chart hangs it on the tick it is drawing, so the band is centred on
+     * the market rather than on a five-second-old price. It takes precedence
+     * over the fixed levels above for the same reason.
+     */
+    const band_distance = useMemo(() => {
+        const percent = Number(String(details?.tick_size_barrier_percentage ?? '').replace('%', ''));
+        if (!Number.isFinite(percent) || percent <= 0 || price === null) return null;
+        return (price * percent) / 100;
+    }, [details?.tick_size_barrier_percentage, price]);
+
     // Deriv's own stake limits for the contract as it currently stands, which
     // differ by family - 0.35 on a digit, 1.00 on an accumulator, and a
     // ceiling that moves with the market.
@@ -329,6 +371,21 @@ const DTrader = observer(() => {
     // longer gives up 37rem of it to a drawer.
     return (
         <div className='mw-dt'>
+            {/* What the reference shows while the page is coming up: its own
+                name over the ground it is about to draw on, with the ticket's
+                rows blocked out beneath. It stands until the first ticks are
+                in - it is the page waiting for real data, not a timer. */}
+            {prices.length === 0 && (
+                <div className='mw-dt__loading' role='status'>
+                    <p className='mw-dt__loading-text'>{localize('Loading DTrader...')}</p>
+                    <div className='mw-dt__loading-rows' aria-hidden='true'>
+                        <span />
+                        <span />
+                        <span />
+                    </div>
+                </div>
+            )}
+
             <div className={`mw-dt__body${positions.length ? ' mw-dt__body--positions' : ''}`}>
                 {/* There is nothing to show until something has been bought,
                     and an empty panel would hold 26rem of the page open for a
@@ -355,7 +412,13 @@ const DTrader = observer(() => {
 
                     <div className={`mw-dt__stage mw-dt__stage--${shown_stage}`}>
                         <div className='mw-dt__stage-chart'>
-                            <PriceChart decimals={decimals} epochs={epochs} prices={prices} />
+                            <PriceChart
+                                band_distance={band_distance}
+                                barriers={barriers}
+                                decimals={decimals}
+                                epochs={epochs}
+                                prices={prices}
+                            />
                         </div>
 
                         {type.shows_digit_stats && (

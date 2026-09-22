@@ -10,6 +10,8 @@ $dt-blue: #2196f3;
 $dt-orange: #ff6337;
 
 .mw-dt {
+    // The loading cover below is positioned against this.
+    position: relative;
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -701,6 +703,61 @@ $dt-orange: #ff6337;
     fill: #fff;
     font-size: 1.05rem;
     font-weight: 700;
+}
+
+// Where the market has not been yet - the room the band runs into.
+.mw-dt__chart-future {
+    fill: currentcolor;
+    opacity: 0.05;
+}
+
+// The band the contract has to stay inside: two lines out from the spot, each
+// labelled with its distance from it.
+.mw-dt__chart-barrier {
+    stroke: $dt-blue;
+    stroke-width: 1.4;
+}
+
+.mw-dt__chart-barrier-label {
+    fill: $dt-blue;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+// While the page is coming up. It covers the page rather than sitting inside
+// it, so nothing half-drawn shows through, and it goes the moment the first
+// ticks arrive.
+.mw-dt__loading {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6rem;
+    background: var(--general-main-1);
+}
+
+.mw-dt__loading-text {
+    margin: 0;
+    font-size: 1.6rem;
+    color: var(--text-less-prominent);
+}
+
+// The ticket's rows, blocked out underneath, as the reference has them.
+.mw-dt__loading-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    width: min(100%, 44rem);
+    padding-inline: 1.2rem;
+
+    span {
+        height: 5.6rem;
+        border-radius: 10px;
+        background: var(--general-section-1);
+    }
 }
 
 .mw-dt__chart-waiting {
@@ -1846,10 +1903,20 @@ $dt-orange: #ff6337;
         --text-less-prominent: #{constants.$color-grey-7};
     }
 
-    // #7d7d7d is the light theme's line; on this ground it is barely there.
-    // The same lift .theme--dark gives it above.
+    // The reference draws the market in white on this ground, and its price
+    // badge the other way round - white, with the ground's own colour in it -
+    // rather than the green or red the wide layout carries.
     .mw-dt__chart {
-        --mw-dt-line: #9aa0a6;
+        --mw-dt-line: #fff;
+    }
+
+    .mw-dt__chart-badge,
+    .mw-dt__chart-badge--down {
+        fill: #fff;
+    }
+
+    .mw-dt__chart-badge-text {
+        fill: #{constants.$color-black};
     }
 }
 
