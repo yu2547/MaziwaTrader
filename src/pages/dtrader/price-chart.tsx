@@ -400,6 +400,10 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
                                     { available: false, label: localize('15 minutes') },
                                     { available: false, label: localize('30 minutes') },
                                     { available: false, label: localize('1 hour') },
+                                    { available: false, label: localize('2 hours') },
+                                    { available: false, label: localize('4 hours') },
+                                    { available: false, label: localize('8 hours') },
+                                    { available: false, label: localize('1 day') },
                                 ].map(interval => (
                                     <span
                                         key={interval.label}
