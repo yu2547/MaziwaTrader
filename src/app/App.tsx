@@ -9,6 +9,7 @@ import RoutePromptDialog from '@/components/route-prompt-dialog';
 import { crypto_currencies_display_order, fiat_currencies_display_order } from '@/components/shared';
 import { StoreProvider } from '@/hooks/useStore';
 import CallbackPage from '@/pages/callback';
+import DTraderLoader from '@/pages/dtrader/dtrader-loader';
 import Endpoint from '@/pages/endpoint';
 import { TAuthData } from '@/types/api-types';
 import { initializeI18n, TranslationProvider } from '@deriv-com/translations';
@@ -101,7 +102,19 @@ const router = createBrowserRouter(
             <Route path='bulk-trader' element={page(<BulkTrader />)} errorElement={<RouteErrorBoundary />} />
             <Route path='manual' element={page(<ManualTrader />)} errorElement={<RouteErrorBoundary />} />
             <Route path='tradingview' element={page(<TradingViewPage />)} errorElement={<RouteErrorBoundary />} />
-            <Route path='dtrader' element={page(<DTrader />, true)} errorElement={<RouteErrorBoundary />} />
+            {/* DTrader waits behind its own loader rather than the generic
+                one: the reference holds a single picture from the tap to the
+                market, and the page puts the same one up again while it waits
+                for its first ticks, so nothing swaps in between. */}
+            <Route
+                path='dtrader'
+                element={
+                    <Suspense fallback={<DTraderLoader />}>
+                        <DTrader />
+                    </Suspense>
+                }
+                errorElement={<RouteErrorBoundary />}
+            />
             <Route path='copy-trading' element={page(<CopyTrading />)} errorElement={<RouteErrorBoundary />} />
         </Route>
     )

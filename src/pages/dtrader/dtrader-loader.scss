@@ -1,0 +1,142 @@
+// DTrader's own wait, measured off the phone recording of the reference.
+// Every literal here was sampled or measured on that recording at its own 396px
+// width; the comments say which. Nothing in this file is shared, so nothing
+// outside DTrader can be moved by it.
+
+// The ground the recording holds for the whole wait - a blue-black well below
+// the page's own, sampled at several points across the frame.
+$loader-ground: #0d101b;
+
+// The sphere at its brightest, which is also what the orbits' travelling arc
+// is drawn in.
+$loader-teal: #8ed1d2;
+
+// The line under the artwork.
+$loader-text: #b1b6c3;
+
+.mw-dt-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-height: 0;
+    background: $loader-ground;
+
+    // Over the page instead of in place of it, which is how the page itself
+    // uses it once it is mounted and waiting on the feed.
+    &--cover {
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+    }
+}
+
+// The soft lift the recording has around the artwork: its ground reads #131827
+// beside the sphere against #0d101b out at the edges of the frame.
+.mw-dt-loader__art {
+    display: grid;
+    place-items: center;
+    width: 22rem;
+    height: 22rem;
+    background: radial-gradient(closest-side, rgb(64 190 186 / 9%), rgb(64 190 186 / 0%) 70%);
+}
+
+// 84px across on the reference's 396px screen: the orbits span 65x23 inside it
+// with the sphere 24px through the middle.
+.mw-dt-loader__atom {
+    width: 9.9rem;
+    height: 9.9rem;
+    overflow: visible;
+}
+
+// The set turns as one, slowly - the orbits keep their angles to each other
+// the whole way round, which is what holds the shape together.
+.mw-dt-loader__rings {
+    transform-origin: 50% 50%;
+    animation: mw-dt-loader-turn 9s linear infinite;
+}
+
+// A third of a turn apart, each one fixed against the others.
+.mw-dt-loader__ring {
+    transform-origin: 50% 50%;
+
+    &--b {
+        transform: rotate(60deg);
+    }
+
+    &--c {
+        transform: rotate(120deg);
+    }
+}
+
+// A pixel of stroke on the reference, which is 1.2 on this 100-unit grid.
+.mw-dt-loader__orbit,
+.mw-dt-loader__spark {
+    fill: none;
+    stroke-width: 1.2;
+}
+
+// The ring itself, a dark teal barely above the ground (#0c4044 there).
+.mw-dt-loader__orbit {
+    stroke: rgb(64 190 186 / 26%);
+}
+
+// The bright stretch running round it. The ellipse is about 189 units round,
+// so a quarter of it is lit at a time, and each orbit's runs at its own rate.
+.mw-dt-loader__spark {
+    stroke: $loader-teal;
+    stroke-linecap: round;
+    stroke-dasharray: 47 142;
+    filter: drop-shadow(0 0 2px rgb(64 190 186 / 80%));
+    animation: mw-dt-loader-spark 2.6s linear infinite;
+
+    .mw-dt-loader__ring--b & {
+        animation-duration: 3.4s;
+    }
+
+    .mw-dt-loader__ring--c & {
+        animation-duration: 4.1s;
+        animation-direction: reverse;
+    }
+}
+
+.mw-dt-loader__core {
+    filter: drop-shadow(0 0 5px rgb(90 200 196 / 45%));
+}
+
+// 14px on the reference, 22px under the artwork, in its own grey.
+.mw-dt-loader__text {
+    margin: -1.6rem 0 0;
+    padding-inline: 2.4rem;
+    color: $loader-text;
+    font-size: 1.65rem;
+    line-height: 1.4;
+    text-align: center;
+}
+
+@keyframes mw-dt-loader-turn {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes mw-dt-loader-spark {
+    to {
+        stroke-dashoffset: -189;
+    }
+}
+
+// Still a wait, so it still moves - at a pace that is a signal rather than a
+// motion, the way the rest of the app's loaders slow rather than stop.
+@media (prefers-reduced-motion: reduce) {
+    .mw-dt-loader__rings {
+        animation-duration: 40s;
+    }
+
+    .mw-dt-loader__spark,
+    .mw-dt-loader__ring--b .mw-dt-loader__spark,
+    .mw-dt-loader__ring--c .mw-dt-loader__spark {
+        animation-duration: 14s;
+    }
+}

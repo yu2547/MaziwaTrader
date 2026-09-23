@@ -13,6 +13,7 @@ import { TActiveSymbol, TContractForSymbol } from '@/utils/market-data/public-ma
 import { useTranslations } from '@deriv-com/translations';
 import useManualTrade from '../bulk-trader/use-manual-trade';
 import DigitCircles from './digit-circles';
+import DTraderLoader from './dtrader-loader';
 import { ArrowUpIcon, ChevronRightIcon, InfoIcon, MinusIcon, PlusIcon } from './icons';
 import MarketSelect from './market-select';
 import PositionsPanel, { TPosition } from './positions-panel';
@@ -382,20 +383,13 @@ const DTrader = observer(() => {
     // longer gives up 37rem of it to a drawer.
     return (
         <div className='mw-dt'>
-            {/* What the reference shows while the page is coming up: its own
-                name over the ground it is about to draw on, with the ticket's
-                rows blocked out beneath. It stands until the first ticks are
-                in - it is the page waiting for real data, not a timer. */}
-            {prices.length === 0 && (
-                <div className='mw-dt__loading' role='status'>
-                    <p className='mw-dt__loading-text'>{localize('Loading DTrader...')}</p>
-                    <div className='mw-dt__loading-rows' aria-hidden='true'>
-                        <span />
-                        <span />
-                        <span />
-                    </div>
-                </div>
-            )}
+            {/* What the recording shows for the whole of the wait, and the
+                same artwork the route puts up while this page's chunk is on
+                its way (App.tsx) - so the tap leads to one picture rather than
+                to a spinner, then a second loader, then the market. It stands
+                until the first ticks are in: it is the page waiting for real
+                data, not a timer. */}
+            {prices.length === 0 && <DTraderLoader is_cover />}
 
             <div className={`mw-dt__body${positions.length ? ' mw-dt__body--positions' : ''}`}>
                 {/* There is nothing to show until something has been bought,
@@ -1034,7 +1028,11 @@ const DTrader = observer(() => {
                         draws from 1280px up - so below that this page had none
                         at all. It closes the ticket, where the reference puts
                         it; hidden in dtrader.scss wherever the footer has one. */}
-                    <div className='mw-dt__disclaimer'>
+                    {/* The recording keeps this on screen through the whole
+                        wait, at the foot of the page rather than at the foot of
+                        a ticket nobody can see yet - so while the loader is up
+                        it stands over it, where the reference has it. */}
+                    <div className={`mw-dt__disclaimer${prices.length === 0 ? ' mw-dt__disclaimer--waiting' : ''}`}>
                         <RiskDisclaimer />
                     </div>
                 </aside>
