@@ -9,6 +9,12 @@ $dt-red: #de0040;
 $dt-blue: #2196f3;
 $dt-orange: #ff6337;
 
+// The ground the reference's chart is drawn on, sampled off its own frames: a
+// blue-black a shade above the page, which is what makes the chart read as a
+// panel of the app rather than a line drawn straight onto it. Phone only - the
+// wide layout keeps the app's theme, as it always has.
+$dt-chart-ground: #181c25;
+
 .mw-dt {
     // The loading cover below is positioned against this.
     position: relative;
@@ -259,8 +265,29 @@ $dt-orange: #ff6337;
 }
 
 .mw-dt__market-caret {
-    font-size: 0.9rem;
+    width: 1.8rem;
+    height: 1.8rem;
+    flex: none;
     color: var(--text-less-prominent);
+    transition: transform 0.15s ease;
+
+    &--up {
+        transform: rotate(180deg);
+    }
+}
+
+// The direction the price has moved, beside the figures rather than in them.
+.mw-dt__trend {
+    width: 1rem;
+    height: 1rem;
+    margin-inline-start: 0.4rem;
+    vertical-align: -0.1rem;
+}
+
+// One size for every sheet's close, whatever the heading around it is set in.
+.mw-dt__close-icon {
+    width: 1.8rem;
+    height: 1.8rem;
 }
 
 .mw-dt__markets {
@@ -585,13 +612,21 @@ $dt-orange: #ff6337;
     border-radius: 50%;
     background: transparent;
     color: var(--text-less-prominent);
-    font-size: 2rem;
-    line-height: 1;
     cursor: pointer;
     transform: translateY(-50%);
 
+    svg {
+        width: 2.2rem;
+        height: 2.2rem;
+    }
+
     &--prev {
         inset-inline-start: 0;
+
+        // The same chevron, turned back the way it came.
+        svg {
+            transform: rotate(180deg);
+        }
     }
 
     &--next {
@@ -671,9 +706,14 @@ $dt-orange: #ff6337;
 .mw-dt__chart-line {
     fill: none;
     stroke: currentcolor;
-    stroke-width: 1.6;
+    stroke-width: 1.3;
     stroke-linejoin: round;
     stroke-linecap: round;
+}
+
+// The page's own ground, so the tick sits in the line rather than on it.
+.mw-dt__chart-dot-ring {
+    fill: var(--general-main-1);
 }
 
 .mw-dt__chart-area {
@@ -706,11 +746,6 @@ $dt-orange: #ff6337;
 }
 
 // Where the market has not been yet - the room the band runs into.
-.mw-dt__chart-future {
-    fill: currentcolor;
-    opacity: 0.05;
-}
-
 // The band the contract has to stay inside: two lines out from the spot with
 // an arrow head where each starts, the room between them tinted, the tick they
 // are measured from dotted across, and each line's distance at its end.
@@ -1132,17 +1167,27 @@ $dt-orange: #ff6337;
 .mw-dt__mark {
     display: grid;
     place-items: center;
-    width: 2rem;
-    height: 2rem;
+    width: 2.4rem;
+    height: 2.4rem;
     flex: none;
-    border: 1px solid var(--text-less-prominent);
-    border-radius: 50%;
+    padding: 0;
+    border: none;
     background: transparent;
     color: var(--text-less-prominent);
-    font-size: 1.1rem;
-    font-style: italic;
-    line-height: 1;
     cursor: pointer;
+
+    svg {
+        width: 1.8rem;
+        height: 1.8rem;
+    }
+}
+
+// The chevron that says the trade type opens a list.
+.mw-dt__type-go {
+    width: 1.8rem;
+    height: 1.8rem;
+    flex: none;
+    color: var(--text-less-prominent);
 }
 
 .mw-dt__info {
@@ -1399,13 +1444,17 @@ $dt-orange: #ff6337;
     width: 3.2rem;
     height: 3.2rem;
     flex-shrink: 0;
+    padding: 0;
     border: none;
     border-radius: 6px;
     background: var(--general-main-1);
     color: var(--text-prominent);
-    font-size: 1.8rem;
-    line-height: 1;
     cursor: pointer;
+
+    svg {
+        width: 1.8rem;
+        height: 1.8rem;
+    }
 }
 
 .mw-dt__toggle {
@@ -1730,6 +1779,15 @@ $dt-orange: #ff6337;
     }
 }
 
+// Both marks on this row are drawn, so they need a size of their own at every
+// width: an svg with neither takes the whole row the flexbox will give it.
+.mw-dt__stats-mark,
+.mw-dt__stats-more {
+    width: 1.8rem;
+    height: 1.8rem;
+    flex: none;
+}
+
 .mw-dt__ok {
     margin: 0;
     padding: 0.7rem 1.1rem;
@@ -1915,6 +1973,13 @@ $dt-orange: #ff6337;
 
     span {
         flex: 1;
+    }
+
+    .mw-dt__types-go {
+        width: 1.8rem;
+        height: 1.8rem;
+        flex: none;
+        color: var(--text-less-prominent);
     }
 
     i {
@@ -2202,21 +2267,46 @@ $dt-orange: #ff6337;
     }
 
     // The slot the chart and the rings share. Taller now the card sits inside
-    // it: the reference gives the chart a little over half the screen.
+    // it: the reference gives the chart a little over half the screen. The
+    // negative margin is the body's own side padding, so the chart meets both
+    // edges of the screen the way the reference's does - it is the page's one
+    // full-bleed panel, and an inset one read as a picture of a chart.
     .mw-dt__stage {
+        margin-inline: -1.2rem;
         min-height: 38rem;
     }
 
-    // The chart runs to both edges under the card, with no frame of its own.
+    // The chart runs to both edges under the card, with no frame of its own,
+    // on the ground sampled off the reference rather than on the page's.
     .mw-dt__chart {
         padding: 0;
         border: none;
         border-radius: 0;
+        background: $dt-chart-ground;
+    }
+
+    // The ring that punches the line out behind the spot belongs to whatever
+    // the chart is drawn on, which here is no longer the page.
+    .mw-dt__chart-dot-ring {
+        fill: $dt-chart-ground;
     }
 
     // The band's own figures are the smallest thing on the chart.
     .mw-dt__chart-barrier-label {
         font-size: 1.15rem;
+    }
+
+    // Rules you can see but do not read. Sampled off the reference, whose grid
+    // is #1d212a on a #181c25 ground - white at a fiftieth, a quarter of the
+    // weight this page was drawing them at, and the difference between a chart
+    // and a sheet of graph paper.
+    .mw-dt__chart-grid {
+        stroke: rgb(255 255 255 / 3%);
+    }
+
+    .mw-dt__chart-axis {
+        fill: rgb(255 255 255 / 50%);
+        font-size: 1.1rem;
     }
 
     // Deriv's record of the last runs, on its own row between the chart and
@@ -2233,16 +2323,10 @@ $dt-orange: #ff6337;
     }
 
     .mw-dt__stats-mark {
-        display: grid;
-        place-items: center;
         width: 2rem;
         height: 2rem;
         flex: none;
-        border: 1px solid var(--text-less-prominent);
-        border-radius: 50%;
         color: var(--text-less-prominent);
-        font-size: 1.1rem;
-        font-style: italic;
     }
 
     .mw-dt__stats-title {
@@ -2268,9 +2352,10 @@ $dt-orange: #ff6337;
     }
 
     .mw-dt__stats-more {
+        width: 1.8rem;
+        height: 1.8rem;
         flex: none;
         color: var(--text-general);
-        font-size: 1.4rem;
     }
 
     // The digit rings: a column, so the banner sits above them rather than
@@ -2313,6 +2398,10 @@ $dt-orange: #ff6337;
     // grabber on its top edge, rather than a bordered card inset from the
     // sides. The negative margin is exactly the body's side padding, so it
     // meets both edges and no further.
+    // The sheet is the lighter of the page's two darks and its rows are the
+    // darker, sunk into it - measured off the frames, #151716 against #0c0b09.
+    // That is this page's two tokens the other way round from the wide layout,
+    // where the ticket is the page's own ground and its rows stand above it.
     .mw-dt__ticket {
         position: relative;
         gap: 0.8rem;
@@ -2320,6 +2409,7 @@ $dt-orange: #ff6337;
         padding: 1.6rem 1.2rem 1.2rem;
         border-width: 1px 0 0;
         border-radius: 16px 16px 0 0;
+        background: var(--general-section-1);
         box-shadow: 0 -0.4rem 1.2rem rgb(0 0 0 / 6%);
 
         &:before {
@@ -2330,7 +2420,8 @@ $dt-orange: #ff6337;
             width: 3.6rem;
             height: 0.4rem;
             border-radius: 2px;
-            background: var(--general-section-1);
+            background: var(--text-less-prominent);
+            opacity: 0.5;
             transform: translateX(-50%);
         }
     }
@@ -2339,23 +2430,35 @@ $dt-orange: #ff6337;
         font-size: 1rem;
     }
 
-    .mw-dt__learn-text {
+    .mw-dt__learn-text,
+    .mw-dt__info {
+        background: var(--general-main-1);
         font-size: 1.1rem;
     }
 
+    // The type is the largest thing on the ticket in the reference, a step
+    // above the stake it sits over rather than a step below it.
     .mw-dt__type-head {
         gap: 0.8rem;
         padding: 0.7rem 1rem;
         border-color: transparent;
-        background: var(--general-section-1);
+        background: var(--general-main-1);
 
         b {
-            font-size: 1.35rem;
+            font-size: 1.45rem;
         }
 
         span {
             font-size: 1.4rem;
         }
+    }
+
+    // Deriv's artwork for the type, in a tile of its own as the reference sets
+    // it rather than loose on the row.
+    .mw-dt__type-head .mw-dt__types-icons {
+        padding: 0.3rem;
+        border-radius: 4px;
+        background: var(--general-section-1);
     }
 
     .mw-dt__types-icons svg {
@@ -2385,6 +2488,8 @@ $dt-orange: #ff6337;
 
     .mw-dt__field {
         padding: 0.7rem 1rem;
+        border-color: transparent;
+        background: var(--general-main-1);
 
         > span,
         i {
@@ -2418,7 +2523,7 @@ $dt-orange: #ff6337;
         min-height: 4rem;
         padding: 0.4rem 1rem;
         border-radius: 8px;
-        background: var(--general-section-1);
+        background: var(--general-main-1);
 
         // Duration, as a plain value on the left: the picker's own box and its
         // label go, but the label stays readable to assistive technology - it
@@ -2504,19 +2609,32 @@ $dt-orange: #ff6337;
     }
 
     // The minus and plus either side of the stake, as the reference sets them:
-    // large, quiet glyphs rather than buttons with a box of their own.
+    // quiet marks rather than buttons with a box of their own. The minus is
+    // the dimmer of the two there, and it is the one that takes the stake
+    // towards its floor.
     .mw-dt__compact-step {
         display: grid;
         place-items: center;
         width: 3.2rem;
         height: 3.2rem;
+        padding: 0;
         border: none;
         border-radius: 6px;
         background: transparent;
-        color: var(--text-general);
-        font-size: 2rem;
-        line-height: 1;
+        color: var(--text-prominent);
         cursor: pointer;
+
+        // Measured off the reference: the bar is 17.5px across and near 3px
+        // thick there, which at this page's scale is a 2.6rem mark drawn at 3.
+        svg {
+            width: 2.6rem;
+            height: 2.6rem;
+            stroke-width: 3;
+        }
+
+        &:first-of-type {
+            color: var(--text-less-prominent);
+        }
     }
 
     // The growth rate as the reference has it: a chip beside the trade type
@@ -2527,7 +2645,7 @@ $dt-orange: #ff6337;
         gap: 0.8rem;
         padding: 0 1rem;
         border-radius: 8px;
-        background: var(--general-section-1);
+        background: var(--general-main-1);
 
         span {
             position: absolute;
@@ -2558,21 +2676,49 @@ $dt-orange: #ff6337;
 
     .mw-dt__tp-head {
         min-height: 3.6rem;
-        font-size: 1.2rem;
+        border-color: transparent;
+        background: var(--general-main-1);
+        font-size: 1.3rem;
+
+        // A native checkbox is all but invisible unticked on this ground - the
+        // reference's is a clear empty square with a border, and green with a
+        // tick in it once it is on.
+        input {
+            width: 1.6rem;
+            height: 1.6rem;
+            border: 1px solid var(--text-less-prominent);
+            border-radius: 3px;
+            background: transparent;
+            appearance: none;
+
+            &:checked {
+                border-color: $dt-green;
+                background: $dt-green
+                    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l5 5 9-10"/></svg>')
+                    center / 1.2rem no-repeat;
+            }
+        }
     }
 
     // Deriv's figures under the ticket's controls, each value underlined the
     // way the reference marks the ones it explains.
     .mw-dt__quote {
         gap: 0.3rem;
+        padding-block-start: 0.4rem;
 
+        // Both sides of these rows are bold in the reference - the label as
+        // much as the figure, which is what sets them apart from the ticket's
+        // own quiet labels above.
         dt {
-            font-size: 1.1rem;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-general);
         }
 
         dd {
             border-block-end: 1px dotted var(--text-less-prominent);
             font-size: 1.15rem;
+            font-weight: 700;
         }
     }
 
@@ -2594,6 +2740,24 @@ $dt-orange: #ff6337;
 
         b {
             font-size: 1.05rem;
+        }
+
+        // Deriv's type artwork is drawn in its own colours, and the reference
+        // puts it on this button in white - the button is one flat colour with
+        // white on it, and a red mark in the middle of it read as a sticker.
+        svg {
+            filter: brightness(0) invert(1);
+        }
+    }
+
+    // With one side there is nothing to line up against, so the mark and the
+    // word sit together in the middle, as the reference has them.
+    .mw-dt__actions--one .mw-dt__action-btn {
+        justify-content: center;
+
+        span {
+            flex: 0 1 auto;
+            text-align: center;
         }
     }
 

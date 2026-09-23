@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from '@deriv-com/translations';
+import { AreaChartIcon, CloseIcon } from './icons';
 
 /**
  * The market, drawn from the ticks this page is already receiving.
@@ -145,7 +146,6 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
         return {
             area,
             band,
-            future: band_levels ? { width: plot_width - ticks_width, x: ticks_width } : null,
             grid,
             last: { price: spot, x: x(shown.length - 1), y: y(spot) },
             // The tick the band is measured from, which the reference marks
@@ -171,14 +171,20 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
                     aria-label={localize('Price chart')}
                 >
                     <defs>
-                        {/* Measured off the reference, which fades but never
-                            reaches the page: at 0.32 down to 0.08 of the line's
-                            own grey, the fill reads #e2e2e2 where the reference
-                            reads #e0e0e0 and #f0f0f0 where it reads #f1f1f1. */}
+                        {/* Sampled down the reference's own frame: its ground
+                            is #181c25 and the pixel under the line is #2f323b,
+                            which is white at a tenth over it - a wash you can
+                            just see, not the grey mass a heavier fill draws. */}
                         <linearGradient id='mw-dt-fill' x1='0' y1='0' x2='0' y2='1'>
-                            <stop offset='0%' stopColor='currentColor' stopOpacity='0.32' />
-                            <stop offset='100%' stopColor='currentColor' stopOpacity='0.08' />
+                            <stop offset='0%' stopColor='currentColor' stopOpacity='0.1' />
+                            <stop offset='100%' stopColor='currentColor' stopOpacity='0.01' />
                         </linearGradient>
+
+                        {/* The price tag sits off the page rather than on it,
+                            the way the reference lifts it off the chart. */}
+                        <filter id='mw-dt-badge-shadow' x='-30%' y='-60%' width='170%' height='240%'>
+                            <feDropShadow dx='0' dy='1' stdDeviation='2' floodColor='#000' floodOpacity='0.45' />
+                        </filter>
                     </defs>
 
                     {drawing.grid.map(line => (
@@ -216,18 +222,12 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
                         </g>
                     ))}
 
-                    {/* The stretch the market has not reached yet, shaded the
-                        way the reference shades it. */}
-                    {drawing.future && (
-                        <rect
-                            className='mw-dt__chart-future'
-                            x={drawing.future.x}
-                            y='0'
-                            width={drawing.future.width}
-                            height={drawing.plot_height}
-                        />
-                    )}
-
+                    {/* The stretch the market has not reached yet is left as
+                        it is: sampled either side of the spot on the
+                        reference's own frame, its ground is #181c25 in both
+                        places. The wash that used to stand there drew a pale
+                        block down the right of the chart that the reference
+                        has no trace of. */}
                     <path className='mw-dt__chart-area' d={drawing.area} fill='url(#mw-dt-fill)' />
                     <path className='mw-dt__chart-line' d={drawing.line} />
 
@@ -297,14 +297,19 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
                         y1={drawing.last.y}
                         y2={drawing.last.y}
                     />
+                    {/* The tick itself, with a ring of the page's own ground
+                        around it so it reads as a point on the line rather
+                        than a blob drawn over it. */}
+                    <circle className='mw-dt__chart-dot-ring' cx={drawing.last.x} cy={drawing.last.y} r='5.5' />
                     <circle className='mw-dt__chart-dot' cx={drawing.last.x} cy={drawing.last.y} r='3.5' />
                     <rect
                         className={`mw-dt__chart-badge${drawing.rising ? '' : ' mw-dt__chart-badge--down'}`}
                         x={drawing.plot_width + 2}
-                        y={drawing.last.y - 10}
+                        y={drawing.last.y - 11}
                         width={RIGHT_GUTTER - 4}
-                        height='20'
-                        rx='4'
+                        height='22'
+                        rx='5'
+                        filter='url(#mw-dt-badge-shadow)'
                     />
                     <text
                         className='mw-dt__chart-badge-text'
@@ -327,9 +332,7 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
                 onClick={() => setIsTypesOpen(true)}
             >
                 <i>{localize('1 T')}</i>
-                <svg viewBox='0 0 24 24' aria-hidden='true'>
-                    <path d='M3 17l5-6 4 3 5-7 4 4v6z' fill='none' stroke='currentColor' strokeWidth='1.6' />
-                </svg>
+                <AreaChartIcon />
             </button>
 
             {is_types_open &&
@@ -355,7 +358,7 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
                                     aria-label={localize('Close')}
                                     onClick={() => setIsTypesOpen(false)}
                                 >
-                                    &times;
+                                    <CloseIcon className='mw-dt__close-icon' />
                                 </button>
                             </header>
 

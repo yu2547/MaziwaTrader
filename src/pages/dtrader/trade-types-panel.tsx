@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { TradeTypeIcon } from '@/components/trade-type/trade-type-icon';
 import { useTranslations } from '@deriv-com/translations';
+import { ChevronRightIcon, CloseIcon } from './icons';
 import { findTradeType, TRADE_DESCRIPTIONS, TTradeType } from './trade-types';
 
 /**
@@ -121,7 +122,7 @@ const TradeTypesPanel = ({ is_open, onClose, onSelect, supported, type_id }: TTr
                         aria-label={localize('Close')}
                         onClick={onClose}
                     >
-                        ✕
+                        <CloseIcon className='mw-dt__close-icon' />
                     </button>
                 </header>
 
@@ -174,7 +175,7 @@ const TradeTypesPanel = ({ is_open, onClose, onSelect, supported, type_id }: TTr
 
                             <button type='button' className='mw-dt__types-learn' onClick={() => setIsLearning(true)}>
                                 <span>{localize('Learn more about trade types')}</span>
-                                <i aria-hidden='true'>›</i>
+                                <ChevronRightIcon className='mw-dt__types-go' />
                             </button>
 
                             <div className='mw-dt__types-scroll'>

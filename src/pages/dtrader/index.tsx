@@ -13,6 +13,7 @@ import { TActiveSymbol, TContractForSymbol } from '@/utils/market-data/public-ma
 import { useTranslations } from '@deriv-com/translations';
 import useManualTrade from '../bulk-trader/use-manual-trade';
 import DigitCircles from './digit-circles';
+import { ArrowUpIcon, ChevronRightIcon, InfoIcon, MinusIcon, PlusIcon } from './icons';
 import MarketSelect from './market-select';
 import PositionsPanel, { TPosition } from './positions-panel';
 import PriceChart from './price-chart';
@@ -465,7 +466,7 @@ const DTrader = observer(() => {
                                 aria-label={shown_stage === 'chart' ? localize('Show digits') : localize('Show chart')}
                                 onClick={() => setStage(current => (current === 'chart' ? 'digits' : 'chart'))}
                             >
-                                «
+                                <ChevronRightIcon />
                             </button>
                         )}
                         <button
@@ -474,7 +475,7 @@ const DTrader = observer(() => {
                             aria-label={localize('Trade types')}
                             onClick={() => setIsTypesOpen(true)}
                         >
-                            »
+                            <ChevronRightIcon />
                         </button>
                     </div>
                     {/* Deriv's own record for an accumulator: how many ticks
@@ -483,9 +484,7 @@ const DTrader = observer(() => {
                         the chart rather than at the foot of the ticket. */}
                     {details?.ticks_stayed_in && (
                         <div className='mw-dt__stats'>
-                            <span className='mw-dt__stats-mark' aria-hidden='true'>
-                                i
-                            </span>
+                            <InfoIcon className='mw-dt__stats-mark' />
                             <b className='mw-dt__stats-title'>{localize('Stats')}</b>
                             <div className='mw-dt__stats-list'>
                                 {details.ticks_stayed_in.slice(0, 8).map((count, index) => (
@@ -493,9 +492,7 @@ const DTrader = observer(() => {
                                     <b key={`${count}-${index}`}>{count}</b>
                                 ))}
                             </div>
-                            <span className='mw-dt__stats-more' aria-hidden='true'>
-                                ↑
-                            </span>
+                            <ArrowUpIcon className='mw-dt__stats-more' />
                         </div>
                     )}
                 </section>
@@ -547,7 +544,7 @@ const DTrader = observer(() => {
                                 ))}
                             </span>
                             <b>{localize(type.label)}</b>
-                            <span aria-hidden='true'>›</span>
+                            <ChevronRightIcon className='mw-dt__type-go' />
                         </button>
 
                         {type.fields.includes('growth_rate') && (
@@ -572,7 +569,7 @@ const DTrader = observer(() => {
                                     aria-expanded={info === 'growth'}
                                     onClick={() => setInfo(current => (current === 'growth' ? null : 'growth'))}
                                 >
-                                    i
+                                    <InfoIcon />
                                 </button>
                             </div>
                         )}
@@ -797,7 +794,7 @@ const DTrader = observer(() => {
                                 aria-label={localize('Less')}
                                 onClick={() => stepStake(-1)}
                             >
-                                −
+                                <MinusIcon />
                             </button>
                         )}
                         <label className='mw-dt__compact-stake'>
@@ -820,7 +817,7 @@ const DTrader = observer(() => {
                                 aria-label={localize('More')}
                                 onClick={() => stepStake(1)}
                             >
-                                +
+                                <PlusIcon />
                             </button>
                         )}
                         <span className='mw-dt__compact-label' aria-hidden='true'>
@@ -841,7 +838,7 @@ const DTrader = observer(() => {
                                 aria-label={localize('Less')}
                                 onClick={() => stepStake(-1)}
                             >
-                                −
+                                <MinusIcon />
                             </button>
                             <input
                                 type='number'
@@ -860,7 +857,7 @@ const DTrader = observer(() => {
                                 aria-label={localize('More')}
                                 onClick={() => stepStake(1)}
                             >
-                                +
+                                <PlusIcon />
                             </button>
                         </div>
                     </div>
@@ -889,7 +886,7 @@ const DTrader = observer(() => {
                                         setInfo(current => (current === 'take_profit' ? null : 'take_profit'))
                                     }
                                 >
-                                    i
+                                    <InfoIcon />
                                 </button>
                             </div>
 

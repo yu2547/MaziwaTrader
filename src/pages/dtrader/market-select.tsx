@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { TActiveSymbol } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
+import { ChevronDownIcon, CloseIcon, TrendIcon } from './icons';
 import { CategoryIcon, ChevronIcon, SearchIcon, StarIcon, SymbolIcon } from './market-icon';
 
 /**
@@ -275,21 +276,23 @@ const MarketSelect = ({ change, decimals, onChange, price, symbol, symbols }: TM
             <span className='mw-dt__market-text'>
                 <b>{active?.underlying_symbol_name ?? symbol}</b>
                 {/* Price, then the move since the tick before it and what that
-                    is as a percentage - the way Deriv writes it. */}
+                    is as a percentage - the way Deriv writes it. Only the
+                    triangle carries the direction's colour, as it does there. */}
                 <i>
                     {price === null ? '--' : price.toFixed(decimals)}
                     {change !== null && price !== null && (
-                        <em className={change >= 0 ? 'mw-dt__up' : 'mw-dt__down'}>
+                        <em>
                             {` ${change >= 0 ? '+' : '-'}${Math.abs(change).toFixed(decimals)}`}
                             {` (${Math.abs((change / (price - change || price)) * 100).toFixed(2)}%)`}
-                            {change >= 0 ? ' ▲' : ' ▼'}
+                            <TrendIcon
+                                className={`mw-dt__trend ${change >= 0 ? 'mw-dt__up' : 'mw-dt__down'}`}
+                                is_up={change >= 0}
+                            />
                         </em>
                     )}
                 </i>
             </span>
-            <span className='mw-dt__market-caret' aria-hidden='true'>
-                {is_open ? '▲' : '▼'}
-            </span>
+            <ChevronDownIcon className={`mw-dt__market-caret${is_open ? ' mw-dt__market-caret--up' : ''}`} />
         </button>
     );
 
@@ -314,7 +317,7 @@ const MarketSelect = ({ change, decimals, onChange, price, symbol, symbols }: TM
                         aria-label={localize('Close')}
                         onClick={() => setIsOpen(false)}
                     >
-                        ✕
+                        <CloseIcon className='mw-dt__close-icon' />
                     </button>
                 </header>
 
