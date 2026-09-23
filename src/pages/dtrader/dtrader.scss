@@ -711,16 +711,33 @@ $dt-orange: #ff6337;
     opacity: 0.05;
 }
 
-// The band the contract has to stay inside: two lines out from the spot, each
-// labelled with its distance from it.
+// The band the contract has to stay inside: two lines out from the spot with
+// an arrow head where each starts, the room between them tinted, the tick they
+// are measured from dotted across, and each line's distance at its end.
 .mw-dt__chart-barrier {
     stroke: $dt-blue;
+    stroke-width: 1.6;
+}
+
+.mw-dt__chart-barrier-head {
+    fill: $dt-blue;
+}
+
+.mw-dt__chart-band-fill {
+    fill: $dt-blue;
+    opacity: 0.07;
+}
+
+.mw-dt__chart-band-spot {
+    stroke: $dt-blue;
     stroke-width: 1.4;
+    stroke-dasharray: 2 4;
+    stroke-linecap: round;
 }
 
 .mw-dt__chart-barrier-label {
     fill: $dt-blue;
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 600;
 }
 
@@ -758,6 +775,129 @@ $dt-orange: #ff6337;
         border-radius: 10px;
         background: var(--general-section-1);
     }
+}
+
+// What the chart is drawing, in its bottom-left corner: the interval over a
+// small chart mark, as the reference has it.
+.mw-dt__chart-kind {
+    position: absolute;
+    inset-block-end: 2.6rem;
+    inset-inline-start: 1rem;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
+    width: 4rem;
+    height: 4rem;
+    border: none;
+    border-radius: 50%;
+    background: var(--general-section-1);
+    color: var(--text-general);
+    cursor: pointer;
+
+    i {
+        font-size: 0.9rem;
+        font-style: normal;
+    }
+
+    svg {
+        width: 1.8rem;
+        height: 1.8rem;
+    }
+}
+
+// The panel it opens, and the two sets in it. Everything this chart cannot
+// draw is shown the way the reference shows it for this trade type - there,
+// and not available.
+.mw-dt__kinds {
+    position: fixed;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    width: min(42rem, calc(100vw - 3.2rem));
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 1.6rem;
+    border-radius: 12px;
+    background: var(--general-main-1);
+    color: var(--text-prominent);
+    transform: translate(-50%, -50%);
+}
+
+.mw-dt__kinds-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    h2 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 700;
+    }
+
+    button {
+        border: none;
+        background: transparent;
+        color: var(--text-general);
+        font-size: 2rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+}
+
+.mw-dt__kinds-row {
+    display: flex;
+    gap: 1.2rem;
+    padding-block-end: 1.2rem;
+    border-block-end: 1px solid var(--general-section-1);
+}
+
+.mw-dt__kinds-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+}
+
+.mw-dt__kind {
+    display: grid;
+    place-items: center;
+    min-height: 4rem;
+    padding: 0 1rem;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: 1.3rem;
+    color: var(--text-less-prominent);
+    text-align: center;
+
+    &--on {
+        border-color: var(--text-prominent);
+        color: var(--text-prominent);
+    }
+}
+
+.mw-dt__kinds-title {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+.mw-dt__kinds-note,
+.mw-dt__kinds-foot {
+    margin: 0;
+    font-size: 1.2rem;
+    line-height: 1.5;
+    color: var(--text-less-prominent);
+}
+
+.mw-dt__kinds-foot {
+    padding-block-start: 1.2rem;
+    border-block-start: 1px solid var(--general-section-1);
+    text-align: center;
 }
 
 .mw-dt__chart-waiting {
@@ -986,6 +1126,33 @@ $dt-orange: #ff6337;
 // Shown on phones only - the rates' own row below carries them elsewhere.
 .mw-dt__growth {
     display: none;
+}
+
+// The mark beside a control, and what it says when it is pressed.
+.mw-dt__mark {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    flex: none;
+    border: 1px solid var(--text-less-prominent);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-less-prominent);
+    font-size: 1.1rem;
+    font-style: italic;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.mw-dt__info {
+    margin: 0;
+    padding: 1rem 1.2rem;
+    border-radius: 8px;
+    background: var(--general-section-1);
+    font-size: 1.2rem;
+    line-height: 1.5;
+    color: var(--text-general);
 }
 
 .mw-dt__types-icons {
@@ -1885,6 +2052,7 @@ $dt-orange: #ff6337;
 .mw-dt__tp-head {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 1rem;
     min-height: 4rem;
     padding: 0.6rem 1.2rem;
@@ -1893,7 +2061,13 @@ $dt-orange: #ff6337;
     background: var(--general-section-1);
     font-size: 1.25rem;
     color: var(--text-prominent);
-    cursor: pointer;
+
+    label {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        cursor: pointer;
+    }
 
     input {
         width: 1.8rem;
@@ -1981,7 +2155,12 @@ $dt-orange: #ff6337;
         padding: 0.8rem 1.2rem 0;
     }
 
+    // The market card stands on this, at the chart's top-left corner, as the
+    // reference has it rather than on a row of its own above it - which is
+    // what gives the chart the height it has there. The orbs keep the space to
+    // its right, where the reference also has them.
     .mw-dt__chart-side {
+        position: relative;
         gap: 0.8rem;
     }
 
@@ -2013,10 +2192,85 @@ $dt-orange: #ff6337;
         }
     }
 
-    // The slot the chart and the rings share. 28rem left a 110px blank under
-    // the smaller rings; this is the reference's chart height, give or take.
+    .mw-dt__market {
+        position: absolute;
+        inset-block-start: 0.4rem;
+        inset-inline-start: 0.4rem;
+        z-index: 3;
+        margin-block-end: 0;
+        max-width: 26rem;
+    }
+
+    // The slot the chart and the rings share. Taller now the card sits inside
+    // it: the reference gives the chart a little over half the screen.
     .mw-dt__stage {
-        min-height: 24rem;
+        min-height: 38rem;
+    }
+
+    // The chart runs to both edges under the card, with no frame of its own.
+    .mw-dt__chart {
+        padding: 0;
+        border: none;
+        border-radius: 0;
+    }
+
+    // The band's own figures are the smallest thing on the chart.
+    .mw-dt__chart-barrier-label {
+        font-size: 1.15rem;
+    }
+
+    // Deriv's record of the last runs, on its own row between the chart and
+    // the ticket: the mark, the word, then the counts, newest first.
+    .mw-dt__stats {
+        display: flex;
+        align-items: center;
+        gap: 1.2rem;
+        margin: 0;
+        padding: 0.8rem 1.2rem;
+        border: none;
+        border-radius: 8px;
+        background: var(--general-section-1);
+    }
+
+    .mw-dt__stats-mark {
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        flex: none;
+        border: 1px solid var(--text-less-prominent);
+        border-radius: 50%;
+        color: var(--text-less-prominent);
+        font-size: 1.1rem;
+        font-style: italic;
+    }
+
+    .mw-dt__stats-title {
+        flex: none;
+        padding-inline-end: 1.2rem;
+        border-inline-end: 1px solid var(--general-main-1);
+        font-size: 1.25rem;
+    }
+
+    .mw-dt__stats-list {
+        display: flex;
+        flex: 1;
+        justify-content: space-between;
+        gap: 0.8rem;
+        min-width: 0;
+        overflow: hidden;
+
+        b {
+            font-size: 1.25rem;
+            font-weight: 400;
+            color: var(--text-prominent);
+        }
+    }
+
+    .mw-dt__stats-more {
+        flex: none;
+        color: var(--text-general);
+        font-size: 1.4rem;
     }
 
     // The digit rings: a column, so the banner sits above them rather than
@@ -2266,10 +2520,11 @@ $dt-orange: #ff6337;
     }
 
     // The growth rate as the reference has it: a chip beside the trade type
-    // carrying the rate itself, in place of the row of five below.
+    // carrying the rate itself and its mark, in place of the row of five.
     .mw-dt__growth {
         display: flex;
         align-items: center;
+        gap: 0.8rem;
         padding: 0 1rem;
         border-radius: 8px;
         background: var(--general-section-1);
@@ -2306,6 +2561,8 @@ $dt-orange: #ff6337;
         font-size: 1.2rem;
     }
 
+    // Deriv's figures under the ticket's controls, each value underlined the
+    // way the reference marks the ones it explains.
     .mw-dt__quote {
         gap: 0.3rem;
 
@@ -2314,6 +2571,7 @@ $dt-orange: #ff6337;
         }
 
         dd {
+            border-block-end: 1px dotted var(--text-less-prominent);
             font-size: 1.15rem;
         }
     }

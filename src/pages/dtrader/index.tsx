@@ -65,6 +65,8 @@ const DTrader = observer(() => {
     const [bought, setBought] = useState<string | null>(null);
     const [is_types_open, setIsTypesOpen] = useState(false);
     const [is_learn_open, setIsLearnOpen] = useState(false);
+    /** Which of the ticket's marks is open, when one is. */
+    const [info, setInfo] = useState<'growth' | 'take_profit' | null>(null);
     /** Phone only: the chart and the digit rings share one slot, as on Deriv. */
     const [stage, setStage] = useState<'chart' | 'digits'>('digits');
 
@@ -80,6 +82,14 @@ const DTrader = observer(() => {
      * than pricing the same thing twice.
      */
     const has_two_sides = type.sides.length > 1;
+
+    /**
+     * Contracts that pay as they run rather than to a payout fixed at
+     * purchase - an accumulator grows the stake per tick, a multiplier tracks
+     * the market - so there is no payout figure to put on the button, and the
+     * reference's button says only "Buy".
+     */
+    const has_running_payout = type.fields.includes('growth_rate') || type.fields.includes('multiplier');
     const quote_up = useTradeProposal({ currency, is_connected: isConnected, params, side_index: 0, symbol, type });
     const quote_down = useTradeProposal({
         currency,
@@ -467,6 +477,27 @@ const DTrader = observer(() => {
                             »
                         </button>
                     </div>
+                    {/* Deriv's own record for an accumulator: how many ticks
+                        each of the last runs stayed inside the band, newest
+                        first. The reference carries it on its own row under
+                        the chart rather than at the foot of the ticket. */}
+                    {details?.ticks_stayed_in && (
+                        <div className='mw-dt__stats'>
+                            <span className='mw-dt__stats-mark' aria-hidden='true'>
+                                i
+                            </span>
+                            <b className='mw-dt__stats-title'>{localize('Stats')}</b>
+                            <div className='mw-dt__stats-list'>
+                                {details.ticks_stayed_in.slice(0, 8).map((count, index) => (
+                                    // eslint-disable-next-line react/no-array-index-key
+                                    <b key={`${count}-${index}`}>{count}</b>
+                                ))}
+                            </div>
+                            <span className='mw-dt__stats-more' aria-hidden='true'>
+                                ↑
+                            </span>
+                        </div>
+                    )}
                 </section>
 
                 <aside className='mw-dt__ticket'>
@@ -480,6 +511,28 @@ const DTrader = observer(() => {
                     </button>
                     {is_learn_open && (
                         <p className='mw-dt__learn-text'>{localize(TRADE_DESCRIPTIONS[type.id] ?? '')}</p>
+                    )}
+
+                    {/* Deriv's own terms for the contract as it stands: the
+                        rate off the ticket, the band off the quote. */}
+                    {info === 'growth' && (
+                        <p className='mw-dt__info'>
+                            {localize(
+                                'Your stake will grow at {{rate}}% per tick as long as the current spot price remains within {{barrier}} from the previous spot price.',
+                                {
+                                    barrier: details?.tick_size_barrier_percentage
+                                        ? `±${details.tick_size_barrier_percentage}`
+                                        : localize('the band above'),
+                                    rate: (params.growth_rate * 100).toFixed(0),
+                                }
+                            )}
+                        </p>
+                    )}
+
+                    {info === 'take_profit' && (
+                        <p className='mw-dt__info'>
+                            {localize('The contract closes itself once its profit reaches the amount you set.')}
+                        </p>
                     )}
 
                     {/* The trade type, and beside it the rate it grows at -
@@ -498,19 +551,30 @@ const DTrader = observer(() => {
                         </button>
 
                         {type.fields.includes('growth_rate') && (
-                            <label className='mw-dt__growth'>
-                                <span>{localize('Growth rate')}</span>
-                                <select
-                                    value={params.growth_rate}
-                                    onChange={event => update({ growth_rate: Number(event.target.value) })}
+                            <div className='mw-dt__growth'>
+                                <label>
+                                    <span>{localize('Growth rate')}</span>
+                                    <select
+                                        value={params.growth_rate}
+                                        onChange={event => update({ growth_rate: Number(event.target.value) })}
+                                    >
+                                        {GROWTH_RATES.map(rate => (
+                                            <option key={rate} value={rate}>
+                                                {`${(rate * 100).toFixed(0)}%`}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <button
+                                    type='button'
+                                    className='mw-dt__mark'
+                                    aria-label={localize('About the growth rate')}
+                                    aria-expanded={info === 'growth'}
+                                    onClick={() => setInfo(current => (current === 'growth' ? null : 'growth'))}
                                 >
-                                    {GROWTH_RATES.map(rate => (
-                                        <option key={rate} value={rate}>
-                                            {`${(rate * 100).toFixed(0)}%`}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
+                                    i
+                                </button>
+                            </div>
                         )}
                     </div>
 
@@ -807,14 +871,27 @@ const DTrader = observer(() => {
                         amount only appears once there is one to set. */}
                     {type.fields.includes('take_profit') && (
                         <div className='mw-dt__tp'>
-                            <label className='mw-dt__tp-head'>
-                                <input
-                                    type='checkbox'
-                                    checked={params.take_profit !== ''}
-                                    onChange={event => update({ take_profit: event.target.checked ? '10' : '' })}
-                                />
-                                <span>{localize('Take profit')}</span>
-                            </label>
+                            <div className='mw-dt__tp-head'>
+                                <label>
+                                    <input
+                                        type='checkbox'
+                                        checked={params.take_profit !== ''}
+                                        onChange={event => update({ take_profit: event.target.checked ? '10' : '' })}
+                                    />
+                                    <span>{localize('Take profit')}</span>
+                                </label>
+                                <button
+                                    type='button'
+                                    className='mw-dt__mark'
+                                    aria-label={localize('About take profit')}
+                                    aria-expanded={info === 'take_profit'}
+                                    onClick={() =>
+                                        setInfo(current => (current === 'take_profit' ? null : 'take_profit'))
+                                    }
+                                >
+                                    i
+                                </button>
+                            </div>
 
                             {params.take_profit !== '' && (
                                 <label className='mw-dt__field mw-dt__tp-amount'>
@@ -932,36 +1009,28 @@ const DTrader = observer(() => {
                                                   ? localize(side.label)
                                                   : localize('Log in')}
                                         </span>
-                                        {percent && !digit_error && <b>{percent}</b>}
+                                        {/* A contract that pays as it runs has
+                                            no payout to state up front, so its
+                                            button carries the side alone - the
+                                            reference's plain "Buy". */}
+                                        {percent && !digit_error && !has_running_payout && <b>{percent}</b>}
                                         {/* The phone carries the payout inside
                                             the button, on its own line under the
                                             side, as the reference does; the line
                                             above the button is the wide
                                             layout's. Same figure either way. */}
-                                        <em className='mw-dt__action-in-payout'>
-                                            <span>{localize('Payout')}</span>
-                                            <span>{payout > 0 ? `${payout.toFixed(2)} ${currency}` : '-'}</span>
-                                        </em>
+                                        {!has_running_payout && (
+                                            <em className='mw-dt__action-in-payout'>
+                                                <span>{localize('Payout')}</span>
+                                                <span>{payout > 0 ? `${payout.toFixed(2)} ${currency}` : '-'}</span>
+                                            </em>
+                                        )}
                                     </button>
                                     {message && <p className='mw-dt__action-error'>{message}</p>}
                                 </div>
                             );
                         })}
                     </div>
-
-                    {/* The stats row Deriv shows for accumulators: how many
-                        ticks each of the last runs stayed inside the barrier. */}
-                    {details?.ticks_stayed_in && (
-                        <div className='mw-dt__stats'>
-                            <span>{localize('Stats')}</span>
-                            <div>
-                                {details.ticks_stayed_in.slice(0, 12).map((count, index) => (
-                                    // eslint-disable-next-line react/no-array-index-key
-                                    <b key={`${count}-${index}`}>{count}</b>
-                                ))}
-                            </div>
-                        </div>
-                    )}
 
                     {/* The execution bar that carries the Risk Disclaimer on
                         other routes is not mounted here, and the footer only

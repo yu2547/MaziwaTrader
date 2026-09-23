@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslations } from '@deriv-com/translations';
 
 /**
@@ -21,6 +22,14 @@ const VISIBLE_TICKS = 180;
 const GRID_LINES = 4;
 const RIGHT_GUTTER = 62;
 const BOTTOM_GUTTER = 22;
+
+// The time marks along the foot, and the vertical rules standing on them.
+const TIME_MARKS = 5;
+
+// The steps a price axis is allowed to land on, so its labels read 946.00 and
+// 947.00 the way the reference's do, rather than whatever the window's own
+// high and low happen to divide into.
+const NICE_STEPS = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100];
 
 // The room the reference leaves to the right of the spot for a contract's band
 // to run into. Only taken when there is a band to draw: without one the ticks
@@ -57,6 +66,7 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
     const { localize } = useTranslations();
     const box = useRef<HTMLDivElement>(null);
     const [size, setSize] = useState({ height: 0, width: 0 });
+    const [is_types_open, setIsTypesOpen] = useState(false);
 
     // Drawn in real pixels rather than a scaled viewBox, so the labels stay
     // the size they were written at whatever shape the panel is.
@@ -103,22 +113,28 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
         const line = shown.map((price, index) => `${index === 0 ? 'M' : 'L'}${x(index)},${y(price)}`).join(' ');
         const area = `${line} L${ticks_width},${plot_height} L0,${plot_height} Z`;
 
-        const grid = Array.from({ length: GRID_LINES + 1 }, (_, index) => {
-            const price = bottom + ((top - bottom) * index) / GRID_LINES;
-            return { label: price.toFixed(decimals), y: y(price) };
-        });
+        // Round prices, a step at a time, rather than the window's own corners.
+        const rough = (top - bottom) / GRID_LINES;
+        const step = NICE_STEPS.find(candidate => candidate >= rough) ?? NICE_STEPS[NICE_STEPS.length - 1];
+        const first = Math.ceil(bottom / step) * step;
+        const grid: { label: string; y: number }[] = [];
+        for (let price = first; price <= top; price += step) {
+            grid.push({ label: price.toFixed(decimals), y: y(price) });
+        }
 
+        // Evenly spaced along the foot, each with its own rule standing on it.
         const times = shown_epochs.length === shown.length;
         const ticks = times
-            ? [0, Math.floor(shown.length / 2), shown.length - 1].map(index => ({
-                  label: timeLabel(shown_epochs[index]),
-                  x: x(index),
-              }))
+            ? Array.from({ length: TIME_MARKS }, (_, mark) => {
+                  const index = Math.round((mark / (TIME_MARKS - 1)) * (shown.length - 1));
+                  return { label: timeLabel(shown_epochs[index]), x: x(index) };
+              })
             : [];
 
         // Each line carries how far it sits from the spot, signed, the way the
-        // reference labels them.
-        const signed = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(decimals)}`;
+        // reference labels them - to one place finer than the market's own
+        // prices, which is how it reads +0.360 on a market quoted to 946.22.
+        const signed = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(decimals + 1)}`;
         const band = band_levels
             ? {
                   high: { label: signed(band_levels.high - spot), y: y(band_levels.high) },
@@ -132,6 +148,9 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
             future: band_levels ? { width: plot_width - ticks_width, x: ticks_width } : null,
             grid,
             last: { price: spot, x: x(shown.length - 1), y: y(spot) },
+            // The tick the band is measured from, which the reference marks
+            // with its own dotted line just off the current one.
+            previous: shown.length > 1 ? y(shown[shown.length - 2]) : null,
             line,
             plot_height,
             plot_width,
@@ -177,16 +196,24 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
                         </g>
                     ))}
 
-                    {drawing.ticks.map(tick => (
-                        <text
-                            key={tick.label}
-                            className='mw-dt__chart-axis'
-                            x={tick.x}
-                            y={size.height - 6}
-                            textAnchor='middle'
-                        >
-                            {tick.label}
-                        </text>
+                    {drawing.ticks.map((tick, index) => (
+                        <g key={tick.label}>
+                            <line
+                                className='mw-dt__chart-grid'
+                                x1={tick.x}
+                                x2={tick.x}
+                                y1='0'
+                                y2={drawing.plot_height}
+                            />
+                            <text
+                                className='mw-dt__chart-axis'
+                                x={tick.x}
+                                y={size.height - 6}
+                                textAnchor={index === 0 ? 'start' : 'middle'}
+                            >
+                                {tick.label}
+                            </text>
+                        </g>
                     ))}
 
                     {/* The stretch the market has not reached yet, shaded the
@@ -209,36 +236,55 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
                         move, as the reference draws it. */}
                     {drawing.band && (
                         <g className='mw-dt__chart-band'>
-                            <line
-                                className='mw-dt__chart-barrier'
-                                x1={drawing.last.x}
-                                x2={drawing.plot_width}
-                                y1={drawing.band.high.y}
-                                y2={drawing.band.high.y}
+                            {/* The room between the two lines, tinted, and the
+                                tick they are measured from - the reference's
+                                dotted line just off the current price. */}
+                            <rect
+                                className='mw-dt__chart-band-fill'
+                                x={drawing.last.x}
+                                y={drawing.band.high.y}
+                                width={Math.max(0, drawing.plot_width - drawing.last.x)}
+                                height={Math.max(0, drawing.band.low.y - drawing.band.high.y)}
                             />
-                            <text
-                                className='mw-dt__chart-barrier-label'
-                                x={drawing.plot_width}
-                                y={drawing.band.high.y - 6}
-                                textAnchor='end'
-                            >
-                                {drawing.band.high.label}
-                            </text>
-                            <line
-                                className='mw-dt__chart-barrier'
-                                x1={drawing.last.x}
-                                x2={drawing.plot_width}
-                                y1={drawing.band.low.y}
-                                y2={drawing.band.low.y}
-                            />
-                            <text
-                                className='mw-dt__chart-barrier-label'
-                                x={drawing.plot_width}
-                                y={drawing.band.low.y + 14}
-                                textAnchor='end'
-                            >
-                                {drawing.band.low.label}
-                            </text>
+                            {drawing.previous !== null && (
+                                <line
+                                    className='mw-dt__chart-band-spot'
+                                    x1={drawing.last.x}
+                                    x2={drawing.plot_width}
+                                    y1={drawing.previous}
+                                    y2={drawing.previous}
+                                />
+                            )}
+
+                            {[drawing.band.high, drawing.band.low].map((edge, index) => (
+                                <g key={edge.label}>
+                                    <line
+                                        className='mw-dt__chart-barrier'
+                                        x1={drawing.last.x}
+                                        x2={drawing.plot_width}
+                                        y1={edge.y}
+                                        y2={edge.y}
+                                    />
+                                    {/* The arrow head the reference puts where
+                                        each line starts. */}
+                                    <path
+                                        className='mw-dt__chart-barrier-head'
+                                        d={
+                                            index === 0
+                                                ? `M${drawing.last.x},${edge.y} l9,0 l0,7 z`
+                                                : `M${drawing.last.x},${edge.y} l9,0 l0,-7 z`
+                                        }
+                                    />
+                                    <text
+                                        className='mw-dt__chart-barrier-label'
+                                        x={drawing.plot_width}
+                                        y={index === 0 ? edge.y - 7 : edge.y + 15}
+                                        textAnchor='end'
+                                    >
+                                        {edge.label}
+                                    </text>
+                                </g>
+                            ))}
                         </g>
                     )}
 
@@ -270,6 +316,105 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
                     </text>
                 </svg>
             )}
+
+            {/* What the chart is drawing, in the corner the reference keeps it
+                in: one tick per point, as an area. */}
+            <button
+                type='button'
+                className='mw-dt__chart-kind'
+                aria-label={localize('Chart types')}
+                aria-expanded={is_types_open}
+                onClick={() => setIsTypesOpen(true)}
+            >
+                <i>{localize('1 T')}</i>
+                <svg viewBox='0 0 24 24' aria-hidden='true'>
+                    <path d='M3 17l5-6 4 3 5-7 4 4v6z' fill='none' stroke='currentColor' strokeWidth='1.6' />
+                </svg>
+            </button>
+
+            {is_types_open &&
+                createPortal(
+                    <div className='mw-dt__sheet'>
+                        <button
+                            type='button'
+                            className='mw-dt__sheet-scrim'
+                            aria-label={localize('Close')}
+                            tabIndex={-1}
+                            onClick={() => setIsTypesOpen(false)}
+                        />
+                        <div
+                            className='mw-dt__kinds'
+                            role='dialog'
+                            aria-modal='true'
+                            aria-label={localize('Chart types')}
+                        >
+                            <header className='mw-dt__kinds-head'>
+                                <h2>{localize('Chart types')}</h2>
+                                <button
+                                    type='button'
+                                    aria-label={localize('Close')}
+                                    onClick={() => setIsTypesOpen(false)}
+                                >
+                                    &times;
+                                </button>
+                            </header>
+
+                            {/* This chart draws the tick stream as an area, and
+                                that is the whole of what it draws - candles
+                                would need a different feed than the one this
+                                page reads. The rest are shown as the reference
+                                shows them for this trade type: present, and not
+                                available. */}
+                            <div className='mw-dt__kinds-row'>
+                                {[
+                                    { available: true, label: localize('Area') },
+                                    { available: false, label: localize('Hollow') },
+                                    { available: false, label: localize('OHLC') },
+                                ].map(kind => (
+                                    <span
+                                        key={kind.label}
+                                        className={`mw-dt__kind${kind.available ? ' mw-dt__kind--on' : ''}`}
+                                        aria-disabled={!kind.available}
+                                    >
+                                        {kind.label}
+                                    </span>
+                                ))}
+                            </div>
+
+                            <h3 className='mw-dt__kinds-title'>{localize('Time interval')}</h3>
+                            <p className='mw-dt__kinds-note'>
+                                {localize('Tick interval only available for "Area" chart type.')}
+                            </p>
+
+                            <div className='mw-dt__kinds-grid'>
+                                {[
+                                    { available: true, label: localize('1 tick') },
+                                    { available: false, label: localize('1 minute') },
+                                    { available: false, label: localize('2 minutes') },
+                                    { available: false, label: localize('3 minutes') },
+                                    { available: false, label: localize('5 minutes') },
+                                    { available: false, label: localize('10 minutes') },
+                                    { available: false, label: localize('15 minutes') },
+                                    { available: false, label: localize('30 minutes') },
+                                    { available: false, label: localize('1 hour') },
+                                ].map(interval => (
+                                    <span
+                                        key={interval.label}
+                                        className={`mw-dt__kind${interval.available ? ' mw-dt__kind--on' : ''}`}
+                                        aria-disabled={!interval.available}
+                                    >
+                                        {interval.label}
+                                    </span>
+                                ))}
+                            </div>
+
+                            <p className='mw-dt__kinds-foot'>
+                                {localize('Only selected charts and time intervals are available for this trade type.')}
+                            </p>
+                        </div>
+                    </div>,
+                    document.body
+                )}
         </div>
     );
 };
