@@ -51,6 +51,21 @@ type TPriceChartProps = {
      * the vertical range so they are on screen rather than off the top of it.
      */
     barriers?: { high: number; low: number } | null;
+    /**
+     * The contract this page has open, when it has one. Everything in it is
+     * Deriv's own figure for that contract, restated on every tick: where it
+     * was entered, the band it is inside now, and what it is making. Given it,
+     * the chart draws the reference's running state - the entry marked on the
+     * line it was taken at, the band in the colour a live contract wears, and
+     * the profit beside the spot - in place of the quote's flat band.
+     */
+    contract?: {
+        barriers: { high: number; low: number } | null;
+        /** The contract's own currency, which is what its profit is in. */
+        currency: string;
+        entry: { epoch: number; price: number } | null;
+        profit: number | null;
+    } | null;
     decimals: number;
     /** Epoch seconds for the ticks, when the feed gave them. */
     epochs?: number[];
@@ -63,7 +78,14 @@ const timeLabel = (epoch: number) => {
     return `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`;
 };
 
-const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = [], prices }: TPriceChartProps) => {
+const PriceChart = ({
+    band_distance = null,
+    barriers = null,
+    contract = null,
+    decimals,
+    epochs = [],
+    prices,
+}: TPriceChartProps) => {
     const { localize } = useTranslations();
     const box = useRef<HTMLDivElement>(null);
     const [size, setSize] = useState({ height: 0, width: 0 });
@@ -92,8 +114,11 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
         const spot = shown[shown.length - 1];
         // A band measured against each tick is hung on this chart's own last
         // one, which is what keeps it centred on the market as it moves. Fixed
-        // levels are drawn where they were set.
-        const band_levels = band_distance ? { high: spot + band_distance, low: spot - band_distance } : barriers;
+        // levels are drawn where they were set. An open contract's own band
+        // outranks both: it is the one the money is actually inside.
+        const band_levels =
+            contract?.barriers ??
+            (band_distance ? { high: spot + band_distance, low: spot - band_distance } : barriers);
 
         const plot_width = Math.max(10, width - RIGHT_GUTTER);
         const plot_height = Math.max(10, height - BOTTOM_GUTTER);
@@ -143,9 +168,20 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
               }
             : null;
 
+        // Where the contract was entered, on this chart's own ticks: the first
+        // one at or after the entry time. An entry older than the window shows
+        // at the left edge, which is where it is - off the left of what is
+        // drawn - rather than not at all.
+        let entry = null;
+        if (contract?.entry && times) {
+            const index = shown_epochs.findIndex(epoch => epoch >= contract.entry!.epoch);
+            entry = { x: x(index === -1 ? shown.length - 1 : Math.max(0, index)), y: y(contract.entry.price) };
+        }
+
         return {
             area,
             band,
+            entry,
             grid,
             last: { price: spot, x: x(shown.length - 1), y: y(spot) },
             // The tick the band is measured from, which the reference marks
@@ -157,7 +193,7 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
             rising: spot >= shown[0],
             ticks,
         };
-    }, [band_distance, barriers, decimals, shown, shown_epochs, size]);
+    }, [band_distance, barriers, contract, decimals, shown, shown_epochs, size]);
 
     return (
         <div className='mw-dt__chart' ref={box}>
@@ -235,7 +271,7 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
                         its distance above each line - the contract's room to
                         move, as the reference draws it. */}
                     {drawing.band && (
-                        <g className='mw-dt__chart-band'>
+                        <g className={`mw-dt__chart-band${contract ? ' mw-dt__chart-band--live' : ''}`}>
                             {/* The room between the two lines, tinted, and the
                                 tick they are measured from - the reference's
                                 dotted line just off the current price. */}
@@ -288,6 +324,41 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
                         </g>
                     )}
 
+                    {/* Where the contract was taken: the reference's dashed
+                        line standing on that tick, the pin hanging over it and
+                        the ring around the tick itself. */}
+                    {drawing.entry && (
+                        <g className='mw-dt__chart-entry'>
+                            <line
+                                className='mw-dt__chart-entry-line'
+                                x1={drawing.entry.x}
+                                x2={drawing.entry.x}
+                                y1='0'
+                                y2={drawing.plot_height}
+                            />
+                            {/* The pin, drawn where it is rather than at the
+                                origin: a teardrop with a hole in it, sitting on
+                                the tick with its point on the price. */}
+                            <path
+                                className='mw-dt__chart-entry-pin'
+                                transform={`translate(${drawing.entry.x - 7}, ${drawing.entry.y - 22})`}
+                                d='M7 22C7 22 14 13.2 14 7.6A7 7 0 0 0 0 7.6C0 13.2 7 22 7 22Z'
+                            />
+                            <circle
+                                className='mw-dt__chart-entry-eye'
+                                cx={drawing.entry.x}
+                                cy={drawing.entry.y - 14.5}
+                                r='2.6'
+                            />
+                            <circle
+                                className='mw-dt__chart-entry-spot'
+                                cx={drawing.entry.x}
+                                cy={drawing.entry.y}
+                                r='4'
+                            />
+                        </g>
+                    )}
+
                     {/* Where the market is now: the dot on the last tick, the
                         dashed line across to it, and Deriv's price beside it. */}
                     <line
@@ -302,6 +373,20 @@ const PriceChart = ({ band_distance = null, barriers = null, decimals, epochs = 
                         than a blob drawn over it. */}
                     <circle className='mw-dt__chart-dot-ring' cx={drawing.last.x} cy={drawing.last.y} r='5.5' />
                     <circle className='mw-dt__chart-dot' cx={drawing.last.x} cy={drawing.last.y} r='3.5' />
+
+                    {/* What the contract is making, beside the tick it is
+                        making it on - Deriv's own running figure, in the colour
+                        of the side it has gone. */}
+                    {contract && contract.profit !== null && (
+                        <text
+                            className={`mw-dt__chart-profit${contract.profit < 0 ? ' mw-dt__chart-profit--down' : ''}`}
+                            x={drawing.last.x + 11}
+                            y={drawing.last.y + 5}
+                        >
+                            {`${contract.profit >= 0 ? '+' : '-'}${Math.abs(contract.profit).toFixed(2)}`}
+                            <tspan className='mw-dt__chart-profit-unit'>{` ${contract.currency}`}</tspan>
+                        </text>
+                    )}
                     <rect
                         className={`mw-dt__chart-badge${drawing.rising ? '' : ' mw-dt__chart-badge--down'}`}
                         x={drawing.plot_width + 2}

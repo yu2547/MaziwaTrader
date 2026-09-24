@@ -65,6 +65,13 @@ const DTrader = observer(() => {
     const [positions, setPositions] = useState<TPosition[]>([]);
     const [is_positions_collapsed, setIsPositionsCollapsed] = useState(false);
     const [bought, setBought] = useState<string | null>(null);
+    /**
+     * The contract this page has open, as Deriv last reported it. Null whenever
+     * there is not one - which is what decides between the ticket and the
+     * reference's running state, so the page is never showing a Sell for a
+     * contract that has already closed.
+     */
+    const [open_contract, setOpenContract] = useState<Record<string, unknown> | null>(null);
     const [is_types_open, setIsTypesOpen] = useState(false);
     const [is_learn_open, setIsLearnOpen] = useState(false);
     /** Which of the ticket's marks is open, when one is. */
@@ -183,6 +190,16 @@ const DTrader = observer(() => {
         const onContract = (contract: Record<string, unknown>) => {
             const contract_id = Number(contract.contract_id);
             if (!own_contracts.current.has(contract_id)) return;
+
+            // The contract as it stands, kept whole rather than reduced to the
+            // positions row: the chart draws its entry, its band and what it is
+            // making from these fields, and the button sells at the price in
+            // them. A sold one is dropped, which is what puts the ticket back.
+            setOpenContract(current => {
+                if (contract.is_sold) return current?.contract_id === contract_id ? null : current;
+                return { ...contract, contract_id };
+            });
+
             setPositions(current =>
                 current.map(position =>
                     position.contract_id === contract_id
@@ -269,6 +286,48 @@ const DTrader = observer(() => {
      * the market rather than on a five-second-old price. It takes precedence
      * over the fixed levels above for the same reason.
      */
+    /**
+     * The contract as the chart and the button need it. Everything here is
+     * Deriv's own figure for the contract that is actually open: the tick it
+     * was entered on, the band it is currently inside - which the open-contract
+     * stream restates on every tick, unlike the quote's, which is priced once -
+     * what it is making, and what it would be sold for now.
+     */
+    const running = useMemo(() => {
+        if (!open_contract) return null;
+        const entry_epoch = Number(open_contract.entry_tick_time ?? open_contract.date_start);
+        const entry_price = Number(open_contract.entry_tick ?? open_contract.entry_spot);
+        const high = Number(open_contract.high_barrier);
+        const low = Number(open_contract.low_barrier);
+        const profit = Number(open_contract.profit);
+        const bid = Number(open_contract.bid_price);
+
+        return {
+            barriers: Number.isFinite(high) && Number.isFinite(low) ? { high, low } : null,
+            bid: Number.isFinite(bid) ? bid : null,
+            contract_id: Number(open_contract.contract_id),
+            currency: (open_contract.currency as string) || currency,
+            entry:
+                Number.isFinite(entry_epoch) && Number.isFinite(entry_price)
+                    ? { epoch: entry_epoch, price: entry_price }
+                    : null,
+            // Deriv says when a contract cannot be closed right now - between
+            // ticks, or on one that has already knocked out - and the button
+            // holds rather than sending a sale that can only be refused.
+            is_sellable: open_contract.is_valid_to_sell !== 0,
+            profit: Number.isFinite(profit) ? profit : null,
+        };
+    }, [currency, open_contract]);
+
+    const is_running = running !== null;
+
+    /** Closes the open contract at the market, through the same socket the buy went out on. */
+    const sell = async () => {
+        if (!running || !Number.isFinite(running.contract_id)) return;
+        setBought(null);
+        await trade.sellContract(running.contract_id);
+    };
+
     const band_distance = useMemo(() => {
         const percent = Number(String(details?.tick_size_barrier_percentage ?? '').replace('%', ''));
         if (!Number.isFinite(percent) || percent <= 0 || price === null) return null;
@@ -418,8 +477,9 @@ const DTrader = observer(() => {
                     <div className={`mw-dt__stage mw-dt__stage--${shown_stage}`}>
                         <div className='mw-dt__stage-chart'>
                             <PriceChart
-                                band_distance={band_distance}
+                                band_distance={is_running ? null : band_distance}
                                 barriers={barriers}
+                                contract={running}
                                 decimals={decimals}
                                 epochs={epochs}
                                 prices={prices}
@@ -526,219 +586,230 @@ const DTrader = observer(() => {
                         </p>
                     )}
 
-                    {/* The trade type, and beside it the rate it grows at -
-                        the pair the reference puts on one line. The rates also
-                        have their own row below for the wide layout; the
-                        stylesheet shows one or the other, never both. */}
-                    <div className='mw-dt__type-row'>
-                        <button type='button' className='mw-dt__type-head' onClick={() => setIsTypesOpen(true)}>
-                            <span className='mw-dt__types-icons'>
-                                {type.sides.map(side => (
-                                    <TradeTypeIcon key={side.contract_type} type={side.contract_type} size='sm' />
-                                ))}
-                            </span>
-                            <b>{localize(type.label)}</b>
-                            <ChevronRightIcon className='mw-dt__type-go' />
-                        </button>
+                    {/* Everything that sets up a trade, inside one disabled
+                        group while a contract is running - which is what the
+                        recording shows: the whole ticket greys out and only the
+                        Sell stays live. A fieldset rather than a class, so the
+                        controls are genuinely out of reach - not reachable by
+                        keyboard, not submittable - rather than dimmed and still
+                        working underneath. */}
+                    <fieldset className='mw-dt__controls' disabled={is_running}>
+                        {/* The trade type, and beside it the rate it grows at -
+                            the pair the reference puts on one line. The rates also
+                            have their own row below for the wide layout; the
+                            stylesheet shows one or the other, never both. */}
+                        <div className='mw-dt__type-row'>
+                            <button type='button' className='mw-dt__type-head' onClick={() => setIsTypesOpen(true)}>
+                                <span className='mw-dt__types-icons'>
+                                    {type.sides.map(side => (
+                                        <TradeTypeIcon key={side.contract_type} type={side.contract_type} size='sm' />
+                                    ))}
+                                </span>
+                                <b>{localize(type.label)}</b>
+                                <ChevronRightIcon className='mw-dt__type-go' />
+                            </button>
 
-                        {type.fields.includes('growth_rate') && (
-                            <div className='mw-dt__growth'>
-                                <label>
-                                    <span>{localize('Growth rate')}</span>
-                                    <select
-                                        value={params.growth_rate}
-                                        onChange={event => update({ growth_rate: Number(event.target.value) })}
+                            {type.fields.includes('growth_rate') && (
+                                <div className='mw-dt__growth'>
+                                    <label>
+                                        <span>{localize('Growth rate')}</span>
+                                        <select
+                                            value={params.growth_rate}
+                                            onChange={event => update({ growth_rate: Number(event.target.value) })}
+                                        >
+                                            {GROWTH_RATES.map(rate => (
+                                                <option key={rate} value={rate}>
+                                                    {`${(rate * 100).toFixed(0)}%`}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <button
+                                        type='button'
+                                        className='mw-dt__mark'
+                                        aria-label={localize('About the growth rate')}
+                                        aria-expanded={info === 'growth'}
+                                        onClick={() => setInfo(current => (current === 'growth' ? null : 'growth'))}
                                     >
-                                        {GROWTH_RATES.map(rate => (
-                                            <option key={rate} value={rate}>
-                                                {`${(rate * 100).toFixed(0)}%`}
-                                            </option>
+                                        <InfoIcon />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {type.fields.includes('duration') && (
+                            <div className='mw-dt__duration'>
+                                {bounds.units.length > 1 && (
+                                    <div className='mw-dt__units'>
+                                        {bounds.units.map(unit => (
+                                            <button
+                                                key={unit}
+                                                type='button'
+                                                className={`mw-dt__unit${
+                                                    unit === params.duration_unit ? ' mw-dt__unit--on' : ''
+                                                }`}
+                                                aria-pressed={unit === params.duration_unit}
+                                                onClick={() => {
+                                                    const limit = unit === 'm' ? bounds.minutes : bounds.ticks;
+                                                    update({ duration: limit?.min ?? 1, duration_unit: unit });
+                                                }}
+                                            >
+                                                {unit === 'm' ? localize('Minutes') : localize('Ticks')}
+                                            </button>
                                         ))}
-                                    </select>
-                                </label>
-                                <button
-                                    type='button'
-                                    className='mw-dt__mark'
-                                    aria-label={localize('About the growth rate')}
-                                    aria-expanded={info === 'growth'}
-                                    onClick={() => setInfo(current => (current === 'growth' ? null : 'growth'))}
-                                >
-                                    <InfoIcon />
-                                </button>
+                                    </div>
+                                )}
+
+                                {params.duration_unit === 't' ? (
+                                    <div className='mw-dt__slider'>
+                                        <span>{localize('Ticks')}</span>
+                                        <input
+                                            type='range'
+                                            min={duration_bounds.min}
+                                            max={duration_bounds.max}
+                                            step={1}
+                                            value={params.duration}
+                                            aria-label={localize('Ticks')}
+                                            onChange={event => update({ duration: Number(event.target.value) })}
+                                        />
+                                        <b>{durationLabel(params.duration, 't')}</b>
+                                    </div>
+                                ) : (
+                                    <ValuePicker
+                                        display={durationLabel(params.duration, params.duration_unit)}
+                                        label={localize('Duration')}
+                                        max={duration_bounds.max}
+                                        min={duration_bounds.min}
+                                        onChange={duration => update({ duration })}
+                                        presetLabel={preset => durationLabel(preset, params.duration_unit)}
+                                        presets={MINUTE_PRESETS}
+                                        value={params.duration}
+                                    />
+                                )}
                             </div>
                         )}
-                    </div>
 
-                    {type.fields.includes('duration') && (
-                        <div className='mw-dt__duration'>
-                            {bounds.units.length > 1 && (
-                                <div className='mw-dt__units'>
-                                    {bounds.units.map(unit => (
+                        {type.fields.includes('digit') && (
+                            <div className='mw-dt__pred'>
+                                <span className='mw-dt__pred-label' aria-hidden='true'>
+                                    {localize('Last Digit Prediction')}
+                                </span>
+                                {/* Named on the group itself, so the grid still says
+                                what it is on a phone, where the visible label
+                                above is dropped to match the reference. */}
+                                <div
+                                    className='mw-dt__pred-grid'
+                                    role='group'
+                                    aria-label={localize('Last Digit Prediction')}
+                                >
+                                    {DIGITS.map(digit => (
                                         <button
-                                            key={unit}
+                                            key={digit}
                                             type='button'
-                                            className={`mw-dt__unit${
-                                                unit === params.duration_unit ? ' mw-dt__unit--on' : ''
+                                            className={`mw-dt__pred-digit${
+                                                digit === params.digit ? ' mw-dt__pred-digit--on' : ''
                                             }`}
-                                            aria-pressed={unit === params.duration_unit}
-                                            onClick={() => {
-                                                const limit = unit === 'm' ? bounds.minutes : bounds.ticks;
-                                                update({ duration: limit?.min ?? 1, duration_unit: unit });
-                                            }}
+                                            aria-pressed={digit === params.digit}
+                                            onClick={() => update({ digit })}
                                         >
-                                            {unit === 'm' ? localize('Minutes') : localize('Ticks')}
+                                            {digit}
                                         </button>
                                     ))}
                                 </div>
-                            )}
+                            </div>
+                        )}
 
-                            {params.duration_unit === 't' ? (
-                                <div className='mw-dt__slider'>
-                                    <span>{localize('Ticks')}</span>
-                                    <input
-                                        type='range'
-                                        min={duration_bounds.min}
-                                        max={duration_bounds.max}
-                                        step={1}
-                                        value={params.duration}
-                                        aria-label={localize('Ticks')}
-                                        onChange={event => update({ duration: Number(event.target.value) })}
-                                    />
-                                    <b>{durationLabel(params.duration, 't')}</b>
+                        {type.fields.includes('growth_rate') && (
+                            <div className='mw-dt__field mw-dt__field--block mw-dt__field--growth'>
+                                <span>{localize('Growth rate')}</span>
+                                <div className='mw-dt__chips'>
+                                    {GROWTH_RATES.map(rate => (
+                                        <button
+                                            key={rate}
+                                            type='button'
+                                            className={`mw-dt__chip${
+                                                rate === params.growth_rate ? ' mw-dt__chip--on' : ''
+                                            }`}
+                                            aria-pressed={rate === params.growth_rate}
+                                            onClick={() => update({ growth_rate: rate })}
+                                        >
+                                            {`${(rate * 100).toFixed(0)}%`}
+                                        </button>
+                                    ))}
                                 </div>
-                            ) : (
-                                <ValuePicker
-                                    display={durationLabel(params.duration, params.duration_unit)}
-                                    label={localize('Duration')}
-                                    max={duration_bounds.max}
-                                    min={duration_bounds.min}
-                                    onChange={duration => update({ duration })}
-                                    presetLabel={preset => durationLabel(preset, params.duration_unit)}
-                                    presets={MINUTE_PRESETS}
-                                    value={params.duration}
+                            </div>
+                        )}
+
+                        {type.fields.includes('multiplier') && (
+                            <div className='mw-dt__field mw-dt__field--block'>
+                                <span>{localize('Multiplier')}</span>
+                                <div className='mw-dt__chips'>
+                                    {MULTIPLIERS.map(value => (
+                                        <button
+                                            key={value}
+                                            type='button'
+                                            className={`mw-dt__chip${value === params.multiplier ? ' mw-dt__chip--on' : ''}`}
+                                            aria-pressed={value === params.multiplier}
+                                            onClick={() => update({ multiplier: value })}
+                                        >
+                                            {`x${value}`}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {type.fields.includes('barrier') && (
+                            <label className='mw-dt__field'>
+                                <span>{localize('Barrier')}</span>
+                                <input
+                                    type='text'
+                                    value={params.barrier_offset}
+                                    onChange={event => update({ barrier_offset: event.target.value })}
                                 />
-                            )}
-                        </div>
-                    )}
+                            </label>
+                        )}
 
-                    {type.fields.includes('digit') && (
-                        <div className='mw-dt__pred'>
-                            <span className='mw-dt__pred-label' aria-hidden='true'>
-                                {localize('Last Digit Prediction')}
-                            </span>
-                            {/* Named on the group itself, so the grid still says
-                                what it is on a phone, where the visible label
-                                above is dropped to match the reference. */}
-                            <div
-                                className='mw-dt__pred-grid'
-                                role='group'
-                                aria-label={localize('Last Digit Prediction')}
-                            >
-                                {DIGITS.map(digit => (
-                                    <button
-                                        key={digit}
-                                        type='button'
-                                        className={`mw-dt__pred-digit${
-                                            digit === params.digit ? ' mw-dt__pred-digit--on' : ''
-                                        }`}
-                                        aria-pressed={digit === params.digit}
-                                        onClick={() => update({ digit })}
-                                    >
-                                        {digit}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {type.fields.includes('growth_rate') && (
-                        <div className='mw-dt__field mw-dt__field--block mw-dt__field--growth'>
-                            <span>{localize('Growth rate')}</span>
-                            <div className='mw-dt__chips'>
-                                {GROWTH_RATES.map(rate => (
-                                    <button
-                                        key={rate}
-                                        type='button'
-                                        className={`mw-dt__chip${
-                                            rate === params.growth_rate ? ' mw-dt__chip--on' : ''
-                                        }`}
-                                        aria-pressed={rate === params.growth_rate}
-                                        onClick={() => update({ growth_rate: rate })}
-                                    >
-                                        {`${(rate * 100).toFixed(0)}%`}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {type.fields.includes('multiplier') && (
-                        <div className='mw-dt__field mw-dt__field--block'>
-                            <span>{localize('Multiplier')}</span>
-                            <div className='mw-dt__chips'>
-                                {MULTIPLIERS.map(value => (
-                                    <button
-                                        key={value}
-                                        type='button'
-                                        className={`mw-dt__chip${value === params.multiplier ? ' mw-dt__chip--on' : ''}`}
-                                        aria-pressed={value === params.multiplier}
-                                        onClick={() => update({ multiplier: value })}
-                                    >
-                                        {`x${value}`}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {type.fields.includes('barrier') && (
-                        <label className='mw-dt__field'>
-                            <span>{localize('Barrier')}</span>
-                            <input
-                                type='text'
-                                value={params.barrier_offset}
-                                onChange={event => update({ barrier_offset: event.target.value })}
-                            />
-                        </label>
-                    )}
-
-                    {/* Vanillas price off Deriv's own strike list, which comes
+                        {/* Vanillas price off Deriv's own strike list, which comes
                         back with the quote - so these are its values, not a
                         range of ours. */}
-                    {type.fields.includes('strike') && (
-                        <label className='mw-dt__field'>
-                            <span>{localize('Strike price')}</span>
-                            <select value={params.strike} onChange={event => update({ strike: event.target.value })}>
-                                {(proposal?.barrier_choices ?? [params.strike]).map(choice => (
-                                    <option key={choice} value={choice}>
-                                        {choice}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                    )}
+                        {type.fields.includes('strike') && (
+                            <label className='mw-dt__field'>
+                                <span>{localize('Strike price')}</span>
+                                <select
+                                    value={params.strike}
+                                    onChange={event => update({ strike: event.target.value })}
+                                >
+                                    {(proposal?.barrier_choices ?? [params.strike]).map(choice => (
+                                        <option key={choice} value={choice}>
+                                            {choice}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        )}
 
-                    {/* Turbos price from a payout per point, and Deriv offers
+                        {/* Turbos price from a payout per point, and Deriv offers
                         only a few - it names them when it refuses one, and
                         those are the options here. */}
-                    {type.fields.includes('payout_per_point') && (
-                        <label className='mw-dt__field'>
-                            <span>{localize('Payout per point')}</span>
-                            <select
-                                value={params.payout_per_point}
-                                onChange={event => update({ payout_per_point: event.target.value })}
-                            >
-                                <option value=''>{localize('Choose')}</option>
-                                {offered_payouts_per_point.map(value => (
-                                    <option key={value} value={value}>
-                                        {value}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                    )}
+                        {type.fields.includes('payout_per_point') && (
+                            <label className='mw-dt__field'>
+                                <span>{localize('Payout per point')}</span>
+                                <select
+                                    value={params.payout_per_point}
+                                    onChange={event => update({ payout_per_point: event.target.value })}
+                                >
+                                    <option value=''>{localize('Choose')}</option>
+                                    {offered_payouts_per_point.map(value => (
+                                        <option key={value} value={value}>
+                                            {value}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        )}
 
-                    {/* The phone's version of duration and stake: the one line
+                        {/* The phone's version of duration and stake: the one line
                         the reference gives them - duration on the left, the
                         stake bold in the middle, its label on the right. The
                         stacked tabs, slider and stepper above and below are the
@@ -746,170 +817,173 @@ const DTrader = observer(() => {
                         never both, so each value has exactly one control on
                         screen. Duration opens the same pad the minutes picker
                         uses, with ticks and minutes on it. */}
-                    <div
-                        className={`mw-dt__compact${
-                            type.fields.includes('duration') ? '' : ' mw-dt__compact--no-duration'
-                        }`}
-                    >
-                        {type.fields.includes('duration') && (
-                            <ValuePicker
-                                display={durationLabel(params.duration, params.duration_unit)}
-                                label={localize('Duration')}
-                                max={duration_bounds.max}
-                                min={duration_bounds.min}
-                                onChange={duration => update({ duration })}
-                                onUnitChange={value => {
-                                    // Taken from the contract's own list rather
-                                    // than cast: a unit it does not offer is
-                                    // ignored, not sent to be refused.
-                                    const unit = bounds.units.find(item => item === value);
-                                    if (!unit) return;
-                                    const limit = unit === 'm' ? bounds.minutes : bounds.ticks;
-                                    update({ duration: limit?.min ?? 1, duration_unit: unit });
-                                }}
-                                presetLabel={preset => durationLabel(preset, params.duration_unit)}
-                                presets={params.duration_unit === 'm' ? MINUTE_PRESETS : TICK_PRESETS}
-                                unit={params.duration_unit}
-                                units={bounds.units.map(unit => ({
-                                    label: unit === 'm' ? localize('Minutes') : localize('Ticks'),
-                                    value: unit,
-                                }))}
-                                value={params.duration}
-                            />
-                        )}
-                        {/* The reference sets the stake between a minus and a
+                        <div
+                            className={`mw-dt__compact${
+                                type.fields.includes('duration') ? '' : ' mw-dt__compact--no-duration'
+                            }`}
+                        >
+                            {type.fields.includes('duration') && (
+                                <ValuePicker
+                                    display={durationLabel(params.duration, params.duration_unit)}
+                                    label={localize('Duration')}
+                                    max={duration_bounds.max}
+                                    min={duration_bounds.min}
+                                    onChange={duration => update({ duration })}
+                                    onUnitChange={value => {
+                                        // Taken from the contract's own list rather
+                                        // than cast: a unit it does not offer is
+                                        // ignored, not sent to be refused.
+                                        const unit = bounds.units.find(item => item === value);
+                                        if (!unit) return;
+                                        const limit = unit === 'm' ? bounds.minutes : bounds.ticks;
+                                        update({ duration: limit?.min ?? 1, duration_unit: unit });
+                                    }}
+                                    presetLabel={preset => durationLabel(preset, params.duration_unit)}
+                                    presets={params.duration_unit === 'm' ? MINUTE_PRESETS : TICK_PRESETS}
+                                    unit={params.duration_unit}
+                                    units={bounds.units.map(unit => ({
+                                        label: unit === 'm' ? localize('Minutes') : localize('Ticks'),
+                                        value: unit,
+                                    }))}
+                                    value={params.duration}
+                                />
+                            )}
+                            {/* The reference sets the stake between a minus and a
                             plus on the contracts that have no duration beside
                             it - an accumulator, a multiplier - and those are
                             the only ones with the room for them. */}
-                        {!type.fields.includes('duration') && (
-                            <button
-                                type='button'
-                                className='mw-dt__compact-step'
-                                aria-label={localize('Less')}
-                                onClick={() => stepStake(-1)}
-                            >
-                                <MinusIcon />
-                            </button>
-                        )}
-                        <label className='mw-dt__compact-stake'>
-                            <input
-                                type='number'
-                                inputMode='decimal'
-                                min={stake_limits.min}
-                                max={stake_limits.max}
-                                step={0.01}
-                                value={params.stake}
-                                aria-label={localize('Stake')}
-                                onChange={event => update({ stake: Number(event.target.value) })}
-                            />
-                            <i>{currency}</i>
-                        </label>
-                        {!type.fields.includes('duration') && (
-                            <button
-                                type='button'
-                                className='mw-dt__compact-step'
-                                aria-label={localize('More')}
-                                onClick={() => stepStake(1)}
-                            >
-                                <PlusIcon />
-                            </button>
-                        )}
-                        <span className='mw-dt__compact-label' aria-hidden='true'>
-                            {localize('Stake')}
-                        </span>
-                    </div>
+                            {!type.fields.includes('duration') && (
+                                <button
+                                    type='button'
+                                    className='mw-dt__compact-step'
+                                    aria-label={localize('Less')}
+                                    onClick={() => stepStake(-1)}
+                                >
+                                    <MinusIcon />
+                                </button>
+                            )}
+                            <label className='mw-dt__compact-stake'>
+                                <input
+                                    type='number'
+                                    inputMode='decimal'
+                                    min={stake_limits.min}
+                                    max={stake_limits.max}
+                                    step={0.01}
+                                    value={params.stake}
+                                    aria-label={localize('Stake')}
+                                    onChange={event => update({ stake: Number(event.target.value) })}
+                                />
+                                <i>{currency}</i>
+                            </label>
+                            {!type.fields.includes('duration') && (
+                                <button
+                                    type='button'
+                                    className='mw-dt__compact-step'
+                                    aria-label={localize('More')}
+                                    onClick={() => stepStake(1)}
+                                >
+                                    <PlusIcon />
+                                </button>
+                            )}
+                            <span className='mw-dt__compact-label' aria-hidden='true'>
+                                {localize('Stake')}
+                            </span>
+                        </div>
 
-                    {/* Deriv states the stake it will accept for this exact
+                        {/* Deriv states the stake it will accept for this exact
                         contract - a minute-long accumulator will not go below
                         1.00 - so the stepper holds to its limits rather than to
                         a rule of our own. */}
-                    <div className='mw-dt__stake'>
-                        <span className='mw-dt__stake-label'>{localize('Stake')}</span>
-                        <div className='mw-dt__stake-row'>
-                            <button
-                                type='button'
-                                className='mw-dt__stake-step'
-                                aria-label={localize('Less')}
-                                onClick={() => stepStake(-1)}
-                            >
-                                <MinusIcon />
-                            </button>
-                            <input
-                                type='number'
-                                inputMode='decimal'
-                                min={stake_limits.min}
-                                max={stake_limits.max}
-                                step={0.01}
-                                value={params.stake}
-                                aria-label={localize('Stake')}
-                                onChange={event => update({ stake: Number(event.target.value) })}
-                            />
-                            <i>{currency}</i>
-                            <button
-                                type='button'
-                                className='mw-dt__stake-step'
-                                aria-label={localize('More')}
-                                onClick={() => stepStake(1)}
-                            >
-                                <PlusIcon />
-                            </button>
+                        <div className='mw-dt__stake'>
+                            <span className='mw-dt__stake-label'>{localize('Stake')}</span>
+                            <div className='mw-dt__stake-row'>
+                                <button
+                                    type='button'
+                                    className='mw-dt__stake-step'
+                                    aria-label={localize('Less')}
+                                    onClick={() => stepStake(-1)}
+                                >
+                                    <MinusIcon />
+                                </button>
+                                <input
+                                    type='number'
+                                    inputMode='decimal'
+                                    min={stake_limits.min}
+                                    max={stake_limits.max}
+                                    step={0.01}
+                                    value={params.stake}
+                                    aria-label={localize('Stake')}
+                                    onChange={event => update({ stake: Number(event.target.value) })}
+                                />
+                                <i>{currency}</i>
+                                <button
+                                    type='button'
+                                    className='mw-dt__stake-step'
+                                    aria-label={localize('More')}
+                                    onClick={() => stepStake(1)}
+                                >
+                                    <PlusIcon />
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Take profit is off until it is ticked, as the reference
+                        {/* Take profit is off until it is ticked, as the reference
                         has it: unticked it is left out of the contract
                         altogether rather than sent as an empty amount, and the
                         amount only appears once there is one to set. */}
-                    {type.fields.includes('take_profit') && (
-                        <div className='mw-dt__tp'>
-                            <div className='mw-dt__tp-head'>
-                                <label>
-                                    <input
-                                        type='checkbox'
-                                        checked={params.take_profit !== ''}
-                                        onChange={event => update({ take_profit: event.target.checked ? '10' : '' })}
-                                    />
-                                    <span>{localize('Take profit')}</span>
-                                </label>
-                                <button
-                                    type='button'
-                                    className='mw-dt__mark'
-                                    aria-label={localize('About take profit')}
-                                    aria-expanded={info === 'take_profit'}
-                                    onClick={() =>
-                                        setInfo(current => (current === 'take_profit' ? null : 'take_profit'))
-                                    }
-                                >
-                                    <InfoIcon />
-                                </button>
+                        {type.fields.includes('take_profit') && (
+                            <div className='mw-dt__tp'>
+                                <div className='mw-dt__tp-head'>
+                                    <label>
+                                        <input
+                                            type='checkbox'
+                                            checked={params.take_profit !== ''}
+                                            onChange={event =>
+                                                update({ take_profit: event.target.checked ? '10' : '' })
+                                            }
+                                        />
+                                        <span>{localize('Take profit')}</span>
+                                    </label>
+                                    <button
+                                        type='button'
+                                        className='mw-dt__mark'
+                                        aria-label={localize('About take profit')}
+                                        aria-expanded={info === 'take_profit'}
+                                        onClick={() =>
+                                            setInfo(current => (current === 'take_profit' ? null : 'take_profit'))
+                                        }
+                                    >
+                                        <InfoIcon />
+                                    </button>
+                                </div>
+
+                                {params.take_profit !== '' && (
+                                    <label className='mw-dt__field mw-dt__tp-amount'>
+                                        <span>{localize('Amount')}</span>
+                                        <input
+                                            type='number'
+                                            min={0}
+                                            step={0.01}
+                                            value={params.take_profit}
+                                            onChange={event => update({ take_profit: event.target.value })}
+                                        />
+                                        <i>{currency}</i>
+                                    </label>
+                                )}
                             </div>
+                        )}
 
-                            {params.take_profit !== '' && (
-                                <label className='mw-dt__field mw-dt__tp-amount'>
-                                    <span>{localize('Amount')}</span>
-                                    <input
-                                        type='number'
-                                        min={0}
-                                        step={0.01}
-                                        value={params.take_profit}
-                                        onChange={event => update({ take_profit: event.target.value })}
-                                    />
-                                    <i>{currency}</i>
-                                </label>
-                            )}
-                        </div>
-                    )}
-
-                    {type.id === 'rise_fall' && (
-                        <label className='mw-dt__toggle'>
-                            <span>{localize('Allow equals')}</span>
-                            <input
-                                type='checkbox'
-                                checked={params.allow_equals}
-                                onChange={event => update({ allow_equals: event.target.checked })}
-                            />
-                        </label>
-                    )}
+                        {type.id === 'rise_fall' && (
+                            <label className='mw-dt__toggle'>
+                                <span>{localize('Allow equals')}</span>
+                                <input
+                                    type='checkbox'
+                                    checked={params.allow_equals}
+                                    onChange={event => update({ allow_equals: event.target.checked })}
+                                />
+                            </label>
+                        )}
+                    </fieldset>
 
                     {/* Everything below is Deriv's own answer for this exact
                         ticket. Nothing is shown that did not come back. */}
@@ -969,59 +1043,85 @@ const DTrader = observer(() => {
                     {trade.error_message && <p className='mw-dt__error'>{trade.error_message}</p>}
                     {bought && !trade.error_message && <p className='mw-dt__ok'>{bought}</p>}
 
-                    {/* One button per side, each carrying Deriv's payout for
-                        that side and what it makes on the stake - and buying
-                        that side, which is the ticket's only action. */}
-                    <div className={`mw-dt__actions${has_two_sides ? '' : ' mw-dt__actions--one'}`}>
-                        {type.sides.map((side, index) => {
-                            const quote = quotes[index];
-                            const payout = quote.proposal?.payout ?? 0;
-                            const percent = profitPercent(payout);
-                            const digit_error = digitError(index);
-                            const message = digit_error ?? quote.error;
+                    {/* With a contract open, the recording's ticket has one
+                        action and it is this: close it, at what Deriv would pay
+                        for it now. The figure is Deriv's own bid, restated on
+                        every tick, and it is what the sale goes out at - the
+                        note under it is the reference's, and it is true: the
+                        bid moves between this button being drawn and the request
+                        landing. */}
+                    {is_running ? (
+                        <div className='mw-dt__running'>
+                            <button
+                                type='button'
+                                className='mw-dt__sell'
+                                disabled={trade.is_selling || !running.is_sellable || running.bid === null}
+                                onClick={sell}
+                            >
+                                {trade.is_selling
+                                    ? localize('Selling...')
+                                    : localize('Sell {{amount}} {{currency}}', {
+                                          amount: running.bid === null ? '-' : running.bid.toFixed(2),
+                                          currency,
+                                      })}
+                            </button>
+                            <p className='mw-dt__sell-note'>
+                                <b>{localize('Note:')}</b>{' '}
+                                {localize('You can close your trade anytime. Be aware of slippage risk.')}
+                            </p>
+                        </div>
+                    ) : (
+                        <div className={`mw-dt__actions${has_two_sides ? '' : ' mw-dt__actions--one'}`}>
+                            {type.sides.map((side, index) => {
+                                const quote = quotes[index];
+                                const payout = quote.proposal?.payout ?? 0;
+                                const percent = profitPercent(payout);
+                                const digit_error = digitError(index);
+                                const message = digit_error ?? quote.error;
 
-                            return (
-                                <div key={side.contract_type} className='mw-dt__action'>
-                                    <p className='mw-dt__action-payout'>
-                                        <span>{localize('Payout')}</span>
-                                        <b>{payout > 0 ? `${payout.toFixed(2)} ${currency}` : '-'}</b>
-                                    </p>
-                                    <button
-                                        type='button'
-                                        className={`mw-dt__action-btn mw-dt__action-btn--${index === 0 ? 'up' : 'down'}`}
-                                        disabled={trade.is_placing || Boolean(digit_error)}
-                                        onClick={() => buy(index)}
-                                    >
-                                        <TradeTypeIcon type={side.contract_type} size='sm' />
-                                        <span>
-                                            {trade.is_placing && !digit_error
-                                                ? localize('Buying...')
-                                                : has_session
-                                                  ? localize(side.label)
-                                                  : localize('Log in')}
-                                        </span>
-                                        {/* A contract that pays as it runs has
+                                return (
+                                    <div key={side.contract_type} className='mw-dt__action'>
+                                        <p className='mw-dt__action-payout'>
+                                            <span>{localize('Payout')}</span>
+                                            <b>{payout > 0 ? `${payout.toFixed(2)} ${currency}` : '-'}</b>
+                                        </p>
+                                        <button
+                                            type='button'
+                                            className={`mw-dt__action-btn mw-dt__action-btn--${index === 0 ? 'up' : 'down'}`}
+                                            disabled={trade.is_placing || Boolean(digit_error)}
+                                            onClick={() => buy(index)}
+                                        >
+                                            <TradeTypeIcon type={side.contract_type} size='sm' />
+                                            <span>
+                                                {trade.is_placing && !digit_error
+                                                    ? localize('Buying...')
+                                                    : has_session
+                                                      ? localize(side.label)
+                                                      : localize('Log in')}
+                                            </span>
+                                            {/* A contract that pays as it runs has
                                             no payout to state up front, so its
                                             button carries the side alone - the
                                             reference's plain "Buy". */}
-                                        {percent && !digit_error && !has_running_payout && <b>{percent}</b>}
-                                        {/* The phone carries the payout inside
+                                            {percent && !digit_error && !has_running_payout && <b>{percent}</b>}
+                                            {/* The phone carries the payout inside
                                             the button, on its own line under the
                                             side, as the reference does; the line
                                             above the button is the wide
                                             layout's. Same figure either way. */}
-                                        {!has_running_payout && (
-                                            <em className='mw-dt__action-in-payout'>
-                                                <span>{localize('Payout')}</span>
-                                                <span>{payout > 0 ? `${payout.toFixed(2)} ${currency}` : '-'}</span>
-                                            </em>
-                                        )}
-                                    </button>
-                                    {message && <p className='mw-dt__action-error'>{message}</p>}
-                                </div>
-                            );
-                        })}
-                    </div>
+                                            {!has_running_payout && (
+                                                <em className='mw-dt__action-in-payout'>
+                                                    <span>{localize('Payout')}</span>
+                                                    <span>{payout > 0 ? `${payout.toFixed(2)} ${currency}` : '-'}</span>
+                                                </em>
+                                            )}
+                                        </button>
+                                        {message && <p className='mw-dt__action-error'>{message}</p>}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
 
                     {/* The execution bar that carries the Risk Disclaimer on
                         other routes is not mounted here, and the footer only

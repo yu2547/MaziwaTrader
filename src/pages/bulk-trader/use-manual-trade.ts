@@ -96,6 +96,13 @@ class TimeoutError extends Error {}
  */
 type TProposalReply = { proposal?: { ask_price?: number; id?: string } };
 type TBuyReply = { buy?: { contract_id?: number | string; longcode?: string; transaction_id?: number | string } };
+type TSellReply = { sell?: { sold_for?: number; transaction_id?: number | string } };
+
+/**
+ * A sell is a closing trade, so it is given the buy's patience rather than the
+ * price request's - and, like the buy, it is never retried on a silence.
+ */
+const SELL_TIMEOUT_MS = 20000;
 
 /**
  * Races an untyped request against the clock. The one cast is here, in one
@@ -125,6 +132,7 @@ const withTimeout = <T>(work: Promise<unknown>, ms: number, message: string): Pr
 const useManualTrade = () => {
     const { run_panel, oauth_session } = useStore() ?? {};
     const [is_placing, setIsPlacing] = useState(false);
+    const [is_selling, setIsSelling] = useState(false);
     const [pending_count, setPendingCount] = useState(0);
     const [error_message, setErrorMessage] = useState<string | null>(null);
 
@@ -453,7 +461,64 @@ const useManualTrade = () => {
         [placeTrade, prepareConnection]
     );
 
-    return { placeTrade, placeTrades, is_placing, pending_count, error_message };
+    /**
+     * Closes an open contract at whatever Deriv will pay for it now - the
+     * other half of a trade, and the action behind DTrader's Sell button.
+     *
+     * `price: 0` is Deriv's own "sell at market": the contract goes at the
+     * current bid rather than being held out for a figure that may never come
+     * back. The bid moves between the button being drawn and the request
+     * landing, which is what the slippage note beside the button is about.
+     *
+     * Nothing here settles the contract in the UI. The sale comes back on the
+     * same proposal_open_contract stream as everything else, carrying is_sold,
+     * and settle() above closes it exactly as it closes a contract that ran to
+     * its end - so a sold contract and an expired one write the same record.
+     *
+     * Like the buy, a silence is never retried: the contract may well be sold.
+     */
+    const sellContract = useCallback(
+        async (contract_id: number) => {
+            const blocked = await prepareConnection();
+            if (blocked) {
+                if (is_mounted.current) setErrorMessage(blocked);
+                globalObserver.emit('ui.log.error', blocked);
+                return false;
+            }
+
+            const api = api_base.api;
+            if (!api) {
+                setErrorMessage('Not connected to Deriv yet.');
+                return false;
+            }
+
+            setIsSelling(true);
+            setErrorMessage(null);
+            try {
+                const response = await withTimeout<TSellReply>(
+                    api.send({ price: 0, sell: contract_id }),
+                    SELL_TIMEOUT_MS,
+                    'The sale was not confirmed in time.'
+                );
+                if (readError(response)) throw response;
+                if (!response.sell) throw new Error('The sale came back without a confirmation.');
+                return true;
+            } catch (thrown) {
+                const message =
+                    thrown instanceof TimeoutError
+                        ? 'Deriv did not confirm the sale in time. It may still have gone through - check your open positions before selling again.'
+                        : (readError(thrown) ?? 'The contract could not be sold.');
+                if (is_mounted.current) setErrorMessage(message);
+                globalObserver.emit('ui.log.error', message);
+                return false;
+            } finally {
+                if (is_mounted.current) setIsSelling(false);
+            }
+        },
+        [prepareConnection]
+    );
+
+    return { error_message, is_placing, is_selling, pending_count, placeTrade, placeTrades, sellContract };
 };
 
 export default useManualTrade;

@@ -9,6 +9,10 @@ $dt-red: #de0040;
 $dt-blue: #2196f3;
 $dt-orange: #ff6337;
 
+// The mark on the tick a contract was entered at, sampled off the recording's
+// own pin and the dashed line under it.
+$dt-entry: #377cd6;
+
 // The ground the reference's chart is drawn on, sampled off its own frames: a
 // blue-black a shade above the page, which is what makes the chart read as a
 // panel of the app rather than a line drawn straight onto it. Phone only - the
@@ -774,6 +778,66 @@ $dt-chart-ground: #181c25;
     fill: $dt-blue;
     font-size: 1.1rem;
     font-weight: 600;
+}
+
+// A contract's own band, which the recording draws in green rather than in the
+// blue the quote's band is drawn in - the difference between the room a trade
+// would have and the room it actually has.
+.mw-dt__chart-band--live {
+    .mw-dt__chart-barrier,
+    .mw-dt__chart-band-spot {
+        stroke: $dt-green;
+    }
+
+    .mw-dt__chart-barrier-head,
+    .mw-dt__chart-band-fill {
+        fill: $dt-green;
+    }
+
+    .mw-dt__chart-barrier-label {
+        fill: $dt-green;
+    }
+}
+
+// Where the contract was taken: a dashed line standing on that tick, a pin
+// hanging over it, and a ring around the tick itself.
+.mw-dt__chart-entry-line {
+    stroke: $dt-entry;
+    stroke-width: 1.4;
+    stroke-dasharray: 5 5;
+}
+
+.mw-dt__chart-entry-pin {
+    fill: $dt-entry;
+}
+
+// The hole in the pin, which is the ground showing through it.
+.mw-dt__chart-entry-eye {
+    fill: var(--general-main-1);
+}
+
+.mw-dt__chart-entry-spot {
+    fill: none;
+    stroke: $dt-entry;
+    stroke-width: 1.6;
+}
+
+// What the contract is making, beside the tick it is making it on.
+.mw-dt__chart-profit {
+    fill: $dt-green;
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+
+    &--down {
+        fill: $dt-red;
+    }
+}
+
+.mw-dt__chart-profit-unit {
+    font-size: 1.15rem;
+    font-weight: 400;
+    opacity: 0.75;
 }
 
 // What the chart is drawing, in its bottom-left corner: the interval over a
@@ -1721,6 +1785,67 @@ $dt-chart-ground: #181c25;
     font-size: 1.1rem;
     line-height: 1.4;
     color: $dt-red;
+}
+
+// Everything that sets a trade up, in one group that goes out of reach while a
+// contract is running. A fieldset carries its own box in every browser, so it
+// is reset to the plain column the ticket's rows were in before.
+.mw-dt__controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+
+    &:disabled {
+        opacity: 0.45;
+    }
+}
+
+// The ticket's one action while a contract is open. An outline rather than a
+// filled button, as the recording has it: closing a trade is not the same kind
+// of act as opening one, and it does not wear the same colour.
+.mw-dt__running {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: auto;
+    padding-top: 0.4rem;
+}
+
+.mw-dt__sell {
+    min-height: 4.4rem;
+    padding: 0.6rem 1.2rem;
+    border: 1px solid #6d6b6c;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-prominent);
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        border-color: var(--text-prominent);
+    }
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+}
+
+.mw-dt__sell-note {
+    margin: 0;
+    font-size: 1.1rem;
+    line-height: 1.4;
+    color: var(--text-less-prominent);
+
+    b {
+        font-weight: 700;
+    }
 }
 
 .mw-dt__stats {
@@ -2807,6 +2932,23 @@ $dt-chart-ground: #181c25;
             font-variant-numeric: tabular-nums;
             color: #fff;
         }
+    }
+
+    // The phone's ticket rows sit a little closer than the wide layout's, and
+    // this group holds them.
+    .mw-dt__controls {
+        gap: 0.8rem;
+    }
+
+    // Measured off the recording: a 32px outline across the sheet, its figure
+    // beside the word rather than under it.
+    .mw-dt__sell {
+        min-height: 3.8rem;
+        font-size: 1.35rem;
+    }
+
+    .mw-dt__sell-note {
+        font-size: 1rem;
     }
 
     .mw-dt__action-error,
