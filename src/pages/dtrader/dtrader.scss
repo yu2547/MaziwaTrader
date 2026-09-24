@@ -2338,11 +2338,50 @@ $dt-chart-ground: #181c25;
     }
 
     // The digit rings: a column, so the banner sits above them rather than
-    // beside them, and smaller rings with the figures scaled to match.
+    // beside them, and smaller rings with the figures scaled to match. It
+    // takes the whole slot and centres them in it - held to their own height
+    // they sat at the top of a slot the chart's height, with the rest of it
+    // empty, which the recording has nothing like.
     .mw-dt__stage-digits {
+        flex: 1;
         flex-direction: column;
+        justify-content: center;
         gap: 1.2rem;
         padding: 0.4rem 3.2rem 1.2rem;
+    }
+
+    // The ring each digit sits in. Sampled off the recording: #1f1e21 against a
+    // #0c0a08 ground, about four pixels through - a ring you can see, where
+    // this page was drawing it in a panel colour that vanished on black.
+    .mw-dt__digit-track {
+        stroke: #1f1e21;
+        stroke-width: 4;
+    }
+
+    // The digit the latest tick ended on, which the recording fills in its own
+    // blue with a red point under it - #28a8ea, measured on the frame.
+    .mw-dt__digit--now {
+        color: #fff;
+
+        i {
+            color: rgb(255 255 255 / 85%);
+        }
+
+        .mw-dt__digit-track {
+            fill: #28a8ea;
+            stroke: #28a8ea;
+        }
+    }
+
+    .mw-dt__digit-mark {
+        border-block-end-color: $dt-red;
+    }
+
+    // The prediction keeps its mark, as an outline rather than a second fill -
+    // there is only one filled ring on screen in the recording.
+    .mw-dt__digit--on .mw-dt__digit-track {
+        fill: none;
+        stroke: #fff;
     }
 
     .mw-dt__digit-banner {
@@ -2717,8 +2756,11 @@ $dt-chart-ground: #181c25;
             font-size: 1.35rem;
         }
 
+        // The profit on the stake. The recording's buttons carry the side and
+        // the payout and nothing else, so it goes - the payout underneath is
+        // the figure it was stating twice.
         b {
-            font-size: 1.05rem;
+            display: none;
         }
 
         // Deriv's type artwork is drawn in its own colours, and the reference
@@ -2740,11 +2782,17 @@ $dt-chart-ground: #181c25;
         }
     }
 
+    // The payout sits in a band of its own across the foot of the button in
+    // the recording, a shade darker than the button itself, rather than on a
+    // line of plain text inside it.
     .mw-dt__action-in-payout {
         display: flex;
         justify-content: space-between;
         gap: 0.6rem;
         flex-basis: 100%;
+        margin: 0.4rem -1rem -0.7rem;
+        padding: 0.5rem 1rem;
+        background: rgb(0 0 0 / 22%);
         font-style: normal;
 
         span {
