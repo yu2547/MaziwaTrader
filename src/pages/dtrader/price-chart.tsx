@@ -66,6 +66,17 @@ type TPriceChartProps = {
         entry: { epoch: number; price: number } | null;
         profit: number | null;
     } | null;
+    /**
+     * The trade before this one. The recording keeps a contract that has ended
+     * on the market it ended on, drawn in red - its band, a line standing on
+     * the tick it ended at with a flag over it, and the tick itself squared -
+     * until the ticks carry it off the left edge.
+     */
+    closed?: {
+        barriers: { high: number; low: number } | null;
+        entry: { epoch: number; price: number } | null;
+        exit: { epoch: number; price: number };
+    } | null;
     decimals: number;
     /** Epoch seconds for the ticks, when the feed gave them. */
     epochs?: number[];
@@ -81,6 +92,7 @@ const timeLabel = (epoch: number) => {
 const PriceChart = ({
     band_distance = null,
     barriers = null,
+    closed = null,
     contract = null,
     decimals,
     epochs = [],
@@ -172,10 +184,26 @@ const PriceChart = ({
         // one at or after the entry time. An entry older than the window shows
         // at the left edge, which is where it is - off the left of what is
         // drawn - rather than not at all.
+        const atEpoch = (epoch: number) => {
+            const index = shown_epochs.findIndex(stamp => stamp >= epoch);
+            return x(index === -1 ? shown.length - 1 : Math.max(0, index));
+        };
+
         let entry = null;
         if (contract?.entry && times) {
-            const index = shown_epochs.findIndex(epoch => epoch >= contract.entry!.epoch);
-            entry = { x: x(index === -1 ? shown.length - 1 : Math.max(0, index)), y: y(contract.entry.price) };
+            entry = { x: atEpoch(contract.entry.epoch), y: y(contract.entry.price) };
+        }
+
+        // The trade before this one, drawn only while the tick it ended on is
+        // still one of the ticks on screen: once it has scrolled off, so has
+        // the contract, which is what the recording does with it.
+        let past = null;
+        if (closed && times && shown_epochs.length > 0 && closed.exit.epoch >= shown_epochs[0]) {
+            past = {
+                band: closed.barriers ? { high: y(closed.barriers.high), low: y(closed.barriers.low) } : null,
+                entry_x: closed.entry ? atEpoch(closed.entry.epoch) : null,
+                exit: { x: atEpoch(closed.exit.epoch), y: y(closed.exit.price) },
+            };
         }
 
         return {
@@ -183,6 +211,7 @@ const PriceChart = ({
             band,
             entry,
             grid,
+            past,
             last: { price: spot, x: x(shown.length - 1), y: y(spot) },
             // The tick the band is measured from, which the reference marks
             // with its own dotted line just off the current one.
@@ -193,7 +222,7 @@ const PriceChart = ({
             rising: spot >= shown[0],
             ticks,
         };
-    }, [band_distance, barriers, contract, decimals, shown, shown_epochs, size]);
+    }, [band_distance, barriers, closed, contract, decimals, shown, shown_epochs, size]);
 
     return (
         <div className='mw-dt__chart' ref={box}>
@@ -321,6 +350,77 @@ const PriceChart = ({
                                     </text>
                                 </g>
                             ))}
+                        </g>
+                    )}
+
+                    {/* The trade before this one, in red: the band it was
+                        inside, a line standing on the tick it ended at with a
+                        chequered flag flying from the top of it, and that tick
+                        squared off. */}
+                    {drawing.past && (
+                        <g className='mw-dt__chart-past'>
+                            {drawing.past.band && drawing.past.entry_x !== null && (
+                                <>
+                                    <rect
+                                        className='mw-dt__chart-past-fill'
+                                        x={drawing.past.entry_x}
+                                        y={drawing.past.band.high}
+                                        width={Math.max(0, drawing.past.exit.x - drawing.past.entry_x)}
+                                        height={Math.max(0, drawing.past.band.low - drawing.past.band.high)}
+                                    />
+                                    {[drawing.past.band.high, drawing.past.band.low].map(edge => (
+                                        <line
+                                            key={edge}
+                                            className='mw-dt__chart-past-barrier'
+                                            x1={drawing.past!.entry_x!}
+                                            x2={drawing.past!.exit.x}
+                                            y1={edge}
+                                            y2={edge}
+                                        />
+                                    ))}
+                                </>
+                            )}
+
+                            <line
+                                className='mw-dt__chart-past-line'
+                                x1={drawing.past.exit.x}
+                                x2={drawing.past.exit.x}
+                                y1={drawing.past.band ? drawing.past.band.high : drawing.past.exit.y - 40}
+                                y2={drawing.past.exit.y}
+                            />
+
+                            {/* The flag: a pole with a chequered cloth on it,
+                                which is what the recording flies over the tick
+                                a contract ended on. */}
+                            <g
+                                transform={`translate(${drawing.past.exit.x}, ${
+                                    (drawing.past.band ? drawing.past.band.high : drawing.past.exit.y - 40) - 2
+                                })`}
+                            >
+                                <rect className='mw-dt__chart-past-cloth' x='0' y='0' width='18' height='12' />
+                                {[0, 1, 2].map(column =>
+                                    [0, 1].map(row =>
+                                        (column + row) % 2 === 0 ? (
+                                            <rect
+                                                key={`${column}-${row}`}
+                                                className='mw-dt__chart-past-check'
+                                                x={column * 6}
+                                                y={row * 6}
+                                                width='6'
+                                                height='6'
+                                            />
+                                        ) : null
+                                    )
+                                )}
+                            </g>
+
+                            <rect
+                                className='mw-dt__chart-past-spot'
+                                x={drawing.past.exit.x - 3.5}
+                                y={drawing.past.exit.y - 3.5}
+                                width='7'
+                                height='7'
+                            />
                         </g>
                     )}
 

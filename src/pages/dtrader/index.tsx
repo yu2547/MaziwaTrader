@@ -44,6 +44,13 @@ const TICK_PRESETS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 const DIGITS = Array.from({ length: 10 }, (_, digit) => digit);
 
+/**
+ * How long the line over the chart stands. Counted off the recording a frame a
+ * second: a trade opening shows in one frame, a trade closing in two, so it is
+ * up for a beat rather than for a read.
+ */
+const TOAST_MS = 3000;
+
 const DTrader = observer(() => {
     const { feed, isConnected } = usePublicMarketFeed();
     const { client, oauth_session } = useStore() ?? {};
@@ -72,6 +79,17 @@ const DTrader = observer(() => {
      * contract that has already closed.
      */
     const [open_contract, setOpenContract] = useState<Record<string, unknown> | null>(null);
+    /**
+     * The last contract to close, kept so the chart can go on drawing it in red
+     * the way the recording does - a trade that has ended stays on the market
+     * it ended on until the ticks carry it off the left edge.
+     */
+    const [closed_contract, setClosedContract] = useState<Record<string, unknown> | null>(null);
+    /**
+     * What the recording puts over the chart when a trade opens and when one
+     * closes, and takes away again a couple of seconds later.
+     */
+    const [toast, setToast] = useState<{ amount: string; kind: 'closed' | 'opened'; title: string } | null>(null);
     const [is_types_open, setIsTypesOpen] = useState(false);
     const [is_learn_open, setIsLearnOpen] = useState(false);
     /** Which of the ticket's marks is open, when one is. */
@@ -185,6 +203,46 @@ const DTrader = observer(() => {
      * the app reads. Registered once and reading its own id set from a ref,
      * so a bot running elsewhere cannot end up in this panel.
      */
+    /**
+     * What the trade is called and what it is on, kept current for the line
+     * over the chart. Held in a ref so the contract listener below can read it
+     * without being torn down and re-registered every time the market changes.
+     */
+    const labels = useRef({ market: '', type: '' });
+    useEffect(() => {
+        labels.current = {
+            market: symbols.find(item => item.underlying_symbol === symbol)?.underlying_symbol_name ?? symbol,
+            type: localize(type.label),
+        };
+    }, [localize, symbol, symbols, type.label]);
+
+    const toast_timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(
+        () => () => {
+            if (toast_timer.current) clearTimeout(toast_timer.current);
+        },
+        []
+    );
+
+    /**
+     * The recording's own line over the chart: what opened or closed, on which
+     * market, and the one figure that matters - the stake going in, the profit
+     * or loss coming out. Every word of it is the contract's own.
+     */
+    const announce = useCallback((kind: 'closed' | 'opened', contract: Record<string, unknown>) => {
+        const money = Number(kind === 'opened' ? contract.buy_price : contract.profit);
+        const unit = (contract.currency as string) || 'USD';
+        setToast({
+            amount: Number.isFinite(money)
+                ? `${kind === 'closed' && money >= 0 ? '+' : ''}${money.toFixed(2)} ${unit}`
+                : '-',
+            kind,
+            title: `${labels.current.type} on ${labels.current.market}`,
+        });
+        if (toast_timer.current) clearTimeout(toast_timer.current);
+        toast_timer.current = setTimeout(() => setToast(null), TOAST_MS);
+    }, []);
+
     const own_contracts = useRef(new Set<number>());
     useEffect(() => {
         const onContract = (contract: Record<string, unknown>) => {
@@ -199,6 +257,14 @@ const DTrader = observer(() => {
                 if (contract.is_sold) return current?.contract_id === contract_id ? null : current;
                 return { ...contract, contract_id };
             });
+
+            // A contract that has closed moves to the chart's record of the
+            // last one, and says so over the chart - both of which the
+            // recording does the moment a trade ends.
+            if (contract.is_sold) {
+                setClosedContract({ ...contract, contract_id });
+                announce('closed', contract);
+            }
 
             setPositions(current =>
                 current.map(position =>
@@ -217,7 +283,7 @@ const DTrader = observer(() => {
         };
         globalObserver.register('bot.contract', onContract);
         return () => globalObserver.unregister('bot.contract', onContract);
-    }, []);
+    }, [announce]);
 
     const digits = useMemo(() => prices.map(price => getLastDigit(price, decimals)), [prices, decimals]);
     const distribution = useMemo(() => {
@@ -320,6 +386,31 @@ const DTrader = observer(() => {
     }, [currency, open_contract]);
 
     const is_running = running !== null;
+
+    /**
+     * The trade before this one, in the terms the chart draws it in: where it
+     * started, where it ended, and the band it was inside when it did. The
+     * recording keeps it on the market in red until the ticks carry it off.
+     */
+    const closed = useMemo(() => {
+        if (!closed_contract) return null;
+        const entry_epoch = Number(closed_contract.entry_tick_time);
+        const entry_price = Number(closed_contract.entry_tick);
+        const exit_epoch = Number(closed_contract.exit_tick_time ?? closed_contract.sell_time);
+        const exit_price = Number(closed_contract.exit_tick ?? closed_contract.sell_spot);
+        if (!Number.isFinite(exit_epoch) || !Number.isFinite(exit_price)) return null;
+
+        const high = Number(closed_contract.high_barrier);
+        const low = Number(closed_contract.low_barrier);
+        return {
+            barriers: Number.isFinite(high) && Number.isFinite(low) ? { high, low } : null,
+            entry:
+                Number.isFinite(entry_epoch) && Number.isFinite(entry_price)
+                    ? { epoch: entry_epoch, price: entry_price }
+                    : null,
+            exit: { epoch: exit_epoch, price: exit_price },
+        };
+    }, [closed_contract]);
 
     /** Closes the open contract at the market, through the same socket the buy went out on. */
     const sell = async () => {
@@ -426,7 +517,12 @@ const DTrader = observer(() => {
                 ]);
             }
         );
-        if (opened) setBought(localize('Contract bought.'));
+        if (opened) {
+            setBought(localize('Contract bought.'));
+            // The stake is what went in, which is the figure the recording puts
+            // on this line - the contract's own buy price follows on the stream.
+            announce('opened', { buy_price: params.stake, currency });
+        }
     };
 
     const dismiss = (contract_id: number) => {
@@ -474,11 +570,30 @@ const DTrader = observer(() => {
                         symbols={symbols}
                     />
 
+                    {/* What the recording says over the chart when a trade
+                        opens and when one closes: what it was and what it was
+                        on, then the one figure that matters - the stake going
+                        in, the profit or loss coming out. */}
+                    {toast && (
+                        <div className='mw-dt__toast' role='status'>
+                            <p>
+                                <b>{toast.kind === 'opened' ? localize('Trade opened:') : localize('Trade closed:')}</b>{' '}
+                                {toast.title}
+                            </p>
+                            <p>
+                                {toast.kind === 'opened' ? localize('Stake:') : localize('Total profit/loss:')}{' '}
+                                <b>{toast.amount}</b>
+                                {toast.kind === 'closed' && <i>{localize('now')}</i>}
+                            </p>
+                        </div>
+                    )}
+
                     <div className={`mw-dt__stage mw-dt__stage--${shown_stage}`}>
                         <div className='mw-dt__stage-chart'>
                             <PriceChart
                                 band_distance={is_running ? null : band_distance}
                                 barriers={barriers}
+                                closed={closed}
                                 contract={running}
                                 decimals={decimals}
                                 epochs={epochs}
