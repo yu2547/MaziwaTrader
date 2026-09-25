@@ -285,19 +285,23 @@ $gem-bubble-pace: 0.55;
 // shell navigation under it.
 @media (width <= 1099px) {
     body:has(.mw-dt) {
+        // Down the left of the chart rather than across its top right, which is
+        // where this page now draws the things a trader is actually reading:
+        // the band, its two figures, and the white price tag on the axis. The
+        // recording never has an orb over any of them - its own sits low and
+        // left over ticks that have already happened - and Gemini's halo was
+        // landing squarely on the tag. Below the market card (12.9rem) and
+        // above the chart's interval button, so it covers nothing but line.
         .mw-gem-orb {
-            top: 7.8rem;
+            top: 15.5rem;
             bottom: auto;
+            inset-inline: 6.8rem auto;
         }
 
-        // Low enough to clear the market card's bottom edge (12.9rem) as well as
-        // its side. At 11rem it sat beside the card on a 396px phone but
-        // clipped its right end - the dropdown caret - on a 360px one, where
-        // there is not room for the card and both orbs across.
         .mw-exec-bar__ai {
-            top: 13.4rem;
+            top: 21rem;
             bottom: auto;
-            inset-inline-end: 6.6rem;
+            inset-inline: 1.2rem auto;
         }
     }
 }

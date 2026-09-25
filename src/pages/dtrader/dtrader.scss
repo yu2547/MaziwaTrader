@@ -4,7 +4,9 @@
 // theme, so a ground of its own would fight it. The four literals below are the
 // ones Deriv keeps constant in both themes - the two trade directions, the
 // digit it has landed on, and the digit the ticket is predicting.
-$dt-green: #00a79e;
+// The teal every buy button on the recording is filled with, taken as the
+// commonest colour across the button rather than off one pixel of it.
+$dt-green: #00a59d;
 $dt-red: #de0040;
 $dt-blue: #2196f3;
 $dt-orange: #ff6337;
@@ -17,7 +19,7 @@ $dt-entry: #377cd6;
 // blue-black a shade above the page, which is what makes the chart read as a
 // panel of the app rather than a line drawn straight onto it. Phone only - the
 // wide layout keeps the app's theme, as it always has.
-$dt-chart-ground: #181c25;
+$dt-chart-ground: #171b23;
 
 .mw-dt {
     // The loading cover below is positioned against this.
@@ -2325,13 +2327,13 @@ $dt-chart-ground: #181c25;
     }
 }
 
-// Leaves the space to the right of the market card clear, and tall enough for
-// the AI and Gemini orbs, which park there on the single-column layout
-// (assistant-orbs.scss) as they do in the reference. Their usual corner is the
-// bottom right, and on this page that is the Fall / Put button - measured, the
-// right-hand buy button hit-tested to Gemini's orb. A margin rather than a
-// min-height, so the market list still opens directly under the card: its
-// `top: 100%` is measured from the padding box.
+// Leaves the space under the market card clear and tall enough for the AI and
+// Gemini orbs, which park down the left of the chart on the single-column
+// layout (assistant-orbs.scss). Their usual corner is the bottom right, and on
+// this page that is the Fall / Put button - measured, the right-hand buy button
+// hit-tested to Gemini's orb. A margin rather than a min-height, so the market
+// list still opens directly under the card: its `top: 100%` is measured from
+// the padding box.
 @media (width <= 1099px) {
     .mw-dt__market {
         margin-block-end: 6.9rem;
@@ -2351,11 +2353,20 @@ $dt-chart-ground: #181c25;
 // outside anything the page could set. Nothing beyond DTrader can see these,
 // and from 769px up the page follows the app's theme exactly as before.
 @media (width <= 768px) {
+    // The two darks are the recording's own, taken as the commonest colour
+    // across each surface rather than off single pixels: #0c0a08 for the page
+    // and the rows sunk into the ticket, #141514 for the sheet they are sunk
+    // into and the cards that stand on the page. The app's constants are one
+    // and two units lighter and a shade cooler, which nothing else on this
+    // page has to match - it does not follow the app's theme on a phone at
+    // all. The three text colours are the app's, and they are already what the
+    // recording uses: its stake reads #cbc9c7 against $color-grey's #c2c2c2,
+    // its quiet labels #716f6d against $color-grey-7's #6e6e6e.
     .mw-dt,
     .mw-dt__sheet,
     .mw-dt__pad {
-        --general-main-1: #{constants.$color-black};
-        --general-section-1: #{constants.$color-black-3};
+        --general-main-1: #0c0a08;
+        --general-section-1: #141514;
         --text-prominent: #{constants.$color-white};
         --text-general: #{constants.$color-grey};
         --text-less-prominent: #{constants.$color-grey-7};
@@ -2401,11 +2412,17 @@ $dt-chart-ground: #181c25;
     }
 
     // The market card that sits over the chart. Narrower than on the wide
-    // layout so the orbs beside it do not overlap it.
+    // layout so the orbs beside it do not overlap it - and drawn on the
+    // chart's own ground rather than on the page's. Scanned across the
+    // recording's card, its inside is #171b23 at every point, which is the
+    // chart to either side of it: it reads as a card by its edge and its
+    // shadow, not by being a black box laid on a blue-grey chart.
     .mw-dt__market-chip {
         gap: 0.8rem;
         max-width: 24rem;
         padding: 0.6rem 1rem;
+        background: $dt-chart-ground;
+        box-shadow: 0 0.2rem 0.8rem rgb(0 0 0 / 35%);
     }
 
     .mw-dt__market-badge {
@@ -2483,8 +2500,11 @@ $dt-chart-ground: #181c25;
         stroke: rgb(255 255 255 / 3%);
     }
 
+    // The prices down the right read #c0c4cc on the recording, which is white
+    // at three quarters over that ground - half was a good deal quieter than
+    // the figures it is quoting.
     .mw-dt__chart-axis {
-        fill: rgb(255 255 255 / 50%);
+        fill: rgb(255 255 255 / 75%);
         font-size: 1.1rem;
     }
 
@@ -2797,7 +2817,10 @@ $dt-chart-ground: #181c25;
             padding: 0;
             border: none;
             background: transparent;
-            color: var(--text-prominent);
+
+            // #cbc9c7 on the recording - the stake is the loudest figure on
+            // that row, but it is not white; the trade type above it is.
+            color: var(--text-general);
             font-size: 1.4rem;
             font-weight: 700;
             font-variant-numeric: tabular-nums;
@@ -2816,7 +2839,7 @@ $dt-chart-ground: #181c25;
             font-style: normal;
             font-size: 1.4rem;
             font-weight: 700;
-            color: var(--text-prominent);
+            color: var(--text-general);
         }
     }
 
@@ -2925,9 +2948,10 @@ $dt-chart-ground: #181c25;
         padding-block-start: 0.4rem;
 
         // Both sides of these rows are bold in the reference - the label as
-        // much as the figure, which is what sets them apart from the ticket's
-        // own quiet labels above.
-        dt {
+        // much as the figure - and both are the same light grey, #c8c8c8 and
+        // #c5c5c5 measured, rather than one of them white.
+        dt,
+        dd {
             font-size: 1.15rem;
             font-weight: 700;
             color: var(--text-general);
@@ -2935,8 +2959,6 @@ $dt-chart-ground: #181c25;
 
         dd {
             border-block-end: 1px dotted var(--text-less-prominent);
-            font-size: 1.15rem;
-            font-weight: 700;
         }
     }
 
