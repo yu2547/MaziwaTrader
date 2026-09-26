@@ -166,7 +166,9 @@ export const TRADE_TYPES: TTradeType[] = [
         duration_units: ['m'],
         fields: ['duration', 'strike', 'stake'],
         id: 'vanillas',
-        label: 'Vanillas',
+        // Deriv heads the group "Vanillas" and names the contract under it
+        // "Call/Put", which is what the phone frames show on that row.
+        label: 'Call/Put',
         max_minutes: 1440,
         min_minutes: 1,
         sides: [

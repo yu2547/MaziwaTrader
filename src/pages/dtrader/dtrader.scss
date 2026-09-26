@@ -2691,17 +2691,21 @@ $dt-chart-ground: #171b23;
         }
     }
 
-    // Deriv's artwork for the type, in a tile of its own as the reference sets
-    // it rather than loose on the row.
-    .mw-dt__type-head .mw-dt__types-icons {
-        padding: 0.3rem;
-        border-radius: 4px;
-        background: var(--general-section-1);
-    }
+    // Deriv's artwork for a trade type, each glyph in a tile of its own - one
+    // tile per side, as the reference sets them, rather than loose on the row
+    // or boxed together. The tile is #131716 there, a shade above the ground.
+    .mw-dt__types-icons {
+        gap: 0.6rem;
 
-    .mw-dt__types-icons svg {
-        width: 2rem;
-        height: 2rem;
+        // The tile is the border box, so the glyph inside it is what is left
+        // after the padding - 18px and 12px on the frames.
+        svg {
+            width: 1.8rem;
+            height: 1.8rem;
+            padding: 0.3rem;
+            border-radius: 4px;
+            background: #131716;
+        }
     }
 
     // The reference has no label over the digit grid; the grid carries the
@@ -3046,6 +3050,69 @@ $dt-chart-ground: #171b23;
 
     .mw-dt__sell-note {
         font-size: 1rem;
+    }
+
+    // ---
+    // The trade types screen, measured off the two phone frames of it.
+    // Everything on it is bigger and further apart than this page was drawing
+    // it: the headings 16px against 11, the rows 15 against 11, and 42px of
+    // air between one group and the next where there was none at all, which is
+    // what turned a list you read into a list you scan past.
+    // The list runs the width of the screen; the rows and the card above them
+    // set their own insets, as the frames set theirs - the card 7px from each
+    // edge, the rows 14.
+    .mw-dt__types-list {
+        padding-inline: 0;
+    }
+
+    .mw-dt__types-scroll {
+        padding-inline: 1.6rem;
+
+        // On the group rather than on its heading: every heading is the first
+        // child of its own section, so the rule that pulls the first one up to
+        // the top of the list was taking the air out from between all of them.
+        section + section {
+            margin-block-start: 4.2rem;
+        }
+
+        h3 {
+            margin: 0 0 1rem;
+            padding-inline: 1.6rem;
+            font-size: 1.6rem;
+        }
+    }
+
+    // A row is the artwork and its name on the panel's own ground. Only the one
+    // the ticket is on carries a box, and there it is #323838 - the single
+    // lightest surface on the screen, which is how it is found at a glance.
+    .mw-dt__types-item {
+        gap: 1.2rem;
+        min-height: 3.4rem;
+        padding: 0.5rem 1.6rem;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--text-general);
+        font-size: 1.5rem;
+
+        &--on {
+            background: #323838;
+            color: var(--text-prominent);
+        }
+    }
+
+    .mw-dt__types-new {
+        padding: 0.2rem 0.7rem;
+        border-radius: 10px;
+        background: #f70000;
+        font-size: 1.05rem;
+    }
+
+    // The way into the descriptions, on its own card above the list.
+    .mw-dt__types-learn {
+        min-height: 5.3rem;
+        margin-inline: 0.8rem;
+        color: var(--text-general);
+        font-size: 1.4rem;
     }
 
     .mw-dt__action-error,
