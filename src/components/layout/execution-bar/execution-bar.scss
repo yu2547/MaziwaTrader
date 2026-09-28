@@ -571,16 +571,22 @@ $mw-ai-white: #faf2fb; // lettering
     }
 
     // The reticle around the lettering: four corner brackets, and nothing else.
-    // Measured off the reference, where it is 52 by 42 on a 119px sphere - 44%
-    // of the sphere across and 35% down - sitting a touch right of centre and a
-    // touch below it. It slides across the letters and back, its travel centred
-    // on that offset; the stills only ever catch it at one point of that.
+    // Measured corner to corner on the still - 53 by 43 on a 116px sphere, so
+    // 45.7% of it across and 37.1% down, sitting 3% right of centre - against
+    // the lettering's own 41% by 29%. The square goes outside the letters and
+    // stays there.
+    // Which is what fixes the travel as well. The clearance between the two is
+    // about a pixel at this size, so the ±20% slide this used to run put the
+    // brackets straight over the glyphs at each end - the square reading as
+    // something crossing the "AI" rather than something framing it. It moves a
+    // twentieth of its own width each way now: enough to be alive, never enough
+    // to touch what it is framing.
     &__ai-frame {
         position: absolute;
         inset: 0;
         z-index: 2;
-        width: 2.02rem;
-        height: 1.62rem;
+        width: 2.1rem;
+        height: 1.71rem;
         margin: auto;
         animation: mw-ai-square 4.4s ease-in-out infinite;
         will-change: transform, opacity;
@@ -743,17 +749,18 @@ $mw-ai-white: #faf2fb; // lettering
     }
 }
 
-// The reticle's slide: left to right and back across the lettering. Position is
-// keyed only at the two ends, so with ease-in-out it slows into each and
-// crosses the middle at speed, like a pendulum, rather than pausing there.
-// Opacity is keyed separately, fullest as it crosses the centre.
-// The travel is centred on the 5% right-of-centre the still puts it at, and is
-// a fifth of the reticle's own width each way.
+// The reticle's slide: left to right and back. Position is keyed only at the
+// two ends, so with ease-in-out it slows into each and crosses the middle at
+// speed, like a pendulum, rather than pausing there. Opacity is keyed
+// separately, fullest as it crosses the centre.
+// The travel is centred on the 3% right-of-centre the still puts it at and is
+// a twentieth of the reticle's own width each way - which is the whole of the
+// clearance it has over the lettering inside it.
 @keyframes mw-ai-square {
     0%,
     100% {
-        transform: translate(-13%, 3%);
-        opacity: 0.6;
+        transform: translate(-2%, 2%);
+        opacity: 0.62;
     }
 
     25%,
@@ -762,8 +769,8 @@ $mw-ai-white: #faf2fb; // lettering
     }
 
     50% {
-        transform: translate(23%, 3%);
-        opacity: 0.6;
+        transform: translate(8%, 2%);
+        opacity: 0.62;
     }
 }
 
