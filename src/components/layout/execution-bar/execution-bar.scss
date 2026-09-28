@@ -547,33 +547,34 @@ $mw-ai-white: #faf2fb; // lettering
     // below the lettering and once above it - and it replaces the hand that
     // used to turn round the centre like a clock, which nothing in the
     // reference does.
-    // Short and quiet: below the letters on the reference it reads #bda1d1
-    // against a #8f5fb5 body - a line you notice moving, not a bright stroke.
-    // It runs 28% of the sphere's height there.
+    // The hand: one thin line standing on the sphere's centre and turning
+    // clockwise, like the hand of a clock. Linear, because a hand that eases is
+    // a hand that hesitates.
+    // Measured on the still: it reaches from the centre to 78% of the radius,
+    // and it is quiet - #bda1d1 against a #8f5fb5 body - brightest at the tip
+    // and fading to nothing at its foot, so where it passes under the lettering
+    // there is barely anything of it to see.
     &__ai-beam {
         position: absolute;
-        inset-block: 30%;
+        bottom: 50%;
         inset-inline-start: 50%;
         z-index: 1;
         width: 1.5px;
+        height: 39%; // 78% of the radius, which is half the core
         margin-inline-start: -0.75px;
         border-radius: 1px;
-        background: linear-gradient(
-            180deg,
-            rgb(250 242 251 / 0%) 0%,
-            rgb(250 242 251 / 52%) 26%,
-            rgb(250 242 251 / 52%) 74%,
-            rgb(250 242 251 / 0%) 100%
-        );
-        animation: mw-ai-beam 3.4s ease-in-out infinite;
+        background: linear-gradient(0deg, rgb(250 242 251 / 6%) 0%, rgb(250 242 251 / 72%) 100%);
+
+        // About its own foot, which is the centre of the sphere.
+        transform-origin: 50% 100%;
+        animation: mw-ai-beam 3.6s linear infinite;
     }
 
     // The reticle around the lettering: four corner brackets, and nothing else.
     // Measured off the reference, where it is 52 by 42 on a 119px sphere - 44%
     // of the sphere across and 35% down - sitting a touch right of centre and a
-    // touch below it. It stood still there in both frames, so it stands still
-    // here: it was sliding left and right across the letters, which is what
-    // made the middle of the sphere restless.
+    // touch below it. It slides across the letters and back, its travel centred
+    // on that offset; the stills only ever catch it at one point of that.
     &__ai-frame {
         position: absolute;
         inset: 0;
@@ -581,7 +582,8 @@ $mw-ai-white: #faf2fb; // lettering
         width: 2.02rem;
         height: 1.62rem;
         margin: auto;
-        transform: translate(5%, 3%);
+        animation: mw-ai-square 4.4s ease-in-out infinite;
+        will-change: transform, opacity;
 
         // The corner brackets, drawn as eight background layers. The reference
         // draws them at #eeddff against a #7355ad body - a clear mark, not the
@@ -730,21 +732,38 @@ $mw-ai-white: #faf2fb; // lettering
 // so it eases into each and crosses the lettering at speed. It goes just past
 // the reticle at either end, which is where the reference's two frames catch
 // it - once below the letters and once above them.
+// The hand's turn: twelve, round through three, six and nine, back to twelve.
 @keyframes mw-ai-beam {
-    0%,
-    100% {
-        transform: translateY(-62%);
-        opacity: 0.35;
+    from {
+        transform: rotate(0deg);
     }
 
-    20%,
-    80% {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+// The reticle's slide: left to right and back across the lettering. Position is
+// keyed only at the two ends, so with ease-in-out it slows into each and
+// crosses the middle at speed, like a pendulum, rather than pausing there.
+// Opacity is keyed separately, fullest as it crosses the centre.
+// The travel is centred on the 5% right-of-centre the still puts it at, and is
+// a fifth of the reticle's own width each way.
+@keyframes mw-ai-square {
+    0%,
+    100% {
+        transform: translate(-13%, 3%);
+        opacity: 0.6;
+    }
+
+    25%,
+    75% {
         opacity: 1;
     }
 
     50% {
-        transform: translateY(62%);
-        opacity: 0.35;
+        transform: translate(23%, 3%);
+        opacity: 0.6;
     }
 }
 
@@ -789,11 +808,12 @@ $mw-ai-white: #faf2fb; // lettering
 }
 
 @media (prefers-reduced-motion: reduce) {
-    // Everything travelling across or inside the sphere stops - the line rests
-    // in the middle of the reticle. The rings and the sphere never moved in the
-    // first place, so there is nothing there to still. The selector carries the
+    // Everything travelling inside the sphere stops - the hand rests at twelve,
+    // the reticle centred. The rings and the sphere never moved in the first
+    // place, so there is nothing there to still. The first selector carries the
     // orb's class so it also outranks the quicker scanning speed.
     .mw-exec-bar__ai .mw-exec-bar__ai-beam,
+    .mw-exec-bar__ai-frame,
     .mw-exec-bar__ai-dot,
     .mw-exec-bar__ai-hint,
     .mw-exec-bar__ai-hint--leaving {
