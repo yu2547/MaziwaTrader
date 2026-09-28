@@ -174,28 +174,25 @@ const AssistantOrbs = () => {
                 aria-label={localize('Entry Scanner')}
                 {...ai_orb.handlers}
             >
+                {/* Three closed circles held at fixed radii. Nothing rides
+                    them and nothing turns: on the reference they are three
+                    clean rings around a still sphere, and a ring with a gap in
+                    it - or a point running along it - is what made this read as
+                    a drawing of an instrument rather than an instrument. */}
                 <span className='mw-exec-bar__ai-ring' aria-hidden='true' />
                 <span className='mw-exec-bar__ai-ring mw-exec-bar__ai-ring--mid' aria-hidden='true' />
                 <span className='mw-exec-bar__ai-ring mw-exec-bar__ai-ring--wide' aria-hidden='true' />
-                {/* Signal points travelling the rings. Each is a carrier the
-                    size of its ring, turning at its own speed, with the point
-                    drawn at its top - so it rides the ring's line exactly. */}
-                <span className='mw-exec-bar__ai-orbit mw-exec-bar__ai-orbit--1' aria-hidden='true' />
-                <span className='mw-exec-bar__ai-orbit mw-exec-bar__ai-orbit--2' aria-hidden='true' />
-                <span className='mw-exec-bar__ai-orbit mw-exec-bar__ai-orbit--3' aria-hidden='true' />
-                <span className='mw-exec-bar__ai-orbit mw-exec-bar__ai-orbit--4' aria-hidden='true' />
-                <span className='mw-exec-bar__ai-orbit mw-exec-bar__ai-orbit--5' aria-hidden='true' />
                 {/* The lettering is its own layer so it sits above everything
-                    else on the core - glass, light, beam and frame are all
+                    else on the core - the light, the beam and the frame are all
                     absolutely positioned, which paints over a bare text node -
                     and so nothing animating the core can reach the letters. */}
                 <span className='mw-exec-bar__ai-core'>
-                    <span className='mw-exec-bar__ai-sweep' aria-hidden='true' />
-                    {/* The scan field slides across the lettering, so it has a
-                        clipped layer of its own: at each end of its travel it
-                        meets the sphere's edge and is cut by it, rather than
-                        spilling out. */}
+                    {/* The reticle and the line that travels through it, in a
+                        clipped layer of its own: the line runs the height of
+                        the sphere and is cut by its edge rather than spilling
+                        past it. */}
                     <span className='mw-exec-bar__ai-scan' aria-hidden='true'>
+                        <span className='mw-exec-bar__ai-beam' />
                         <span className='mw-exec-bar__ai-frame' />
                     </span>
                     <span className='mw-exec-bar__ai-text'>AI</span>

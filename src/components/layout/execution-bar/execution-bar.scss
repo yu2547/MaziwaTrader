@@ -23,31 +23,10 @@ $exec-bar-gap: 1.2rem;
 
 // The AI launcher's violet family. Literal values rather than theme tokens:
 // the orb is the same instrument in light and dark, and reading --general-*
-// would repaint it white-ish on a light page.
-$mw-ai-deep: #1e1c2e; // near-black violet, the sphere's lower edge
-$mw-ai-dark: #3e385e; // dark violet
-$mw-ai-violet: #7a4da1; // violet body
-$mw-ai-bright: #9c64bc; // brighter purple, toward the lit side
-$mw-ai-highlight: #bb98cf; // specular highlight
+// would repaint it white-ish on a light page. The sphere's own four stops are
+// sampled off the reference and written where the gradient is, so the sampled
+// figures and the comment that explains them cannot drift apart.
 $mw-ai-white: #faf2fb; // lettering
-$mw-ai-online: #31dc81; // status dot
-
-// The ring system: three periods, and the middle ring turning the other way,
-// so the rings slide against one another like independent sensors rather than
-// turning as one rigid piece. Close enough in speed to read as one
-// coordinated instrument, not three unrelated spinners.
-$mw-ai-ring-inner: 3.8s;
-$mw-ai-ring-mid: 5s;
-$mw-ai-ring-wide: 7s;
-
-// The scanning hand's revolution. Unhurried while nothing is happening, and
-// quickened while a scan is actually running.
-$mw-ai-hand-idle: 3.5s;
-$mw-ai-hand-active: 1.6s;
-
-// The scan field's round trip, left to right and back - slower than the hand,
-// so the two never fall into step.
-$mw-ai-square-period: 4.4s;
 
 // The floating orbs' footing, published once and read by both of them.
 // There are two spheres now - the AI scanner and Gemini, stacked in the same
@@ -526,96 +505,28 @@ $mw-ai-square-period: 4.4s;
         font-weight: 700;
         letter-spacing: 0.02em;
 
-        // Violet glass, not a flat disc: bright at the upper-left where the
-        // light falls, through violet, down to the near-black violet at the
-        // lower edge.
-        background: radial-gradient(
-            circle at 34% 28%,
-            $mw-ai-highlight 0%,
-            $mw-ai-bright 22%,
-            $mw-ai-violet 48%,
-            $mw-ai-dark 78%,
-            $mw-ai-deep 100%
-        );
+        // Violet glass, lit from the lower right. Sampled across the reference
+        // sphere: #a672c5 at the foot and #9560b8 at the right shoulder against
+        // #7051ae at the left and #7355ad at the upper left - the light does
+        // not fall from above on it, which is why a top-left gradient read as a
+        // different object drawn in the same colours.
+        background: radial-gradient(circle at 64% 76%, #b078ce 0%, #9d69c0 24%, #8156ae 58%, #6f4fa6 100%);
 
-        // The first shadow is the halo, blooming out of the sphere itself
-        // rather than out of the button box - that keeps the brightest part of
-        // the glow tight around the core, so the rings still have a dark
-        // enough field to be seen against. The two insets are the glass: a
-        // lit crown and a shadowed floor.
+        // The halo blooms out of the sphere itself rather than out of the
+        // button box, so its brightest part stays tight around the core and the
+        // rings keep a dark enough field to be seen against. The inset is the
+        // rim light along the top edge, which the reference carries at #8e77bb
+        // where the body beside it is #7051ae.
         box-shadow:
-            0 0 2.2rem rgb(154 100 188 / 48%),
-            0 8px 26px rgb(62 56 94 / 55%),
-            inset 0 -0.7rem 1.3rem rgb(30 28 46 / 62%),
-            inset 0 0.6rem 1rem rgb(250 242 251 / 26%);
+            0 0 1.1rem rgb(154 100 188 / 30%),
+            0 6px 18px rgb(62 56 94 / 42%),
+            inset 0 0.5rem 0.9rem rgb(226 216 246 / 20%);
 
-        // Text stays crisp while the glass layer beneath it breathes.
+        // Text stays crisp against the glass.
         text-shadow: 0 0 0.6rem rgb(250 242 251 / 45%);
         transition:
             transform 150ms ease,
             box-shadow 200ms ease;
-
-        // The diagonal glass streak, upper-left to lower-right. A separate
-        // layer so it can catch the light at its own angle instead of being
-        // folded into the radial gradient, which can only be concentric.
-        // Under the hand, the scan field and the lettering. The core is its own
-        // stacking context (z-index above), so these orders hold among its
-        // layers and nothing outside can intrude.
-        &:before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            z-index: 1;
-            border-radius: inherit;
-            background: linear-gradient(
-                138deg,
-                rgb(250 242 251 / 42%) 0%,
-                rgb(187 152 207 / 16%) 26%,
-                rgb(255 255 255 / 0%) 52%,
-                rgb(30 28 46 / 22%) 100%
-            );
-            pointer-events: none;
-
-            // The glass brightens and settles in place. Light only: the core
-            // used to run a 1 -> 1.06 scale, and later this layer a 1.015 one,
-            // and a sphere that is meant to be still should not grow at all.
-            animation: mw-ai-breathe 2.6s ease-in-out infinite;
-        }
-    }
-
-    // The scanning hand: one thin line from the centre to the rim, turning a
-    // full 360 degrees clockwise like the hand of a clock - linear, so it never
-    // hesitates or jumps between angles. Brightest at its tip and fading
-    // toward the centre, so where it crosses under the lettering it is faint.
-    // This box is the clip; the hand is the pseudo-element, which alone turns.
-    &__ai-sweep {
-        position: absolute;
-        inset: 0;
-        z-index: 2;
-        border-radius: 50%;
-        overflow: hidden;
-        clip-path: circle(50%);
-        pointer-events: none;
-
-        // Standing on the centre, pointing to twelve, and turned about its
-        // own foot - the centre of the sphere.
-        &:before {
-            content: '';
-            position: absolute;
-            left: 50%;
-            bottom: 50%;
-            width: 1px;
-            height: 50%;
-            margin-left: -0.5px;
-            transform-origin: 50% 100%;
-
-            // Faded but still there, as in the reference: a quiet line, not a
-            // bright one. It was 85% at the tip with a strong glow.
-            background: linear-gradient(0deg, rgb(250 242 251 / 10%) 0%, rgb(250 242 251 / 55%) 100%);
-            box-shadow: 0 0 0.2rem rgb(214 196 255 / 40%);
-            filter: blur(0.25px);
-            animation: mw-ai-hand $mw-ai-hand-idle linear infinite;
-        }
     }
 
     // The scan field's clip. The field slides until it meets the sphere's edge,
@@ -630,41 +541,55 @@ $mw-ai-square-period: 4.4s;
         pointer-events: none;
     }
 
-    // The scan field: a faded square with four corner brackets, sliding left
-    // and right across the lettering while the hand turns. Just larger than
-    // the lettering, as in the reference, which puts it at about 58% of the
-    // sphere - "AI" is 24px wide and 17px tall in its black weight at 46px, and
-    // the field 27 by 26px. Moved 5.5px each way it lies over the A at the left
-    // end of its travel and over the I at the right, and stays wholly inside
-    // the sphere throughout, its farthest corner 23px from the centre - on the
-    // edge, not past it. The clip above is kept as a guard.
-    // The fill and the brackets are separate layers so the brackets draw over
-    // the fill; both travel with this element.
+    // The line that travels through the reticle: one thin vertical stroke
+    // running the height of the sphere, sweeping down and back up. It is what
+    // the reference's two frames differ by - the same sphere with the line once
+    // below the lettering and once above it - and it replaces the hand that
+    // used to turn round the centre like a clock, which nothing in the
+    // reference does.
+    // Short and quiet: below the letters on the reference it reads #bda1d1
+    // against a #8f5fb5 body - a line you notice moving, not a bright stroke.
+    // It runs 28% of the sphere's height there.
+    &__ai-beam {
+        position: absolute;
+        inset-block: 30%;
+        inset-inline-start: 50%;
+        z-index: 1;
+        width: 1.5px;
+        margin-inline-start: -0.75px;
+        border-radius: 1px;
+        background: linear-gradient(
+            180deg,
+            rgb(250 242 251 / 0%) 0%,
+            rgb(250 242 251 / 52%) 26%,
+            rgb(250 242 251 / 52%) 74%,
+            rgb(250 242 251 / 0%) 100%
+        );
+        animation: mw-ai-beam 3.4s ease-in-out infinite;
+    }
+
+    // The reticle around the lettering: four corner brackets, and nothing else.
+    // Measured off the reference, where it is 52 by 42 on a 119px sphere - 44%
+    // of the sphere across and 35% down - sitting a touch right of centre and a
+    // touch below it. It stood still there in both frames, so it stands still
+    // here: it was sliding left and right across the letters, which is what
+    // made the middle of the sphere restless.
     &__ai-frame {
         position: absolute;
         inset: 0;
-        width: 2.7rem;
-        height: 2.6rem;
+        z-index: 2;
+        width: 2.02rem;
+        height: 1.62rem;
         margin: auto;
-        animation: mw-ai-square $mw-ai-square-period ease-in-out infinite;
-        will-change: transform, opacity;
+        transform: translate(5%, 3%);
 
-        // The faded field itself - lavender, low, soft-edged.
-        &:before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: 0.25rem;
-            background: rgb(200 175 255 / 18%);
-            filter: blur(0.5px);
-        }
-
-        // The corner brackets, drawn as eight background layers. Short, thin,
-        // faint and unlit, as the reference has them: a hint of a frame you
-        // have to look for, rather than a bright one that competes with "AI".
+        // The corner brackets, drawn as eight background layers. The reference
+        // draws them at #eeddff against a #7355ad body - a clear mark, not the
+        // hint at 40% this was carrying, which is most of why the reticle read
+        // as a smudge. The arms are a fifth of the reticle's width there.
         &:after {
-            $corner: rgb(246 238 255 / 40%);
-            $arm: 0.35rem;
+            $corner: rgb(246 238 255 / 82%);
+            $arm: 0.42rem;
             $stroke: 1px;
 
             content: '';
@@ -686,91 +611,18 @@ $mw-ai-square-period: 4.4s;
     // layer there is absolutely positioned, and an absolutely positioned
     // element paints over a bare text node.
     // The reference's lettering: Inter at its black weight (900, loaded for this
-    // in index.html), set tight and large - caps about a third of the sphere's
-    // height and the pair about half its width, where the 16px bold it had
-    // before read small and light inside the sphere.
+    // in index.html). Measured on the frames rather than judged - the stem of
+    // the I runs 34px on a 119px sphere, so the caps are 29% of the sphere's
+    // height and the pair 35% of its width. At 2.25rem the caps were 36% and
+    // the letters overflowed the reticle that is meant to frame them.
     &__ai-text {
         position: relative;
         z-index: 4;
         font-family: 'Inter', 'Roboto', 'Arial', sans-serif;
-        font-size: 2.25rem;
+        font-size: 1.8rem;
         font-weight: 900;
         line-height: 1;
         letter-spacing: -0.02em;
-    }
-
-    // Signal points travelling the rings. Each carrier is the size of one ring
-    // and turns about the orb's centre; the point is drawn at its top, so it
-    // runs exactly along that ring's line. Different rings, speeds, directions
-    // and starting angles (the negative delays), so the points pass, meet and
-    // part rather than marching in step.
-    &__ai-orbit {
-        position: absolute;
-        border-radius: 50%;
-        pointer-events: none;
-        animation: mw-ai-ring-spin var(--mw-orbit-period, 6s) linear infinite;
-
-        // 3px - small signal points that reinforce the search without
-        // competing with the hand and the field inside.
-        &:before {
-            content: '';
-            position: absolute;
-            top: -0.15rem;
-            left: 50%;
-            width: 0.3rem;
-            height: 0.3rem;
-            margin-left: -0.15rem;
-            border-radius: 50%;
-            background: var(--mw-orbit-colour);
-            box-shadow: 0 0 0.3rem var(--mw-orbit-colour);
-        }
-
-        // Inner ring, cyan, quickest.
-        &--1 {
-            --mw-orbit-colour: rgb(120 230 255 / 95%);
-            --mw-orbit-period: 3.2s;
-
-            inset: 0.9rem;
-        }
-
-        // Middle ring, violet, the other way round.
-        &--2 {
-            --mw-orbit-colour: rgb(190 150 255 / 95%);
-            --mw-orbit-period: 4.6s;
-
-            inset: 0.45rem;
-            animation-direction: reverse;
-            animation-delay: -1.5s;
-        }
-
-        // Middle ring, white, the other way round and slower - it gains on and
-        // falls behind the violet point on the same ring.
-        &--3 {
-            --mw-orbit-colour: rgb(250 248 255 / 95%);
-            --mw-orbit-period: 6.1s;
-
-            inset: 0.45rem;
-            animation-direction: reverse;
-            animation-delay: -4.2s;
-        }
-
-        // Outer ring, blue.
-        &--4 {
-            --mw-orbit-colour: rgb(120 150 255 / 95%);
-            --mw-orbit-period: 7.4s;
-
-            inset: 0;
-            animation-delay: -2.4s;
-        }
-
-        // Outer ring, lavender, slower still.
-        &--5 {
-            --mw-orbit-colour: rgb(214 190 255 / 90%);
-            --mw-orbit-period: 9.2s;
-
-            inset: 0;
-            animation-delay: -6.8s;
-        }
     }
 
     // Hover lifts the whole orb and warms its halo; press pushes it back in.
@@ -802,212 +654,97 @@ $mw-ai-square-period: 4.4s;
             inset 0 0.6rem 1rem rgb(250 242 251 / 38%);
     }
 
-    &__ai:active &__ai-ring {
-        animation-duration: 1s;
-    }
-
     // A scan is running. Deliberately only the rings and the bloom - the
     // sphere and its "AI" stay put, so the centre never jitters. The
-    // instrument quickens; it does not change shape.
+    // instrument brightens; it does not change shape.
     &__ai--scanning {
         filter: drop-shadow(0 0 1.6rem rgb(187 152 207 / 78%));
     }
 
-    // Each ring roughly two and a half times faster, so they keep their speeds
-    // relative to one another - one duration for all three would have locked
-    // them together for the length of the scan.
     &__ai--scanning &__ai-ring {
-        animation-duration: 1.5s;
-        border-color: rgb(187 170 255 / 92%);
+        border-color: rgb(206 205 240 / 92%);
     }
 
-    &__ai--scanning &__ai-ring--mid {
-        animation-duration: 2s;
-    }
-
-    &__ai--scanning &__ai-ring--wide {
-        animation-duration: 2.8s;
-    }
-
-    // The hand quickens with them, which is the difference between the orb
+    // The line quickens with it, which is the difference between the orb
     // idling and the orb working.
-    &__ai--scanning &__ai-sweep:before {
-        animation-duration: $mw-ai-hand-active;
+    &__ai--scanning &__ai-beam {
+        animation-duration: 1.4s;
     }
 
-    // Scaled rather than replaced, so the points keep their different speeds.
-    &__ai--scanning &__ai-orbit {
-        animation-duration: calc(var(--mw-orbit-period) * 0.45);
-    }
-
-    // Three thin concentric rings held at fixed radii, tight around the core.
-    // They were expanding pings before - each ring born at the sphere's edge
-    // and travelling out to the button's rim - which read as a ripple rather
-    // than as an instrument, and at the outer end of the sweep the ring was
-    // wide enough to be clipped into an ellipse by the button box.
-    // They breathe in place instead: the innermost carries the most light and
-    // each one outward is thinner and softer.
-    // The scanning system: three concentric rings turning around a core that
-    // does not move. Each is an ARC rather than a closed circle - a perfect
-    // circle rotating is indistinguishable from a still one, so a ring that
-    // merely spun would have read as static no matter how smooth it was. The
-    // gap in each ring is what makes the rotation visible.
-    // ---
-    // Each ring has its own period - 3.8s, 5s and 7s - and the middle one turns
-    // the other way, so the rings slide against each other like independent
-    // sensors. All three turned as one before, which read as a single rigid
-    // part. Negative delays spread their starting angles so the arcs begin
-    // distributed round the circle rather than stacked.
-    // ---
-    // Blue-violet, in line with the reference's orbit system around a violet
-    // sphere. Radial spacing is fixed by `inset` and untouched by the rotation,
-    // so the rings never drift apart or ripple outward.
+    // Three closed circles held at fixed radii. Measured off the reference:
+    // against a sphere of radius 60 its rings sit at 63, 77 and 94 - 1.05,
+    // 1.28 and 1.56 times the sphere - all three drawn in the same thin
+    // periwinkle, #b9b8e2 to #c1c0e2, and all three complete.
+    // Nothing here turns. Each ring used to be an ARC with a gap in it, spun at
+    // its own speed, with signal points running round it: a system that is only
+    // legible as a system when you stop and study it, and at a glance read as
+    // scribble around a sphere. A closed circle needs no rotation to be a
+    // circle, and three of them concentric and still is what the reference is.
     &__ai-ring {
         position: absolute;
-        inset: 0.9rem; // 5.4rem circle, just clear of the 4.6rem core
+        inset: 1.2rem; // 4.8rem circle around the 4.6rem core
+        border: 1px solid rgb(185 184 226 / 88%);
         border-radius: 50%;
         pointer-events: none;
-
-        // Three quarters lit, innermost and brightest.
-        border: 1px solid transparent;
-        border-top-color: rgb(160 150 255 / 82%);
-        border-right-color: rgb(160 150 255 / 82%);
-        border-bottom-color: rgb(160 150 255 / 45%);
-        box-shadow: 0 0 0.4rem rgb(120 110 240 / 35%);
-
-        // Rotation and glow are separate animations on separate properties, so
-        // the breathing cannot disturb the turn.
-        animation:
-            mw-ai-ring-spin $mw-ai-ring-inner linear infinite,
-            mw-ai-ring-glow $mw-ai-ring-inner ease-in-out infinite;
     }
 
     &__ai-ring--mid {
-        inset: 0.45rem; // 6.3rem
-
-        // Half lit.
-        border-top-color: rgb(140 140 255 / 58%);
-        border-right-color: rgb(140 140 255 / 58%);
-        border-bottom-color: transparent;
-        box-shadow: 0 0 0.4rem rgb(110 110 240 / 22%);
-        animation-duration: $mw-ai-ring-mid, $mw-ai-ring-mid;
-        animation-direction: reverse, normal;
-        animation-delay:
-            -1.7s,
-            -1.7s;
+        inset: 0.65rem; // 5.9rem
+        border-color: rgb(185 184 226 / 76%);
     }
 
     &__ai-ring--wide {
         inset: 0; // 7.2rem, the button's own extent
-
-        // A quarter lit, outermost and faintest.
-        border-top-color: rgb(120 140 255 / 42%);
-        border-right-color: transparent;
-        border-bottom-color: transparent;
-        box-shadow: 0 0 0.4rem rgb(100 120 240 / 14%);
-        animation-duration: $mw-ai-ring-wide, $mw-ai-ring-wide;
-        animation-delay:
-            -4.6s,
-            -4.6s;
+        border-color: rgb(193 192 226 / 64%);
     }
 
-    // Roughly 1-2 o'clock on the core, overlapping its edge. The ring is the
-    // page behind it rather than a white stroke, so the dot reads as sitting
-    // on the sphere rather than floating over it.
+    // Roughly 1-2 o'clock and well inside the sphere's edge - on the reference
+    // its centre is 70% of the way out, not overlapping the rim. The ring round
+    // it is dark, not white: sampled either side of the green in both frames,
+    // the pixels outside it run #0b3a3e to #123d44, darker than the sphere it
+    // sits on as well as the green it holds.
     &__ai-dot {
+        // Measured from the button's own box, which is 7.2rem around a 4.6rem
+        // sphere: this puts the dot's centre 1.6rem from the sphere's centre,
+        // seven tenths of its radius, at half past one.
         position: absolute;
-        top: 1.55rem;
-        inset-inline-end: 1.75rem;
+        top: 2.4rem;
+        inset-inline-end: 2.4rem;
         z-index: 3;
-        width: 0.9rem;
-        height: 0.9rem;
+        width: 0.54rem;
+        height: 0.54rem;
         border-radius: 50%;
 
-        // Lit green at the centre, darker at the edge, inside a white ring.
-        background: radial-gradient(circle at 40% 35%, #8dffc0 0%, $mw-ai-online 45%, #148a4a 100%);
-        border: 2px solid rgb(250 242 251 / 90%);
-        box-shadow: 0 0 0.3rem rgb(49 220 129 / 45%);
+        // #10d875 through the middle of it on both frames.
+        background: radial-gradient(circle at 42% 36%, #4ce89a 0%, #10d875 52%, #0bab5d 100%);
+        border: 1.5px solid rgb(9 44 47 / 88%);
+        box-shadow: 0 0 0.3rem rgb(16 216 117 / 45%);
 
-        // Fixed to the core, not carried by the rings: it is a sibling of
-        // them, so the rotation cannot reach it and it never travels round the
-        // circle. Its glow swells and settles every two seconds - active and
-        // available - and nothing else about it moves.
+        // Its glow swells and settles every two seconds - active and available
+        // - and nothing else about it moves.
         animation: mw-ai-live 2s ease-in-out infinite;
     }
 }
 
-// The glass layer's breathing: its light rises and settles, and nothing about
-// its size changes.
-@keyframes mw-ai-breathe {
+// The line's travel: down the sphere and back up, keyed only at the two ends
+// so it eases into each and crosses the lettering at speed. It goes just past
+// the reticle at either end, which is where the reference's two frames catch
+// it - once below the letters and once above them.
+@keyframes mw-ai-beam {
     0%,
     100% {
+        transform: translateY(-62%);
+        opacity: 0.35;
+    }
+
+    20%,
+    80% {
         opacity: 1;
     }
 
     50% {
-        opacity: 0.88;
-    }
-}
-
-// The ring system's turn. Linear, because an eased revolution speeds up and
-// slows down every cycle, which reads as a spinner catching rather than an
-// instrument sweeping.
-@keyframes mw-ai-ring-spin {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-// Glow only - no scale. The rings used to breathe outward 1 -> 1.03, which
-// moved them against each other and against the core.
-@keyframes mw-ai-ring-glow {
-    0%,
-    100% {
-        opacity: 0.82;
-    }
-
-    50% {
-        opacity: 1;
-    }
-}
-
-// The hand's turn: twelve, round through three, six and nine, back to twelve.
-// Linear, because a hand that eases is a hand that hesitates.
-@keyframes mw-ai-hand {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-// The scan field's slide: left to right and back. Position is keyed only at
-// the two ends, so with ease-in-out it slows into each end and crosses the
-// lettering at speed, like a pendulum, rather than pausing in the middle.
-// Opacity is keyed separately, highest as it crosses the centre and faded
-// toward the ends.
-// Left: the field over the A. Right: the field over the I.
-@keyframes mw-ai-square {
-    0%,
-    100% {
-        transform: translateX(-0.55rem);
-        opacity: 0.55;
-    }
-
-    25%,
-    75% {
-        opacity: 1;
-    }
-
-    50% {
-        transform: translateX(0.55rem);
-        opacity: 0.55;
+        transform: translateY(62%);
+        opacity: 0.35;
     }
 }
 
@@ -1052,19 +789,12 @@ $mw-ai-square-period: 4.4s;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    // The orbit system keeps turning, far slower, so the orb still reads as
-    // live; everything travelling across or inside the sphere stops - the
-    // field rests centred, the hand at twelve. Selectors carry the orb's class
-    // so they also outrank the quicker scanning speeds.
-    .mw-exec-bar__ai .mw-exec-bar__ai-ring,
-    .mw-exec-bar__ai .mw-exec-bar__ai-orbit {
-        animation-duration: 40s;
-    }
-
+    // Everything travelling across or inside the sphere stops - the line rests
+    // in the middle of the reticle. The rings and the sphere never moved in the
+    // first place, so there is nothing there to still. The selector carries the
+    // orb's class so it also outranks the quicker scanning speed.
+    .mw-exec-bar__ai .mw-exec-bar__ai-beam,
     .mw-exec-bar__ai-dot,
-    .mw-exec-bar__ai-core:before,
-    .mw-exec-bar__ai-frame,
-    .mw-exec-bar__ai-sweep:before,
     .mw-exec-bar__ai-hint,
     .mw-exec-bar__ai-hint--leaving {
         animation: none;
