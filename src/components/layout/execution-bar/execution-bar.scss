@@ -927,6 +927,23 @@ $mw-ai-white: #faf2fb; // lettering
             opacity: 0.85;
             max-width: 32rem;
         }
+
+        // The card on the recordings is a hundred pixels tall on a 368px sheet
+        // with an 18px title, where this was a hundred and fifteen with a
+        // twenty-four.
+        @media (width <= 600px) {
+            padding: 1.4rem 1.6rem;
+
+            h3 {
+                margin: 0.6rem 0 0.3rem;
+                font-size: 1.8rem;
+            }
+
+            p {
+                font-size: 1.15rem;
+                line-height: 1.45;
+            }
+        }
     }
 
     &__hero-pill {
@@ -961,16 +978,22 @@ $mw-ai-white: #faf2fb; // lettering
         }
     }
 
+    // One track carrying the three modes side by side, at every width. The
+    // recordings show them as a segmented control - a row you read in one
+    // glance - and this was stacking them into three full-width bars on a
+    // phone, which is most of why the panel ran off the bottom of the screen
+    // there: the modes alone took 105px of it against the recording's 35.
     &__modes {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 0.4rem;
         padding: 0.4rem;
-        border-radius: 10px;
+        border-radius: 12px;
         background: var(--general-section-1);
 
         @media (width <= 600px) {
-            grid-template-columns: minmax(0, 1fr);
+            gap: 0.2rem;
+            padding: 0.3rem;
         }
     }
 
@@ -991,16 +1014,21 @@ $mw-ai-white: #faf2fb; // lettering
         // with no motion at all, which is what it used to do.
         transition: color 220ms ease;
 
-        // The blue-to-cyan fill, carried on its own layer so it can cross-fade
-        // between tabs: it sits at zero opacity under every tab and rises on
-        // the selected one, so the old tab's fill falls away as the new one
-        // comes up rather than the block teleporting.
+        // The selected mode's pill, carried on its own layer so it can
+        // cross-fade between tabs: it sits at zero opacity under every tab and
+        // rises on the selected one, so the old tab's pill falls away as the
+        // new one comes up rather than the block teleporting.
+        // White with a soft shadow, as both recordings draw it - a card lifted
+        // out of the track it sits in. It was a blue-to-cyan fill, which reads
+        // as a button among two labels rather than as one control with three
+        // positions.
         &:before {
             content: '';
             position: absolute;
             inset: 0;
             border-radius: inherit;
-            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            background: #fff;
+            box-shadow: 0 1px 3px rgb(15 23 42 / 14%);
             opacity: 0;
             transition: opacity 220ms ease;
             pointer-events: none;
@@ -1013,7 +1041,7 @@ $mw-ai-white: #faf2fb; // lettering
         }
 
         &--active {
-            color: #fff;
+            color: var(--text-prominent);
 
             &:before {
                 opacity: 1;
@@ -1023,6 +1051,11 @@ $mw-ai-white: #faf2fb; // lettering
         &:disabled {
             opacity: 0.6;
             cursor: not-allowed;
+        }
+
+        @media (width <= 600px) {
+            padding: 0.7rem 0.6rem;
+            font-size: 1.15rem;
         }
     }
 
@@ -1039,15 +1072,13 @@ $mw-ai-white: #faf2fb; // lettering
             gap: 0.6rem;
         }
 
+        // The market and trade-type cards stay side by side on a phone too -
+        // the recordings put them in one row, and stacking them cost another
+        // 20px of a panel that was already past the bottom of the screen. They
+        // carry sentences rather than numbers, so they wrap inside their own
+        // card instead of pushing it wider.
         &--two {
             grid-template-columns: repeat(2, minmax(0, 1fr));
-
-            // The market and trade-type cards carry sentences rather than
-            // numbers - "Scan to find the best market" - so these two keep
-            // stacking on a phone.
-            @media (width <= 600px) {
-                grid-template-columns: minmax(0, 1fr);
-            }
         }
     }
 
@@ -1106,16 +1137,35 @@ $mw-ai-white: #faf2fb; // lettering
                 font-size: 1.3rem;
                 white-space: nowrap;
             }
+
+            // Except the two that carry sentences: the market's name and the
+            // trade type wrap onto a second line inside their own card, as they
+            // do on the recordings, rather than being cut off mid-word.
+            &--static strong {
+                white-space: normal;
+                line-height: 1.3;
+            }
         }
     }
 
+    // What the scanner is about to do, or has just done. The recordings put it
+    // on a cream strip with an amber edge rather than on another grey panel:
+    // between the fields above and the buttons below, all of them grey, it was
+    // the one line on the sheet that says what happens next and it read as
+    // another field.
     &__status {
         padding: 1.2rem 1.4rem;
+        border: 1px solid rgb(217 160 40 / 35%);
         border-radius: 10px;
-        background: var(--general-section-1);
+        background: rgb(253 224 138 / 16%);
         font-size: 1.3rem;
         color: var(--text-general);
         line-height: 1.5;
+
+        @media (width <= 600px) {
+            padding: 0.9rem 1.1rem;
+            font-size: 1.2rem;
+        }
 
         // A failure has to read as one. Every scanner message shared this
         // neutral panel, so "Could not load the market list" looked exactly
@@ -1130,13 +1180,15 @@ $mw-ai-white: #faf2fb; // lettering
         }
     }
 
+    // Both buttons on one row, at every width - the recordings have Scan
+    // Markets beside Load Scanner Bot, not above it.
     &__actions {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 1.2rem;
 
         @media (width <= 600px) {
-            grid-template-columns: minmax(0, 1fr);
+            gap: 0.8rem;
         }
     }
 
@@ -1148,6 +1200,11 @@ $mw-ai-white: #faf2fb; // lettering
         font-size: 1.4rem;
         font-weight: 700;
         cursor: pointer;
+
+        @media (width <= 600px) {
+            padding: 1rem 0.8rem;
+            font-size: 1.2rem;
+        }
     }
 
     &__scan {
@@ -1452,8 +1509,11 @@ $mw-ai-white: #faf2fb; // lettering
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1.2rem;
 
+    // Four across on a phone as well. The recordings read them as one line -
+    // score, win rate, recent, samples - and in two rows of two they became two
+    // unrelated pairs, and cost the sheet a hundred pixels it does not have.
     @media (width <= 600px) {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
     }
 
     > div {
@@ -1464,6 +1524,11 @@ $mw-ai-white: #faf2fb; // lettering
         border-radius: 10px;
         background: var(--general-section-1);
         min-width: 0;
+
+        @media (width <= 600px) {
+            gap: 0.2rem;
+            padding: 0.8rem 0.6rem;
+        }
     }
 
     span {
@@ -1471,6 +1536,11 @@ $mw-ai-white: #faf2fb; // lettering
         font-weight: 700;
         letter-spacing: 0.08em;
         color: var(--text-less-prominent);
+
+        @media (width <= 600px) {
+            font-size: 0.85rem;
+            letter-spacing: 0.02em;
+        }
     }
 
     strong {
@@ -1478,6 +1548,10 @@ $mw-ai-white: #faf2fb; // lettering
         font-weight: 700;
         font-variant-numeric: tabular-nums;
         color: var(--text-prominent);
+
+        @media (width <= 600px) {
+            font-size: 1.3rem;
+        }
     }
 }
 
