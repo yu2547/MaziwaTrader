@@ -15,6 +15,11 @@ import {
     unrecoverable_errors,
 } from '@/external/bot-skeleton';
 import { getSelectedTradeType } from '@/external/bot-skeleton/scratch/utils';
+import {
+    resetPacing,
+    setPaused,
+    setSlowExecution,
+} from '@/external/bot-skeleton/services/tradeEngine/utils/run-pacing';
 import { getActiveCurrency } from '@/utils/active-account-id';
 import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
 // import { journalError, switch_account_notification } from '@/utils/bot-notifications';
@@ -34,6 +39,18 @@ export type TContractState = {
     id: string;
 };
 
+/** Where the FAST/SLOW choice is remembered between visits. */
+const EXECUTION_SPEED_KEY = 'mw_execution_speed';
+
+const readStoredSpeed = (): 'fast' | 'slow' => {
+    try {
+        return localStorage.getItem(EXECUTION_SPEED_KEY) === 'slow' ? 'slow' : 'fast';
+    } catch {
+        // A browser that refuses storage trades at the default.
+        return 'fast';
+    }
+};
+
 export default class RunPanelStore {
     root_store: RootStore;
     dbot: TDbot;
@@ -48,6 +65,10 @@ export default class RunPanelStore {
             dialog_options: observable,
             has_open_contract: observable,
             is_running: observable,
+            is_paused: observable,
+            execution_speed: observable,
+            togglePause: action,
+            setExecutionSpeed: action,
             is_statistics_info_modal_open: observable,
             is_drawer_open: observable,
             is_dialog_open: observable,
@@ -105,6 +126,9 @@ export default class RunPanelStore {
         this.core = core;
         this.disposeReactionsFn = this.registerReactions();
         this.timer = null;
+        // The remembered choice has to reach the engine as well as the switch,
+        // or a visitor who left it on SLOW would see SLOW and trade at FAST.
+        setSlowExecution(this.execution_speed === 'slow');
     }
 
     active_index = 0;
@@ -112,6 +136,10 @@ export default class RunPanelStore {
     dialog_options = {};
     has_open_contract = false;
     is_running = false;
+    /** Held between contracts, with the run still up. See togglePause. */
+    is_paused = false;
+    /** FAST trades as the conditions come; SLOW paces them. See setExecutionSpeed. */
+    execution_speed: 'fast' | 'slow' = readStoredSpeed();
     is_statistics_info_modal_open = false;
     is_drawer_open = true;
     is_dialog_open = false;
@@ -924,6 +952,40 @@ export default class RunPanelStore {
 
     setIsRunning = (is_running: boolean) => {
         this.is_running = is_running;
+        // A run that has ended must not come back up paced by the last one -
+        // a bot paused and then stopped would otherwise start paused.
+        if (!is_running) {
+            resetPacing();
+            this.is_paused = false;
+        }
+    };
+
+    /**
+     * Holds the bot between contracts without ending the run. The engine asks
+     * run-pacing at the top of every purchase (tradeEngine/trade/Purchase.js),
+     * so pausing stops the next contract being opened and nothing else: the
+     * contract already running settles as it would have, the stats stand, and
+     * Stop is still there. Resuming lets the next tick through.
+     */
+    togglePause = () => {
+        this.is_paused = !this.is_paused;
+        setPaused(this.is_paused);
+    };
+
+    /**
+     * FAST or SLOW. SLOW puts a floor under how often the bot may open a
+     * contract - it is otherwise tick-driven and on a one-second market will
+     * buy as fast as its conditions are met. The preference is remembered, and
+     * read by the engine through the same module as the pause.
+     */
+    setExecutionSpeed = (speed: 'fast' | 'slow') => {
+        this.execution_speed = speed;
+        setSlowExecution(speed === 'slow');
+        try {
+            localStorage.setItem(EXECUTION_SPEED_KEY, speed);
+        } catch {
+            // A browser that refuses storage simply forgets the choice.
+        }
     };
 
     onMount = () => {

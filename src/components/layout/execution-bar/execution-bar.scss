@@ -359,6 +359,137 @@ $mw-ai-white: #faf2fb; // lettering
         }
     }
 
+    // Pause, and the execution switch that stands where it does while the bot
+    // is idle. Colours sampled off the screenshots of the bar: #fba61b for
+    // Pause, #4bb3b2 for Resume and Run, #ec4040 for Stop, and the switch's
+    // own mint and cream grounds.
+    &__pause {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        flex: none;
+        align-self: stretch;
+        padding: 0 1.6rem;
+        border: none;
+        border-radius: 4px 0 0 4px;
+        background: #fba61b;
+        color: #fff;
+        font-size: 1.4rem;
+        font-weight: 700;
+        cursor: pointer;
+
+        &:hover {
+            filter: brightness(1.05);
+        }
+
+        // Paused: the same button offering the other half of the pair, in the
+        // colour the reference gives Resume.
+        &--paused {
+            background: #4bb3b2;
+        }
+    }
+
+    // Two bars for pause, one triangle for resume - drawn rather than typed,
+    // so they sit on the same baseline as the word beside them.
+    &__pause-icon {
+        width: 1.2rem;
+        height: 1.4rem;
+        flex: none;
+        background: currentcolor;
+        clip-path: polygon(0 0, 35% 0, 35% 100%, 0 100%, 0 0, 65% 0, 100% 0, 100% 100%, 65% 100%, 65% 0);
+
+        .mw-exec-bar__pause--paused & {
+            width: 1.3rem;
+            clip-path: polygon(0 0, 100% 50%, 0 100%);
+        }
+    }
+
+    &__speed {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.2rem;
+        flex: 1 1 auto;
+        min-width: 0;
+        align-self: stretch;
+        padding: 0.4rem 1.2rem 0.4rem 1.6rem;
+        border: none;
+        background: #e9f7f2;
+        color: var(--text-prominent);
+        cursor: pointer;
+        transition: background 200ms ease;
+
+        &--slow {
+            background: #fdf6e3;
+        }
+    }
+
+    // Idle, the switch IS the status area - the reference's bar reads Run and
+    // then Execution, with nothing between them. "Bot is not running" is the
+    // same fact the Run button already states by being a Run button, and with
+    // the text gone the animation shrinks to its button so the switch sits
+    // flush against it rather than across a gap.
+    &:not(&--running) &__animation .animation__text,
+    &:not(&--running) &__animation .animation__progress {
+        display: none;
+    }
+
+    &:not(&--running) &__animation {
+        flex: none;
+        width: auto;
+    }
+
+    &__speed-text {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.1rem;
+        min-width: 0;
+
+        i {
+            font-style: normal;
+            font-size: 1.1rem;
+            color: var(--text-less-prominent);
+        }
+
+        b {
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+    }
+
+    // The switch itself: knob to the right and teal on FAST, to the left and
+    // amber on SLOW, which is how the two screenshots differ.
+    &__speed-switch {
+        position: relative;
+        width: 4.4rem;
+        height: 2.4rem;
+        flex: none;
+        border: 1px solid rgb(15 23 42 / 10%);
+        border-radius: 999px;
+        background: #fff;
+
+        &:after {
+            content: '';
+            position: absolute;
+            top: 0.25rem;
+            inset-inline-start: 2.2rem;
+            width: 1.8rem;
+            height: 1.8rem;
+            border-radius: 50%;
+            background: #4bb3b2;
+            transition:
+                inset-inline-start 200ms ease,
+                background 200ms ease;
+        }
+
+        .mw-exec-bar__speed--slow &:after {
+            inset-inline-start: 0.25rem;
+            background: #e8a20c;
+        }
+    }
+
     &__run {
         // Takes the free space so the stage text and its progress bar have
         // somewhere to sit; min-width: 0 lets it shrink below its content

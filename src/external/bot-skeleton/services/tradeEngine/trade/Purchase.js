@@ -5,6 +5,7 @@ import { observer as globalObserver } from '../../../utils/observer';
 import { api_base } from '../../api/api-base';
 import { contractStatus, info, log } from '../utils/broadcast';
 import { doUntilDone, getUUID, recoverFromError, tradeOptionToBuy } from '../utils/helpers';
+import { canPurchase, markPurchased } from '../utils/run-pacing';
 import { markTiming } from '../utils/run-timing';
 import { canEvaluateVirtually } from '../utils/virtual-hook-runner';
 import { purchaseSuccessful } from './state/actions';
@@ -27,6 +28,16 @@ export default Engine =>
                 return Promise.resolve();
             }
 
+            // Paused, or held back by SLOW execution. Returning here leaves the
+            // run exactly where it was - still in the before-purchase scope,
+            // still watching ticks - so the bot is asked again on the next one
+            // and goes straight through the moment it is released. Nothing is
+            // cancelled, nothing is queued, and a run that is never released
+            // simply never buys again until it is stopped.
+            if (!canPurchase()) {
+                return Promise.resolve();
+            }
+
             // Virtual Hook: while it is watching, this contract is scored on
             // paper and no `buy` is sent. Returning to the before-purchase
             // scope afterwards puts the bot back here for the next tick,
@@ -42,6 +53,10 @@ export default Engine =>
 
             const onSuccess = response => {
                 markTiming('buy_accepted');
+                // Starts SLOW's clock from the purchase Deriv actually took,
+                // not from the attempt: a refused buy must not hold the next
+                // one back as though it had gone through.
+                markPurchased();
                 // Don't unnecessarily send a forget request for a purchased contract.
                 const { buy } = response;
 

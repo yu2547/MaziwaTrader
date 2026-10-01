@@ -24,11 +24,19 @@ import './execution-bar.scss';
  * already reports it, and a second copy on the card was only repeating what
  * was already on screen a few pixels away.
  *
- * An Execution FAST/SLOW switch used to sit on the right of the bar. It was a
- * persisted preference that no engine path ever read: the one thing it could
- * have selected - buying straight from parameters rather than from a proposal
- * id - is rejected by the Options API on the OTP transport. It has been
- * removed rather than left as a control that does nothing.
+ * The Execution FAST/SLOW switch is back, and this time it does something. It
+ * was removed once as a persisted preference that no engine path ever read -
+ * the one thing it could have selected, buying straight from parameters rather
+ * than from a proposal id, is rejected by the Options API on the OTP transport.
+ * It now sets a floor on how often the bot may open a contract, which the
+ * engine reads at the top of every purchase (tradeEngine/utils/run-pacing.ts).
+ * FAST is what the bot always did: trade as the conditions come.
+ *
+ * Pause is new for the same reason. The engine had Run and Stop and nothing
+ * between them, so a bot could only be ended, never held. Pausing returns from
+ * purchase() without buying, which leaves the run exactly where it was - the
+ * open contract settles, the stats stand, Stop is still there - and the next
+ * tick goes through the moment it is resumed.
  *
  * The floating AI and Gemini orbs used to hang off this component. They are in
  * layout/assistant-orbs now, because this bar is not mounted on DTrader and
@@ -67,7 +75,8 @@ const ExecutionBar = observer(() => {
 
     if (!run_panel) return null;
 
-    const { is_drawer_open, toggleDrawer, is_running } = run_panel;
+    const { is_drawer_open, toggleDrawer, is_running, is_paused, togglePause, execution_speed, setExecutionSpeed } =
+        run_panel;
 
     // The Trading Configuration button used to live here as well. It now sits
     // directly under the digit circles on the Analysis page, which is where a
@@ -95,6 +104,23 @@ const ExecutionBar = observer(() => {
 
                 <div className='mw-exec-bar__inner'>
                     <div className='mw-exec-bar__run'>
+                        {/* While a bot is running the bar carries Pause on the
+                            left of the status and Stop on its right, as the
+                            reference does. TradeAnimation draws the status and
+                            the Stop; the Pause is ours, because the engine had
+                            no such state until now - see run-pacing.ts. */}
+                        {is_running && (
+                            <button
+                                type='button'
+                                className={`mw-exec-bar__pause ${is_paused ? 'mw-exec-bar__pause--paused' : ''}`}
+                                onClick={togglePause}
+                                aria-pressed={is_paused}
+                            >
+                                <span className='mw-exec-bar__pause-icon' aria-hidden='true' />
+                                {is_paused ? localize('Resume') : localize('Pause')}
+                            </button>
+                        )}
+
                         {/* should_show_overlay puts the settled result - Won
                             or Lost, from the real contract - across the status
                             area. The bar never passed it, so a finished trade
@@ -105,6 +131,32 @@ const ExecutionBar = observer(() => {
                             removed and the result went with it. Shown on
                             phones only (execution-bar.scss). */}
                         <TradeAnimation className='mw-exec-bar__animation' should_show_overlay />
+
+                        {/* Idle, the status area is the execution switch
+                            instead - which is what the reference puts beside
+                            Run. FAST trades as the conditions come; SLOW holds
+                            the bot to one contract every few seconds. Both are
+                            read by the engine at the top of every purchase, so
+                            this is a control over what the bot does, not a
+                            label on it. */}
+                        {!is_running && (
+                            <button
+                                type='button'
+                                className={`mw-exec-bar__speed ${
+                                    execution_speed === 'slow' ? 'mw-exec-bar__speed--slow' : ''
+                                }`}
+                                role='switch'
+                                aria-checked={execution_speed === 'fast'}
+                                aria-label={localize('Execution speed')}
+                                onClick={() => setExecutionSpeed(execution_speed === 'fast' ? 'slow' : 'fast')}
+                            >
+                                <span className='mw-exec-bar__speed-text'>
+                                    <i>{localize('Execution')}</i>
+                                    <b>{execution_speed === 'slow' ? localize('SLOW') : localize('FAST')}</b>
+                                </span>
+                                <span className='mw-exec-bar__speed-switch' aria-hidden='true' />
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
