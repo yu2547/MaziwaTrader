@@ -2327,13 +2327,12 @@ $dt-chart-ground: #171b23;
     }
 }
 
-// Leaves the space under the market card clear and tall enough for the AI and
-// Gemini orbs, which park down the left of the chart on the single-column
-// layout (assistant-orbs.scss). Their usual corner is the bottom right, and on
-// this page that is the Fall / Put button - measured, the right-hand buy button
-// hit-tested to Gemini's orb. A margin rather than a min-height, so the market
-// list still opens directly under the card: its `top: 100%` is measured from
-// the padding box.
+// Leaves the space under the market card clear and tall enough for the AI orb,
+// which parks down the left of the chart on the single-column layout
+// (assistant-orbs.scss). Its usual corner is the bottom right, and on this page
+// that is the Fall / Put button - measured, the right-hand buy button hit-tested
+// to the orb. A margin rather than a min-height, so the market list still opens
+// directly under the card: its `top: 100%` is measured from the padding box.
 @media (width <= 1099px) {
     .mw-dt__market {
         margin-block-end: 6.9rem;

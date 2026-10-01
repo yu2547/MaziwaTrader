@@ -38,9 +38,9 @@ import './execution-bar.scss';
  * open contract settles, the stats stand, Stop is still there - and the next
  * tick goes through the moment it is resumed.
  *
- * The floating AI and Gemini orbs used to hang off this component. They are in
- * layout/assistant-orbs now, because this bar is not mounted on DTrader and
- * they belong on every route.
+ * The floating AI orb used to hang off this component. It is in
+ * layout/assistant-orbs now, because this bar is not mounted on DTrader and the
+ * orb belongs on every route.
  */
 const ExecutionBar = observer(() => {
     const { run_panel } = useStore() ?? {};

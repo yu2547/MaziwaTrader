@@ -1,5 +1,4 @@
 import { CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import GeminiPanel from '@/pages/gemini/gemini-panel';
 import { localize } from '@deriv-com/translations';
 import EntryScanner from '../execution-bar/entry-scanner';
 import useDraggableOrb from './use-draggable-orb';
@@ -7,34 +6,25 @@ import '../execution-bar/execution-bar.scss';
 import './assistant-orbs.scss';
 
 /**
- * The two floating assistants - the violet AI scanner and the red Gemini -
- * and the panels they open.
+ * The floating assistant - the violet AI scanner - and the panel it opens.
  *
- * They live in the shell rather than in the execution bar, which is what they
- * used to hang off. The bar is not mounted on DTrader (components/layout
- * skips it there so the page has the width to itself), and the reference has
- * both orbs on that page as much as on any other, so tying them to the bar
- * meant they simply vanished on it.
+ * It lives in the shell rather than in the execution bar, which is what it used
+ * to hang off. The bar is not mounted on DTrader (components/layout skips it
+ * there so the page has the width to itself), and the reference has the orb on
+ * that page as much as on any other, so tying it to the bar meant it simply
+ * vanished on it.
  *
- * They keep their execution-bar class names: the selectors are flat rather
- * than nested under .mw-exec-bar, so moving the markup costs no stylesheet
- * churn, and renaming a working orb's CSS is not worth the risk of a missed
- * rule.
+ * It keeps its execution-bar class names: the selectors are flat rather than
+ * nested under .mw-exec-bar, so moving the markup costs no stylesheet churn,
+ * and renaming a working orb's CSS is not worth the risk of a missed rule.
+ *
+ * A second orb, Gemini, used to stand above this one and open a panel of its
+ * own. It has been deleted at the owner's request - the sphere, the panel, its
+ * engine and its stylesheet - and what is left of its placement rules is in
+ * assistant-orbs.scss.
  */
 
 const AI_ORB_POS_KEY = 'mw_ai_orb_position';
-const GEMINI_ORB_POS_KEY = 'mw_gemini_orb_position';
-
-/**
- * Gemini is off for now, at the owner's request.
- *
- * Held behind a flag rather than deleted: the orb, its panel, its stylesheet
- * and its remembered position are all still here and still wired to each other,
- * so turning it back on is this line and nothing else. Everything below reads
- * it, so there is one place to change and no half-mounted state - no orb, no
- * panel, and no key held open in storage that the panel would reopen from.
- */
-const SHOW_GEMINI: boolean = false;
 
 /**
  * How long the scanner is held mounted while it animates out. Deliberately
@@ -72,7 +62,6 @@ const AssistantOrbs = () => {
     // Reported up by the scanner so the orb can show a scan is under way even
     // with the modal dismissed behind it.
     const [is_scanning, setIsScanning] = useState(false);
-    const [is_gemini_open, setIsGeminiOpen] = useState(false);
     // The post-load card. Timed rather than dismissed, and never shown while
     // the scanner itself is open - pointing at a button the user is already
     // using would be noise.
@@ -104,10 +93,7 @@ const AssistantOrbs = () => {
         setIsAiOpen(true);
     }, []);
 
-    const openGemini = useCallback(() => setIsGeminiOpen(true), []);
-
     const ai_orb = useDraggableOrb({ onActivate: openAi, storage_key: AI_ORB_POS_KEY });
-    const gemini_orb = useDraggableOrb({ onActivate: openGemini, storage_key: GEMINI_ORB_POS_KEY });
 
     // One shot per mount, which is per page load or sign-in - the component
     // goes up with the app shell and stays up. Each step only moves the card
@@ -211,39 +197,6 @@ const AssistantOrbs = () => {
                 <span className='mw-exec-bar__ai-dot' aria-hidden='true' />
             </button>
 
-            {/* Gemini's own sphere, the same instrument in red and parked
-                directly above the scanner's. Same drag and press behaviour,
-                its own remembered position. Off while SHOW_GEMINI is. */}
-            {SHOW_GEMINI && (
-                <button
-                    type='button'
-                    className={`mw-gem-orb${gemini_orb.is_dragging ? ' mw-gem-orb--dragging' : ''}${
-                        is_gemini_open ? ' mw-gem-orb--open' : ''
-                    }`}
-                    style={gemini_orb.style}
-                    aria-expanded={is_gemini_open}
-                    aria-haspopup='dialog'
-                    aria-label={localize('Gemini trading assistant')}
-                    {...gemini_orb.handlers}
-                >
-                    <span className='mw-gem-orb__halo' aria-hidden='true' />
-                    <span className='mw-gem-orb__core'>
-                        {/* The light moving inside the sphere. Its own clipped
-                            layer so nothing that drifts can cross the orb's
-                            edge, and behind the lettering, which never moves. */}
-                        <span className='mw-gem-orb__field' aria-hidden='true'>
-                            <span className='mw-gem-orb__bubble mw-gem-orb__bubble--1' />
-                            <span className='mw-gem-orb__bubble mw-gem-orb__bubble--2' />
-                            <span className='mw-gem-orb__bubble mw-gem-orb__bubble--3' />
-                            <span className='mw-gem-orb__bubble mw-gem-orb__bubble--4' />
-                            <span className='mw-gem-orb__bubble mw-gem-orb__bubble--5' />
-                        </span>
-                        <span className='mw-gem-orb__text'>GEMINI</span>
-                    </span>
-                    <span className='mw-gem-orb__dot' aria-hidden='true' />
-                </button>
-            )}
-
             {/* Says what the orb is, once, shortly after the app settles - the
                 orb is a lettered sphere with no label, and nothing else on the
                 page explains it. It follows the orb wherever the user has
@@ -291,11 +244,6 @@ const AssistantOrbs = () => {
                     <EntryScanner onClose={closeAi} onScanningChange={setIsScanning} />
                 </div>
             )}
-
-            {/* Unmounted rather than hidden when closed: it holds a market
-                subscription per volatility index, and a closed panel has no
-                business keeping those open. */}
-            {SHOW_GEMINI && is_gemini_open && <GeminiPanel onClose={() => setIsGeminiOpen(false)} />}
         </>
     );
 };

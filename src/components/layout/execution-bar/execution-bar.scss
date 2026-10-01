@@ -28,15 +28,12 @@ $exec-bar-gap: 1.2rem;
 // figures and the comment that explains them cannot drift apart.
 $mw-ai-white: #faf2fb; // lettering
 
-// The floating orbs' footing, published once and read by both of them.
-// There are two spheres now - the AI scanner and Gemini, stacked in the same
-// corner - and everything that moves one has to move the other by the same
-// amount or they overlap. Rather than write each clearance twice, the corner
-// itself is a custom property and the orbs offset from it: the AI orb sits on
-// it and Gemini one orb-height above.
+// The floating orb's footing, published once rather than written into each
+// clearance it has to keep: the corner is a custom property and the orb offsets
+// from it, so moving the bar it sits above moves the orb with it.
 // Declared on :root and overridden on body, because the phone case below keys
-// on `body:has(...)` - body is an ancestor of both orbs, so the value reaches
-// them either way.
+// on `body:has(...)` - body is an ancestor of the orb, so the value reaches it
+// either way.
 :root {
     --mw-orb-bottom: calc(3.6rem + 1.6rem);
     --mw-orb-end: 1.6rem;
@@ -571,7 +568,7 @@ $mw-ai-white: #faf2fb; // lettering
         position: fixed;
 
         // The shared corner. Every clearance that used to live on this rule is
-        // on the custom property now, so Gemini's sphere moves with it.
+        // on the custom property now.
         inset-inline-end: var(--mw-orb-end, 1.6rem);
         bottom: var(--mw-orb-bottom, 5.2rem);
         z-index: 9;

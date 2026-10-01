@@ -23,16 +23,16 @@ body {
 // narrower than Inter and the letters Android draws its own interface in.
 // Sizes, weights and spacing are unchanged: measured against those
 // screenshots, the app already matches them, typeface aside.
-// Four things keep Inter, because each has a look of its own: the loading
-// screen (finished, and not to be touched), the landing page, and the AI and
-// Gemini panels. The two orbs' lettering names Inter itself. `body` in front
+// Three things keep Inter, because each has a look of its own: the loading
+// screen (finished, and not to be touched), the landing page, and the AI
+// scanner's panel. The orb's own lettering names Inter itself. `body` in front
 // so this outranks the landing page's own `font-family: inherit`.
 @media (width <= 600px) {
     body {
         font-family: 'Roboto', 'Arial', sans-serif;
     }
 
-    body :is(.mw-loading, .mw-landing, .mw-exec-bar__ai-hint, .mw-scanner, .mw-scanner-exit, .mw-gem) {
+    body :is(.mw-loading, .mw-landing, .mw-exec-bar__ai-hint, .mw-scanner, .mw-scanner-exit) {
         font-family: 'Inter', 'Roboto', 'Arial', sans-serif;
     }
 }
@@ -44,7 +44,7 @@ body {
 // (8.5px). Taps, dragging and the bot builder's workspace are untouched, since
 // nothing is transformed - things are simply laid out smaller.
 // Two things keep their size exactly, pinned below: the loading screen, which
-// is finished and not to be changed, and the two floating orbs.
+// is finished and not to be changed, and the floating orb.
 $phone-scale: 0.85;
 
 @media (width <= 600px) {
@@ -81,28 +81,20 @@ $phone-scale: 0.85;
         }
     }
 
-    // The orbs at their own size. Each button keeps its 7.2rem box, which is
-    // also what the drag clamp in use-draggable-orb.ts assumes (72px), and
-    // everything drawn inside it is zoomed back by the same factor. The buttons
-    // themselves are not zoomed: their position is set in px by the drag code,
-    // and a zoomed element would move away from the finger. Where they sit - the
-    // corner offsets, anchored to the Run bar - still shrinks with the page, so
-    // they stay the same distance from the bar they sit above.
-    body .mw-gem-orb,
+    // The orb at its own size. The button keeps its 7.2rem box, which is also
+    // what the drag clamp in use-draggable-orb.ts assumes (72px), and
+    // everything drawn inside it is zoomed back by the same factor. The button
+    // itself is not zoomed: its position is set in px by the drag code, and a
+    // zoomed element would move away from the finger. Where it sits - the
+    // corner offset, anchored to the Run bar - still shrinks with the page, so
+    // it stays the same distance from the bar it sits above.
     body .mw-exec-bar__ai {
         width: calc(7.2rem / #{$phone-scale});
         height: calc(7.2rem / #{$phone-scale});
     }
 
-    body .mw-gem-orb > *,
     body .mw-exec-bar__ai > * {
         zoom: math.div(1, $phone-scale);
-    }
-
-    // Gemini stacks one orb-height above the AI orb, so that height is the
-    // pinned one too - otherwise the two would overlap by the 15% difference.
-    body .mw-gem-orb {
-        bottom: calc(var(--mw-orb-bottom, 5.2rem) + 7.2rem / #{$phone-scale} + 1rem);
     }
 }
 
