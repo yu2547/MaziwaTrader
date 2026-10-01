@@ -1018,17 +1018,16 @@ $mw-ai-white: #faf2fb; // lettering
         // cross-fade between tabs: it sits at zero opacity under every tab and
         // rises on the selected one, so the old tab's pill falls away as the
         // new one comes up rather than the block teleporting.
-        // White with a soft shadow, as both recordings draw it - a card lifted
-        // out of the track it sits in. It was a blue-to-cyan fill, which reads
-        // as a button among two labels rather than as one control with three
-        // positions.
+        // Blue, at #215be3 sampled off the screenshot of the open panel, on its
+        // #f4f5f9 track. I had read it as a white pill off a frame of the
+        // recording, which is what that frame shows - the cross-fade caught
+        // part-way, with the blue not yet risen.
         &:before {
             content: '';
             position: absolute;
             inset: 0;
             border-radius: inherit;
-            background: #fff;
-            box-shadow: 0 1px 3px rgb(15 23 42 / 14%);
+            background: linear-gradient(135deg, #215be3, #3b82f6);
             opacity: 0;
             transition: opacity 220ms ease;
             pointer-events: none;
@@ -1041,7 +1040,7 @@ $mw-ai-white: #faf2fb; // lettering
         }
 
         &--active {
-            color: var(--text-prominent);
+            color: #fff;
 
             &:before {
                 opacity: 1;
@@ -1641,6 +1640,9 @@ $mw-ai-white: #faf2fb; // lettering
     color: var(--text-prominent);
 }
 
+// Two columns at every width - stake beside martingale, wins beside digits,
+// stop loss beside the martingale switch - which is the shape the screenshot
+// has and keeps the dialog three rows deep. One column on a phone made it six.
 .mw-scanner__params-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1648,7 +1650,8 @@ $mw-ai-white: #faf2fb; // lettering
     padding: 1.6rem 2rem 0;
 
     @media (width <= 600px) {
-        grid-template-columns: minmax(0, 1fr);
+        gap: 0.8rem;
+        padding-inline: 1.4rem;
     }
 
     label {
@@ -1681,18 +1684,16 @@ $mw-ai-white: #faf2fb; // lettering
     }
 }
 
-.mw-scanner__params-wide {
-    grid-column: 1 / -1;
-}
-
+// A cell of the grid like the five fields beside it, rather than a bar of its
+// own slung underneath them.
 .mw-scanner__params-toggle {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1.6rem;
-    width: calc(100% - 4rem);
-    margin: 1.6rem 2rem 0;
-    padding: 1.2rem 1.4rem;
+    gap: 1.2rem;
+    align-self: end;
+    min-width: 0;
+    padding: 1.1rem 1.4rem;
     border: 1px solid var(--general-section-1);
     border-radius: 8px;
     background: transparent;
@@ -1700,6 +1701,11 @@ $mw-ai-white: #faf2fb; // lettering
     font-size: 1.4rem;
     font-weight: 600;
     cursor: pointer;
+
+    @media (width <= 600px) {
+        padding: 0.9rem 1rem;
+        font-size: 1.2rem;
+    }
 }
 
 .mw-scanner__params-switch {

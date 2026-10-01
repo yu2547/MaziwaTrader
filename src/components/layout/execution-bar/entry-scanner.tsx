@@ -622,7 +622,7 @@ const EntryScanner = observer(
                                         }
                                     />
                                 </label>
-                                <label className='mw-scanner__params-wide'>
+                                <label>
                                     <span>{localize('STOP LOSS')}</span>
                                     <input
                                         type='number'
@@ -633,20 +633,24 @@ const EntryScanner = observer(
                                         }
                                     />
                                 </label>
-                            </div>
 
-                            <button
-                                type='button'
-                                className='mw-scanner__params-toggle'
-                                onClick={() => setParams(p => ({ ...p, use_martingale: !p.use_martingale }))}
-                                role='switch'
-                                aria-checked={params.use_martingale}
-                            >
-                                <span>{localize('Use Martingale')}</span>
-                                <span
-                                    className={`mw-scanner__params-switch ${params.use_martingale ? 'mw-scanner__params-switch--on' : ''}`}
-                                />
-                            </button>
+                                {/* In the grid rather than under it: the
+                                    screenshot puts the switch in the cell beside
+                                    Stop loss, which is what keeps the dialog
+                                    three rows deep rather than four. */}
+                                <button
+                                    type='button'
+                                    className='mw-scanner__params-toggle'
+                                    onClick={() => setParams(p => ({ ...p, use_martingale: !p.use_martingale }))}
+                                    role='switch'
+                                    aria-checked={params.use_martingale}
+                                >
+                                    <span>{localize('Use Martingale')}</span>
+                                    <span
+                                        className={`mw-scanner__params-switch ${params.use_martingale ? 'mw-scanner__params-switch--on' : ''}`}
+                                    />
+                                </button>
+                            </div>
 
                             <p className='mw-scanner__note'>
                                 {localize(
