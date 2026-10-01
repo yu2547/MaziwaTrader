@@ -26,6 +26,17 @@ const AI_ORB_POS_KEY = 'mw_ai_orb_position';
 const GEMINI_ORB_POS_KEY = 'mw_gemini_orb_position';
 
 /**
+ * Gemini is off for now, at the owner's request.
+ *
+ * Held behind a flag rather than deleted: the orb, its panel, its stylesheet
+ * and its remembered position are all still here and still wired to each other,
+ * so turning it back on is this line and nothing else. Everything below reads
+ * it, so there is one place to change and no half-mounted state - no orb, no
+ * panel, and no key held open in storage that the panel would reopen from.
+ */
+const SHOW_GEMINI: boolean = false;
+
+/**
  * How long the scanner is held mounted while it animates out. Deliberately
  * longer than the 200ms animation in execution-bar.scss: the closing class only
  * lands on the next render, so the animation starts a frame or two after this
@@ -202,34 +213,36 @@ const AssistantOrbs = () => {
 
             {/* Gemini's own sphere, the same instrument in red and parked
                 directly above the scanner's. Same drag and press behaviour,
-                its own remembered position. */}
-            <button
-                type='button'
-                className={`mw-gem-orb${gemini_orb.is_dragging ? ' mw-gem-orb--dragging' : ''}${
-                    is_gemini_open ? ' mw-gem-orb--open' : ''
-                }`}
-                style={gemini_orb.style}
-                aria-expanded={is_gemini_open}
-                aria-haspopup='dialog'
-                aria-label={localize('Gemini trading assistant')}
-                {...gemini_orb.handlers}
-            >
-                <span className='mw-gem-orb__halo' aria-hidden='true' />
-                <span className='mw-gem-orb__core'>
-                    {/* The light moving inside the sphere. Its own clipped layer
-                        so nothing that drifts can cross the orb's edge, and
-                        behind the lettering, which never moves. */}
-                    <span className='mw-gem-orb__field' aria-hidden='true'>
-                        <span className='mw-gem-orb__bubble mw-gem-orb__bubble--1' />
-                        <span className='mw-gem-orb__bubble mw-gem-orb__bubble--2' />
-                        <span className='mw-gem-orb__bubble mw-gem-orb__bubble--3' />
-                        <span className='mw-gem-orb__bubble mw-gem-orb__bubble--4' />
-                        <span className='mw-gem-orb__bubble mw-gem-orb__bubble--5' />
+                its own remembered position. Off while SHOW_GEMINI is. */}
+            {SHOW_GEMINI && (
+                <button
+                    type='button'
+                    className={`mw-gem-orb${gemini_orb.is_dragging ? ' mw-gem-orb--dragging' : ''}${
+                        is_gemini_open ? ' mw-gem-orb--open' : ''
+                    }`}
+                    style={gemini_orb.style}
+                    aria-expanded={is_gemini_open}
+                    aria-haspopup='dialog'
+                    aria-label={localize('Gemini trading assistant')}
+                    {...gemini_orb.handlers}
+                >
+                    <span className='mw-gem-orb__halo' aria-hidden='true' />
+                    <span className='mw-gem-orb__core'>
+                        {/* The light moving inside the sphere. Its own clipped
+                            layer so nothing that drifts can cross the orb's
+                            edge, and behind the lettering, which never moves. */}
+                        <span className='mw-gem-orb__field' aria-hidden='true'>
+                            <span className='mw-gem-orb__bubble mw-gem-orb__bubble--1' />
+                            <span className='mw-gem-orb__bubble mw-gem-orb__bubble--2' />
+                            <span className='mw-gem-orb__bubble mw-gem-orb__bubble--3' />
+                            <span className='mw-gem-orb__bubble mw-gem-orb__bubble--4' />
+                            <span className='mw-gem-orb__bubble mw-gem-orb__bubble--5' />
+                        </span>
+                        <span className='mw-gem-orb__text'>GEMINI</span>
                     </span>
-                    <span className='mw-gem-orb__text'>GEMINI</span>
-                </span>
-                <span className='mw-gem-orb__dot' aria-hidden='true' />
-            </button>
+                    <span className='mw-gem-orb__dot' aria-hidden='true' />
+                </button>
+            )}
 
             {/* Says what the orb is, once, shortly after the app settles - the
                 orb is a lettered sphere with no label, and nothing else on the
@@ -282,7 +295,7 @@ const AssistantOrbs = () => {
             {/* Unmounted rather than hidden when closed: it holds a market
                 subscription per volatility index, and a closed panel has no
                 business keeping those open. */}
-            {is_gemini_open && <GeminiPanel onClose={() => setIsGeminiOpen(false)} />}
+            {SHOW_GEMINI && is_gemini_open && <GeminiPanel onClose={() => setIsGeminiOpen(false)} />}
         </>
     );
 };
