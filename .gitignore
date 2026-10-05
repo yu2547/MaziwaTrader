@@ -44,3 +44,6 @@ lerna-debug.log*
 .chatgpt-instructions.md
 .claude-instructions.md
 .ai-rules.md
+/MaziwaTrader/
+/=
+/package-lock.json.bak
