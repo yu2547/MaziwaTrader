@@ -8,7 +8,7 @@
         "brace-expansion@2.0.1": "2.0.2"
     },
     "engines": {
-        "node": "20.x"
+        "node": "24.x"
     },
     "scripts": {
         "start": "rsbuild dev",
