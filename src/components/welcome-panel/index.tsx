@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { DBOT_TABS } from '@/constants/bot-contents';
 import { useStore } from '@/hooks/useStore';
@@ -9,38 +9,56 @@ import './welcome-panel.scss';
  * The welcome sheet: shown to an account on its first visit, and again when
  * one comes back after a few days away.
  *
- * "A while" is 3 days. Short enough that someone who drops in once a week is
- * greeted each time, long enough that closing it and coming back after lunch -
- * or the next morning - does not put it straight back on screen.
+ * What is stored is the time of each account's **last visit**, written on
+ * every visit, and the panel is decided against the *previous* one. That is
+ * the only way the "been away a while" half can be true: the question is how
+ * long since they were last here, which the record has to keep answering
+ * whether or not the panel showed.
  *
- * Per account, not per browser: switching to an account that has not seen it
- * shows it for that account, which is what "first time logging in" means when
- * one person holds several.
+ * It used to store the time the panel was last dismissed, and write it only
+ * when the close button was pressed, which got both halves wrong. Reading it
+ * and reloading - or simply moving to another tab and back - never recorded
+ * anything, so the panel returned on every single load until it was explicitly
+ * closed. And because nothing moved the record forward on the days in between,
+ * someone who closed it on Monday and came in every day after was greeted
+ * again on Friday, having never been away at all.
+ *
+ * "A while" is 3 days. Short enough that someone who drops in once a week is
+ * greeted each time, long enough that coming back after lunch - or the next
+ * morning - does not put it straight back on screen.
+ *
+ * Per account: switching to an account that has not been here shows it for
+ * that account, which is what "first time logging in" means when one person
+ * holds several. Per browser too, localStorage being what it is - a new
+ * browser or a cleared store reads as a first visit.
  *
  * The links go to the Tutorials tab, where the guide and these FAQs already
  * live (pages/tutorials/constants.ts). Nothing is duplicated here; the panel
  * is a door to content that exists.
  */
 
+// The key predates the change of meaning above - it holds last-visit times
+// now. Kept as it is on purpose: renaming it would read as "no record" for
+// everyone who already has one and greet the whole user base once more.
 const STORAGE_KEY = 'mw_welcome_last_seen';
 const LONG_ABSENCE_MS = 3 * 24 * 60 * 60 * 1000;
 
-type TSeenMap = Record<string, number>;
+type TVisitMap = Record<string, number>;
 
-const readSeen = (): TSeenMap => {
+const readVisits = (): TVisitMap => {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
         const parsed = raw ? JSON.parse(raw) : null;
-        return parsed && typeof parsed === 'object' ? (parsed as TSeenMap) : {};
+        return parsed && typeof parsed === 'object' ? (parsed as TVisitMap) : {};
     } catch {
-        // A cleared or blocked store just means nobody has seen it yet.
+        // A cleared or blocked store just means nobody has been here yet.
         return {};
     }
 };
 
-const writeSeen = (account_id: string) => {
+const writeVisit = (account_id: string) => {
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...readSeen(), [account_id]: Date.now() }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...readVisits(), [account_id]: Date.now() }));
     } catch {
         // Not being able to remember is not a reason to fail the render; the
         // worst case is the panel greets them again next time.
@@ -57,23 +75,33 @@ const WelcomePanel = observer(() => {
     const { client, dashboard, oauth_session } = useStore() ?? {};
     const { localize } = useTranslations();
     const [is_open, setIsOpen] = useState(false);
+    // Which account this mount has already ruled on. The effect both reads the
+    // record and overwrites it, so letting it run twice for one account - a
+    // remount, a store settling, StrictMode - would have it find its own write
+    // and decide the panel away.
+    const decided = useRef<string | null>(null);
 
     const account_id = oauth_session?.is_authenticated ? oauth_session.account_id : client?.loginid;
 
     useEffect(() => {
-        if (!account_id) return;
-        const last_seen = readSeen()[account_id];
+        if (!account_id || decided.current === account_id) return;
+        // Once per account, and the decision has to be taken before the visit
+        // is recorded - the record about to be written is "now", which would
+        // answer every question with "they were just here".
+        decided.current = account_id;
+        const last_visit = readVisits()[account_id];
         // No record at all is a first visit; an old one is a return after a
         // long absence. Both get the panel, anything recent does not.
-        setIsOpen(!last_seen || Date.now() - last_seen > LONG_ABSENCE_MS);
+        setIsOpen(!last_visit || Date.now() - last_visit > LONG_ABSENCE_MS);
+        // Written whether or not it showed, so the next visit is measured from
+        // this one. This is also what stops a reload bringing the panel back.
+        writeVisit(account_id);
     }, [account_id]);
 
     if (!is_open || !account_id) return null;
 
-    const dismiss = () => {
-        writeSeen(account_id);
-        setIsOpen(false);
-    };
+    // The visit is already recorded; closing it is just closing it.
+    const dismiss = () => setIsOpen(false);
 
     const openTutorials = () => {
         dashboard?.setActiveTab(DBOT_TABS.TUTORIAL);
