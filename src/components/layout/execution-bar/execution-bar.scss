@@ -655,6 +655,17 @@ $mw-ai-white: #faf2fb; // lettering
         transition:
             transform 150ms ease,
             box-shadow 200ms ease;
+
+        // The breath. Measured off the zoomed recording at 15 frames a second:
+        // the sphere holds its size, draws in over about a second to 0.85 of
+        // it, springs back in under half of one, and then rests for three and a
+        // half before doing it again - a little over five seconds end to end.
+        // The rings do not move with it. Tracked across 90 frames, the outer
+        // ring sits at x 262..488 in every single one while the sphere's own
+        // edge travels 17px; so this is on the sphere alone, and the rings it
+        // breathes inside stay where they are.
+        animation: mw-ai-breathe 5.1s ease-in-out infinite;
+        will-change: transform;
     }
 
     // The scan field's clip. The field slides until it meets the sphere's edge,
@@ -866,6 +877,25 @@ $mw-ai-white: #faf2fb; // lettering
 // so it eases into each and crosses the lettering at speed. It goes just past
 // the reticle at either end, which is where the reference's two frames catch
 // it - once below the letters and once above them.
+// The sphere's breath, keyed off the frame counts in the zoomed recording. The
+// contraction is the slow half and the release the quick one, which is what
+// gives it the spring; the long tail is the rest between breaths.
+@keyframes mw-ai-breathe {
+    0%,
+    10% {
+        transform: scale(1);
+    }
+
+    30% {
+        transform: scale(0.85);
+    }
+
+    39%,
+    100% {
+        transform: scale(1);
+    }
+}
+
 // The hand's turn: twelve, round through three, six and nine, back to twelve.
 @keyframes mw-ai-beam {
     from {
@@ -948,6 +978,7 @@ $mw-ai-white: #faf2fb; // lettering
     // place, so there is nothing there to still. The first selector carries the
     // orb's class so it also outranks the quicker scanning speed.
     .mw-exec-bar__ai .mw-exec-bar__ai-beam,
+    .mw-exec-bar__ai-core,
     .mw-exec-bar__ai-frame,
     .mw-exec-bar__ai-dot,
     .mw-exec-bar__ai-hint,
