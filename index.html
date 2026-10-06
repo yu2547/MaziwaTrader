@@ -67,21 +67,47 @@
              canonical link here on purpose: this one file is served for every
              route, so a fixed one would call every page a copy of the home
              page. The layout sets it per route instead (components/layout). -->
-        <title>MaziwaTrader: Automate Your Trades</title>
-        <meta name="title" content="MaziwaTrader: Automate Your Trades" />
+        <title>MaziwaTrader: Smart Trading Tools for Deriv</title>
+        <meta name="title" content="MaziwaTrader: Smart Trading Tools for Deriv" />
         <meta
             name="description"
-            content="Whether you trade by hand, run automated bots or copy other traders, MaziwaTrader gives you the tools to find setups, manage risk and automate your Deriv trading."
+            content="MaziwaTrader is a trading platform with automated trading bots, DTrader, market analysis tools, charts, copy trading and risk management tools for Deriv traders."
         />
+        <!-- Indexable, which is already the default - stated so that nothing is
+             left to inference. max-image-preview:large lets Google use the brand
+             image at full size rather than a thumbnail; the two -1s lift its own
+             caps on snippet length, which it may use or ignore. None of this
+             makes Google show any particular layout - it only removes limits we
+             would otherwise be imposing on it. -->
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="MaziwaTrader" />
-        <meta property="og:title" content="MaziwaTrader: Automate Your Trades" />
+        <meta property="og:locale" content="en_US" />
+        <!-- The home page. Every route is served this one file, so the layout
+             rewrites this per route alongside the canonical link
+             (components/layout). Unlike the canonical, a stale og:url only
+             mislabels a share preview, so it is safe to carry a default here. -->
+        <meta property="og:url" content="https://www.maziwatrader.com/" />
+        <meta property="og:title" content="MaziwaTrader: Smart Trading Tools for Deriv" />
         <meta
             property="og:description"
-            content="Manual trading, automated bots and copy trading for Deriv, with tools to find setups and manage risk."
+            content="MaziwaTrader is a trading platform with automated trading bots, DTrader, market analysis tools, charts, copy trading and risk management tools for Deriv traders."
         />
+        <!-- public/maziwatrader-logo-v3.png, the brand artwork already in the
+             repo. Measured 1536x1024, which clears the 1200x630 that link
+             previews want and is the 3:2 a large card crops to. -->
         <meta property="og:image" content="https://www.maziwatrader.com/maziwatrader-logo-v3.png" />
-        <meta name="twitter:card" content="summary" />
+        <meta property="og:image:width" content="1536" />
+        <meta property="og:image:height" content="1024" />
+        <meta property="og:image:alt" content="MaziwaTrader" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="MaziwaTrader: Smart Trading Tools for Deriv" />
+        <meta
+            name="twitter:description"
+            content="MaziwaTrader is a trading platform with automated trading bots, DTrader, market analysis tools, charts, copy trading and risk management tools for Deriv traders."
+        />
+        <meta name="twitter:image" content="https://www.maziwatrader.com/maziwatrader-logo-v3.png" />
+        <meta name="twitter:image:alt" content="MaziwaTrader" />
         <!-- Structured data: the site name Google prints above the address,
              and the logo it can show for the brand. A data block, not a
              script, so the Content-Security-Policy in vercel.json does not

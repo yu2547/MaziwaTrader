@@ -40,14 +40,27 @@ const Layout = observer(() => {
     // The canonical URL for search engines, on the production host whichever
     // address this copy was reached through (the apex domain, a *.vercel.app
     // alias), and without the query string, which only carries session state.
+    //
+    // og:url is kept on the same address. index.html carries the home page's
+    // as a default, which is right for the one route most things link to and
+    // wrong for the rest, since every route is served that same file. There is
+    // deliberately no canonical in index.html to match: a default canonical
+    // would tell a crawler that did not run this effect that /dtrader and the
+    // rest are all copies of the home page, which is how pages get dropped. A
+    // stale og:url only mislabels a share preview, so it is safe to default.
     useEffect(() => {
+        const url = `https://www.maziwatrader.com${pathname === '/' ? '/' : pathname.replace(/\/+$/, '')}`;
+
         let link = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
         if (!link) {
             link = document.createElement('link');
             link.rel = 'canonical';
             document.head.appendChild(link);
         }
-        link.href = `https://www.maziwatrader.com${pathname === '/' ? '/' : pathname.replace(/\/+$/, '')}`;
+        link.href = url;
+
+        const og_url = document.querySelector<HTMLMetaElement>('meta[property="og:url"]');
+        if (og_url) og_url.content = url;
     }, [pathname]);
     // The pre-auth landing page (index route, logged-out) supplies its own
     // header/footer for its own visual identity - the dashboard chrome below
