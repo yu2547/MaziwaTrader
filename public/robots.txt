@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /callback
+Disallow: /endpoint
+
+Sitemap: https://www.maziwatrader.com/sitemap.xml

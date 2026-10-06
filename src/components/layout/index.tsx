@@ -36,6 +36,19 @@ const Layout = observer(() => {
     // paint and could go stale afterwards.
     const { pathname } = useLocation();
     const isCallbackPage = pathname === '/callback';
+
+    // The canonical URL for search engines, on the production host whichever
+    // address this copy was reached through (the apex domain, a *.vercel.app
+    // alias), and without the query string, which only carries session state.
+    useEffect(() => {
+        let link = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+        if (!link) {
+            link = document.createElement('link');
+            link.rel = 'canonical';
+            document.head.appendChild(link);
+        }
+        link.href = `https://www.maziwatrader.com${pathname === '/' ? '/' : pathname.replace(/\/+$/, '')}`;
+    }, [pathname]);
     // The pre-auth landing page (index route, logged-out) supplies its own
     // header/footer for its own visual identity - the dashboard chrome below
     // is only for the authenticated app and other routes, unchanged for them.

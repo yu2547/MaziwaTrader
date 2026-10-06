@@ -62,17 +62,49 @@
         <link rel="apple-touch-icon" href="/logo.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/logo.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/logo.png" />
-        <meta name="title" content="Automate Your Trades | MaziwaTrader" />
+        <!-- Search and link previews. The title is the blue headline Google
+             shows, the description the grey lines under it. There is no
+             canonical link here on purpose: this one file is served for every
+             route, so a fixed one would call every page a copy of the home
+             page. The layout sets it per route instead (components/layout). -->
+        <title>MaziwaTrader: Automate Your Trades</title>
+        <meta name="title" content="MaziwaTrader: Automate Your Trades" />
         <meta
             name="description"
-            content="Build a trading bot without coding with MaziwaTrader. Automated trading for derivatives."
+            content="Whether you trade by hand, run automated bots or copy other traders, MaziwaTrader gives you the tools to find setups, manage risk and automate your Deriv trading."
         />
-        <meta property="og:title" content="MaziwaTrader" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="MaziwaTrader" />
+        <meta property="og:title" content="MaziwaTrader: Automate Your Trades" />
         <meta
             property="og:description"
-            content="Build a trading bot without coding with MaziwaTrader. Automated trading for derivatives."
+            content="Manual trading, automated bots and copy trading for Deriv, with tools to find setups and manage risk."
         />
-        <title>Automate Your Trades | MaziwaTrader</title>
+        <meta property="og:image" content="https://www.maziwatrader.com/maziwatrader-logo-v3.png" />
+        <meta name="twitter:card" content="summary" />
+        <!-- Structured data: the site name Google prints above the address,
+             and the logo it can show for the brand. A data block, not a
+             script, so the Content-Security-Policy in vercel.json does not
+             apply to it. -->
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@graph": [
+                    {
+                        "@type": "WebSite",
+                        "name": "MaziwaTrader",
+                        "alternateName": ["Maziwa Trader", "maziwatrader.com"],
+                        "url": "https://www.maziwatrader.com/"
+                    },
+                    {
+                        "@type": "Organization",
+                        "name": "MaziwaTrader",
+                        "url": "https://www.maziwatrader.com/",
+                        "logo": "https://www.maziwatrader.com/maziwatrader-logo-v3.png"
+                    }
+                ]
+            }
+        </script>
         <style>
             :root {
                 font-size: 62.5%;
