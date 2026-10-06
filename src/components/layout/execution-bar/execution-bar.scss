@@ -578,6 +578,29 @@ $mw-ai-white: #faf2fb; // lettering
         // lit from inside rather than printed on.
         filter: drop-shadow(0 0 0.9rem rgb(122 77 161 / 45%));
 
+        // The bounce, and it is the whole orb that bounces - sphere, rings and
+        // dot together, rising and falling as one object. Measured over 180
+        // frames of the reference at 30 a second: the outer ring's height never
+        // leaves 103-105px and the sphere's never leaves 56-58px, so nothing
+        // about it changes size, while the ring's centre and the sphere's
+        // centre move in lockstep, within half a pixel of each other in every
+        // frame. Peak to peak is 5.5px on a 104px orb and the period is exactly
+        // 90 frames; against a sine of that amplitude every sample lands within
+        // half a pixel, so it is keyed at the two extremes and eased, which is
+        // what gives a sine its dwell at the top and bottom and its speed
+        // through the middle. 2.64% of the orb's width is 1.9px here.
+        // In px, not rem, and that is on purpose: this button is a 72px object
+        // at every width. On phones styles/index.scss divides its 7.2rem back
+        // out by the page scale to keep it at a true 72 for the drag clamp, so
+        // a rem amplitude would have shrunk the bounce to 1.6px on a phone
+        // while the orb it belongs to stayed the same size.
+        // On `translate` rather than `transform` so it composes with the
+        // hover, press and drag states below instead of overriding them - an
+        // animation outranks a plain declaration, and keying this on transform
+        // would have silently killed the press.
+        animation: mw-ai-bob 3s ease-in-out infinite;
+        will-change: translate;
+
         // Carries the hover/press/scanning states below. Only transform and
         // filter, both compositor properties, so the orb stays on the GPU and
         // does not relayout while the rings are animating.
@@ -656,16 +679,14 @@ $mw-ai-white: #faf2fb; // lettering
             transform 150ms ease,
             box-shadow 200ms ease;
 
-        // The breath. Measured off the zoomed recording at 15 frames a second:
-        // the sphere holds its size, draws in over about a second to 0.85 of
-        // it, springs back in under half of one, and then rests for three and a
-        // half before doing it again - a little over five seconds end to end.
-        // The rings do not move with it. Tracked across 90 frames, the outer
-        // ring sits at x 262..488 in every single one while the sphere's own
-        // edge travels 17px; so this is on the sphere alone, and the rings it
-        // breathes inside stay where they are.
-        animation: mw-ai-breathe 5.1s ease-in-out infinite;
-        will-change: transform;
+        // The sphere does not breathe on its own. It used to carry a scale
+        // here, read off the zoomed recording, where I had tracked the rings
+        // across the frame horizontally - x 262..488 in all of them - and taken
+        // that to mean they were still while the sphere moved. A horizontal
+        // measurement cannot see vertical travel: measured again down the
+        // centre, the rings were rising and falling with the sphere the whole
+        // time, and neither of them ever changes size. The movement is one
+        // bounce of the whole orb, and it is on the button.
     }
 
     // The scan field's clip. The field slides until it meets the sphere's edge,
@@ -873,26 +894,19 @@ $mw-ai-white: #faf2fb; // lettering
     }
 }
 
-// The line's travel: down the sphere and back up, keyed only at the two ends
-// so it eases into each and crosses the lettering at speed. It goes just past
-// the reticle at either end, which is where the reference's two frames catch
-// it - once below the letters and once above them.
-// The sphere's breath, keyed off the frame counts in the zoomed recording. The
-// contraction is the slow half and the release the quick one, which is what
-// gives it the spring; the long tail is the rest between breaths.
-@keyframes mw-ai-breathe {
+// The orb's bounce: up and down, 1.9px each way, keyed only at the two
+// extremes so the easing carries it slowly out of each and quickly through the
+// middle - which is the shape the reference's own travel fits. Small on
+// purpose: 3.8px of travel on a 72px orb, which is something you notice the
+// orb doing rather than something you watch.
+@keyframes mw-ai-bob {
     0%,
-    10% {
-        transform: scale(1);
-    }
-
-    30% {
-        transform: scale(0.85);
-    }
-
-    39%,
     100% {
-        transform: scale(1);
+        translate: 0 -1.9px;
+    }
+
+    50% {
+        translate: 0 1.9px;
     }
 }
 

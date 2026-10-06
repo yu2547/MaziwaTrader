@@ -173,9 +173,11 @@ const AssistantOrbs = () => {
             >
                 {/* Three closed circles held at fixed radii. Nothing rides
                     them and nothing turns: on the reference they are three
-                    clean rings around a still sphere, and a ring with a gap in
-                    it - or a point running along it - is what made this read as
-                    a drawing of an instrument rather than an instrument. */}
+                    clean rings holding a sphere, and a ring with a gap in it -
+                    or a point running along it - is what made this read as a
+                    drawing of an instrument rather than an instrument. They
+                    rise and fall with the sphere, which is the button's own
+                    bounce carrying all of them at once. */}
                 <span className='mw-exec-bar__ai-ring' aria-hidden='true' />
                 <span className='mw-exec-bar__ai-ring mw-exec-bar__ai-ring--mid' aria-hidden='true' />
                 <span className='mw-exec-bar__ai-ring mw-exec-bar__ai-ring--wide' aria-hidden='true' />
