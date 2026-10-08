@@ -426,14 +426,17 @@
             font-size: 1.8rem;
         }
 
-        // Type sizes were matched to the reference as a fraction of card
-        // width, which is scale-invariant and so survives the screenshots
-        // being at different zooms. The ratios were right and the result was
-        // still wrong: the body landed at 10.2px and the title at 12.75px on a
-        // 375px screen, which the comment here already called too small to
-        // read and then shipped anyway. Phone text has a floor that has
-        // nothing to do with any reference - roughly 14px for body copy - and
-        // these sizes are set from that floor instead, at the owner's ask.
+        // Type sizes measured against the reference, finally on equal terms:
+        // two screenshots of the same phone, both 828x1600, one of each app,
+        // so glyphs could be compared pixel for pixel instead of through a
+        // ratio. Measured there, the title already matched at 33px against 34,
+        // the description ran 28px against 20.7, and the button label 19px
+        // against 16. So the title is left where it is and the other two come
+        // down by the measured ratios - 0.74 and 0.84.
+        // This walks back part of an earlier enlargement. The body had been
+        // 10.2px, which is genuinely small, and raising it was asked for; the
+        // description simply went past the reference on the way. The owner has
+        // since seen both side by side and wants the reference's density.
         // Everything scales with the root, which is 8.5px on phones
         // (styles/index.scss), so these rem figures are smaller than they look.
         &__card-title {
@@ -458,7 +461,7 @@
             height: auto;
             margin: 0 auto 12px;
             overflow: hidden;
-            font-size: 1.65rem;
+            font-size: 1.25rem;
             line-height: 1.45;
             text-align: center;
             -webkit-line-clamp: 3;
@@ -470,7 +473,7 @@
             min-height: 44px;
             margin-top: 0;
             border-radius: 16px;
-            font-size: 1.7rem;
+            font-size: 1.45rem;
             font-weight: 700;
         }
     }
@@ -497,7 +500,7 @@
         }
 
         &__card-description {
-            font-size: 1.55rem;
+            font-size: 1.2rem;
         }
     }
 }
