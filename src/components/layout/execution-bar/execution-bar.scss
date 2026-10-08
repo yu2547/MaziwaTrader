@@ -1190,7 +1190,10 @@ $mw-ai-white: #faf2fb; // lettering
         border: none;
         border-radius: 8px;
         background: transparent;
-        color: var(--text-general);
+
+        // The unselected tabs, sampled at rgb(88 112 143) on the reference -
+        // a slate blue, where this was the theme's plain grey.
+        color: #58708f;
         font-size: 1.3rem;
         font-weight: 700;
         cursor: pointer;
@@ -1277,17 +1280,22 @@ $mw-ai-white: #faf2fb; // lettering
         background: var(--general-section-1);
         min-width: 0;
 
+        // Sampled off the reference rather than taken from the theme's greys,
+        // which is what these were: the caption is a muted blue-grey and the
+        // value a near-black navy, so the pair reads as one blue family with
+        // the card and the hero above it rather than as grey text dropped on a
+        // blue sheet.
         > span {
             font-size: 1.05rem;
             font-weight: 700;
             letter-spacing: 0.08em;
-            color: var(--text-less-prominent);
+            color: #71839a;
         }
 
         input {
             border: none;
             background: transparent;
-            color: var(--text-prominent);
+            color: #132a47;
             font-size: 1.8rem;
             font-weight: 700;
             font-variant-numeric: tabular-nums;
@@ -1297,8 +1305,8 @@ $mw-ai-white: #faf2fb; // lettering
 
         strong {
             font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--text-prominent);
+            font-weight: 700;
+            color: #132a47;
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -1334,18 +1342,19 @@ $mw-ai-white: #faf2fb; // lettering
         }
     }
 
-    // What the scanner is about to do, or has just done. The recordings put it
-    // on a cream strip with an amber edge rather than on another grey panel:
-    // between the fields above and the buttons below, all of them grey, it was
-    // the one line on the sheet that says what happens next and it read as
-    // another field.
+    // What the scanner is about to do, or has just done. This was a cream strip
+    // with an amber edge, under a comment saying the recordings put it there.
+    // Sampled off the reference screenshot, the strip is rgb(246 249 254) with
+    // slate text on it - the same near-white as the cards around it, not a
+    // warm colour at all. The amber is gone; the error state below still turns
+    // red, which is the one time this line does change colour.
     &__status {
         padding: 1.2rem 1.4rem;
-        border: 1px solid rgb(217 160 40 / 35%);
+        border: 1px solid #e3e9f2;
         border-radius: 10px;
-        background: rgb(253 224 138 / 16%);
+        background: #f6f9fe;
         font-size: 1.3rem;
-        color: var(--text-general);
+        color: #304863;
         line-height: 1.5;
 
         @media (width <= 600px) {
