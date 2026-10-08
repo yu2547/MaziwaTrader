@@ -109,8 +109,19 @@
         box-shadow: 0 4px 20px rgb(0 0 0 / 8%);
         border: 1px solid var(--border-normal);
         transition: all 0.3s ease;
-        display: flex;
-        flex-direction: column;
+
+        // The icon sits beside the heading on one row, everything under it
+        // spanning both columns. This was a flex column, which gave the icon a
+        // row of its own: measured on the reference's desktop card, the icon
+        // and heading share a 22px band, where ours spent 54px on the icon
+        // alone before the heading had started. Same arrangement the phone
+        // block below already used - it is the card's shape, not a phone
+        // special case, so it belongs here and the phone block now only
+        // changes sizes.
+        display: grid;
+        grid-template-columns: auto 1fr;
+        column-gap: 8px;
+        align-items: center;
 
         &:hover {
             transform: translateY(-4px);
@@ -150,8 +161,14 @@
         line-height: 1.4;
     }
 
+    // Centred on the card, as on the reference, where the stars sit within a
+    // pixel of the card's own axis. These used to start at the left edge, a
+    // hundred pixels off that axis, which is most of why the card read as a
+    // left-aligned list rather than a centred card.
     &__rating {
         display: flex;
+        grid-column: 1 / -1;
+        justify-content: center;
         gap: 0.2rem;
         margin: 0 0 0.8rem;
         font-size: 1.6rem;
@@ -168,13 +185,17 @@
 
     &__card-header {
         display: flex;
+        grid-area: 1 / 1;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 16px;
+        margin: 0;
     }
 
+    // Beside the heading rather than looming over it. At 3.2rem this drew a
+    // 32px glyph on its own row; the reference's sits level with the heading
+    // text, so it is sized to that instead.
     &__card-icon {
-        font-size: 3.2rem;
+        font-size: 2rem;
         line-height: 1;
     }
 
@@ -191,23 +212,35 @@
     // desktop card is only a little wider than the phone one, so the same
     // ratio would shrink it past readability.
     &__card-title {
+        grid-area: 1 / 2;
         font-size: 1.6rem;
         font-weight: 600;
         color: var(--text-general);
-        margin-bottom: 8px;
+        margin: 0;
         line-height: 1.3;
+        overflow-wrap: anywhere;
     }
 
+    // Centred and held to three lines, which is what the reference does - its
+    // own first card ends in an ellipsis. Ours ran to five, and five lines of
+    // left-aligned text under a left-aligned heading is most of the difference
+    // in card height: 350px of content against the reference's 232.
     &__card-description {
+        display: -webkit-box;
+        grid-column: 1 / -1;
+        margin: 0 auto 20px;
+        overflow: hidden;
         font-size: 1.3rem;
         color: var(--text-less-prominent);
         line-height: 1.6;
-        margin-bottom: 20px;
-        flex-grow: 1;
+        text-align: center;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
     }
 
     &__card-btn {
         display: flex;
+        grid-column: 1 / -1;
         align-items: center;
         justify-content: center;
         gap: 8px;
