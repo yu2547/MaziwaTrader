@@ -419,6 +419,16 @@
             font-size: 1.4rem;
         }
 
+        // The emoji sets the first grid column's width, so its size decides
+        // where the title starts. At 3.2rem it drew about 37px wide and pushed
+        // the title 127px in from the card's edge; on the reference the icon is
+        // 20px and the title starts at 89. Measured on screenshots of the same
+        // phone, so those are comparable pixels. An emoji renders wider than
+        // its font-size, which is why this is 1.7rem rather than 2.
+        &__card-icon {
+            font-size: 1.7rem;
+        }
+
         &__rating {
             justify-content: center;
             gap: 3px;
@@ -472,7 +482,11 @@
             // 44px is the touch floor, and the reference button is no taller.
             min-height: 44px;
             margin-top: 0;
-            border-radius: 16px;
+
+            // Squarer. The reference's button corner settles over about 20px
+            // at twice scale, so 10px here; at 16 this read as a lozenge
+            // against a card whose own corners are barely rounded.
+            border-radius: 10px;
             font-size: 1.45rem;
             font-weight: 700;
         }
