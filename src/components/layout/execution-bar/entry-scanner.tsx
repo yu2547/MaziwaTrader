@@ -403,12 +403,21 @@ const EntryScanner = observer(
                             <span className='mw-scanner__hero-pill'>✦ {localize(active_mode.badge)}</span>
                             <h3>{localize(active_mode.title)}</h3>
                             <p>{localize(active_mode.blurb)}</p>
+                            {/* Three rings held at fixed radii around the
+                                lettered core, and three blips on them. The
+                                rings used to be one ripple expanding out of the
+                                centre and fading to nothing; on the reference
+                                they are simply there, all of them, all the
+                                time, and the only thing that moves is the sweep
+                                behind them and the blips twinkling. */}
                             <span className={`mw-scanner__radar ${is_scanning ? 'mw-scanner__radar--on' : ''}`}>
                                 <span className='mw-scanner__radar-ring' />
                                 <span className='mw-scanner__radar-ring mw-scanner__radar-ring--mid' />
+                                <span className='mw-scanner__radar-ring mw-scanner__radar-ring--inner' />
                                 <span className='mw-scanner__radar-core'>AI</span>
                                 <span className='mw-scanner__radar-blip' />
                                 <span className='mw-scanner__radar-blip mw-scanner__radar-blip--two' />
+                                <span className='mw-scanner__radar-blip mw-scanner__radar-blip--three' />
                             </span>
                         </div>
 
@@ -421,18 +430,20 @@ const EntryScanner = observer(
                                     onClick={() => selectMode(item.id)}
                                     disabled={is_scanning}
                                 >
-                                    {/* The compact form the reference uses -
-                                        O1 / U8 rather than Over1 / Under8 -
-                                        derived from the mode's own id so there
-                                        is no second copy of it to drift. The
-                                        full `label` is still what prose like
-                                        "Ready to scan ..." reads from.
+                                    {/* The full name. These read "O1 / U8" for
+                                        a while, from the id, under a comment
+                                        saying that was the form the reference
+                                        used; the reference screenshot since
+                                        supplied spells all three out, so the
+                                        tab and the prose that says "Ready to
+                                        scan ..." now read from the one `label`
+                                        rather than from two different forms.
                                         Wrapped so it can sit above the fill:
                                         the selected tab's gradient is an
                                         absolutely positioned layer, and an
                                         absolutely positioned pseudo-element
                                         paints over a bare text node. */}
-                                    <span>{item.id.replace('/', ' / ')}</span>
+                                    <span>{localize(item.label)}</span>
                                 </button>
                             ))}
                         </div>
