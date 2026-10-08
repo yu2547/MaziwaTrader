@@ -64,10 +64,13 @@ const VirtualHookModal = () => {
 
     const save = () => {
         const block = getBlock(block_id);
-        // block.data is the whole record now. The block face used to carry a
-        // matching checkbox and this kept the two in step; that row is gone,
-        // and setFieldValue on a field that no longer exists throws.
         writeVirtualHookSettings(block, settings);
+        // The checkbox on the block face and this dialog's own toggle are the
+        // same setting, so saving keeps them in step rather than letting the
+        // block claim one thing and the dialog another. Optional-chained
+        // because setFieldValue throws on a field that is not there, and this
+        // row has been taken off the block once already.
+        block?.setFieldValue?.(settings.enabled ? 'TRUE' : 'FALSE', 'VIRTUAL_HOOK');
         setVirtualHookToken(token.trim());
         close();
     };

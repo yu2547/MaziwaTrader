@@ -1,0 +1,422 @@
+<xml xmlns="https://developers.google.com/blockly/xml" is_dbot="true" collection="false">
+  <variables>
+    <variable id="v_stake" >Stake</variable>
+    <variable id="v_initial_stake" >Initial Stake</variable>
+    <variable id="v_initial_prediction" >Initial Prediction</variable>
+    <variable id="v_recovery_prediction" >Recovery Prediction</variable>
+    <variable id="v_prediction" >Prediction</variable>
+    <variable id="v_entry_point_digit" >Entry Point Digit</variable>
+    <variable id="v_entry_signal" >Entry Signal</variable>
+    <variable id="v_martangle" >Martangle</variable>
+    <variable id="v_use_martingale" >Use Martingale</variable>
+    <variable id="v_number_of_wins" >Number of Wins</variable>
+    <variable id="v_run_count" >Run Count</variable>
+    <variable id="v_stop_loss" >Stop Loss</variable>
+    <variable id="v_loop_stop" >Loop Stop</variable>
+    <variable id="v_text" >text</variable>
+  </variables>
+
+  <block type="trade_definition" id="trade_definition_root" deletable="false" x="0" y="60">
+    <statement name="TRADE_OPTIONS">
+      <block type="trade_definition_market" id="td_market" deletable="false" movable="false">
+        <field name="MARKET_LIST">synthetic_index</field>
+        <field name="SUBMARKET_LIST">random_index</field>
+        <field name="SYMBOL_LIST">1HZ25V</field>
+        <next>
+          <block type="trade_definition_tradetype" id="td_tradetype" deletable="false" movable="false">
+            <field name="TRADETYPECAT_LIST">digits</field>
+            <field name="TRADETYPE_LIST">overunder</field>
+            <next>
+              <block type="trade_definition_contracttype" id="td_contracttype" deletable="false" movable="false">
+                <field name="TYPE_LIST">DIGITOVER</field>
+                <next>
+                  <block type="trade_definition_candleinterval" id="td_candle" deletable="false" movable="false">
+                    <field name="CANDLEINTERVAL_LIST">60</field>
+                    <next>
+                      <block type="trade_definition_restartbuysell" id="td_restartbuysell" deletable="false" movable="false">
+                        <field name="TIME_MACHINE_ENABLED">FALSE</field>
+                        <next>
+                          <block type="trade_definition_restartonerror" id="td_restartonerror" deletable="false" movable="false">
+                            <field name="RESTARTONERROR">TRUE</field>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+
+    <statement name="INITIALIZATION">
+      <block type="variables_set" id="init_stake">
+        <field name="VAR" id="v_stake" variabletype="">Stake</field>
+        <value name="VALUE">
+          <shadow type="math_number" id="init_stake_shadow"><field name="NUM">0.5</field></shadow>
+          <block type="math_number" id="init_stake_num"><field name="NUM">0.5</field></block>
+        </value>
+        <next>
+          <block type="variables_set" id="init_initial_prediction">
+            <field name="VAR" id="v_initial_prediction" variabletype="">Initial Prediction</field>
+            <value name="VALUE">
+              <shadow type="math_number" id="init_ip_shadow"><field name="NUM">2</field></shadow>
+              <block type="math_number" id="init_ip_num"><field name="NUM">2</field></block>
+            </value>
+            <next>
+              <block type="variables_set" id="init_recovery_prediction">
+                <field name="VAR" id="v_recovery_prediction" variabletype="">Recovery Prediction</field>
+                <value name="VALUE">
+                  <shadow type="math_number" id="init_rp_shadow"><field name="NUM">4</field></shadow>
+                  <block type="math_number" id="init_rp_num"><field name="NUM">4</field></block>
+                </value>
+                <next>
+                  <block type="variables_set" id="init_entry_digit">
+                    <field name="VAR" id="v_entry_point_digit" variabletype="">Entry Point Digit</field>
+                    <value name="VALUE">
+                      <shadow type="math_number" id="init_ed_shadow"><field name="NUM">0</field></shadow>
+                      <block type="math_number" id="init_ed_num"><field name="NUM">0</field></block>
+                    </value>
+                    <next>
+                      <block type="variables_set" id="init_martangle">
+                        <field name="VAR" id="v_martangle" variabletype="">Martangle</field>
+                        <value name="VALUE">
+                          <shadow type="math_number" id="init_mt_shadow"><field name="NUM">2</field></shadow>
+                          <block type="math_number" id="init_mt_num"><field name="NUM">2</field></block>
+                        </value>
+                        <next>
+                          <block type="variables_set" id="init_number_of_wins">
+                            <field name="VAR" id="v_number_of_wins" variabletype="">Number of Wins</field>
+                            <value name="VALUE">
+                              <shadow type="math_number" id="init_nw_shadow"><field name="NUM">5</field></shadow>
+                              <block type="math_number" id="init_nw_num"><field name="NUM">5</field></block>
+                            </value>
+                            <next>
+                              <block type="variables_set" id="init_stop_loss">
+                                <field name="VAR" id="v_stop_loss" variabletype="">Stop Loss</field>
+                                <value name="VALUE">
+                                  <shadow type="math_number" id="init_sl_shadow"><field name="NUM">50</field></shadow>
+                                  <block type="math_number" id="init_sl_num"><field name="NUM">50</field></block>
+                                </value>
+                                <next>
+                                  <block type="variables_set" id="init_use_martingale">
+                                    <field name="VAR" id="v_use_martingale" variabletype="">Use Martingale</field>
+                                    <value name="VALUE">
+                                      <block type="logic_boolean" id="init_um_bool"><field name="BOOL">TRUE</field></block>
+                                    </value>
+                                    <next>
+                                      <block type="procedures_callnoreturn" id="call_fixed_variables">
+                                        <mutation name="Fixed Variables"></mutation>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+
+    <statement name="SUBMARKET">
+      <block type="controls_whileUntil" id="wait_for_entry">
+        <field name="MODE">UNTIL</field>
+        <value name="BOOL">
+          <block type="variables_get" id="get_entry_signal_loop">
+            <field name="VAR" id="v_entry_signal" variabletype="">Entry Signal</field>
+          </block>
+        </value>
+        <statement name="DO">
+          <block type="controls_if" id="check_entry_digit">
+            <value name="IF0">
+              <block type="logic_compare" id="cmp_entry_digit">
+                <field name="OP">EQ</field>
+                <value name="A">
+                  <block type="last_digit" id="last_digit_entry"></block>
+                </value>
+                <value name="B">
+                  <block type="variables_get" id="get_entry_point_digit">
+                    <field name="VAR" id="v_entry_point_digit" variabletype="">Entry Point Digit</field>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="variables_set" id="arm_entry_signal">
+                <field name="VAR" id="v_entry_signal" variabletype="">Entry Signal</field>
+                <value name="VALUE">
+                  <block type="logic_boolean" id="arm_true"><field name="BOOL">TRUE</field></block>
+                </value>
+              </block>
+            </statement>
+          </block>
+        </statement>
+        <next>
+          <block type="trade_definition_tradeoptions" id="td_tradeoptions">
+            <mutation xmlns="http://www.w3.org/1999/xhtml" has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
+            <field name="DURATIONTYPE_LIST">t</field>
+            <field name="CURRENCY_LIST">USD</field>
+            <value name="DURATION">
+              <shadow type="math_number" id="duration_shadow"><field name="NUM">1</field></shadow>
+              <block type="math_number" id="duration_num"><field name="NUM">1</field></block>
+            </value>
+            <value name="AMOUNT">
+              <shadow type="math_number" id="amount_shadow"><field name="NUM">0.5</field></shadow>
+              <block type="variables_get" id="get_stake_for_trade">
+                <field name="VAR" id="v_stake" variabletype="">Stake</field>
+              </block>
+            </value>
+            <value name="PREDICTION">
+              <shadow type="math_number_positive" id="prediction_shadow"><field name="NUM">2</field></shadow>
+              <block type="variables_get" id="get_prediction_for_trade">
+                <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
+              </block>
+            </value>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+
+  <block type="before_purchase" id="before_purchase_root" deletable="false" x="0" y="620">
+    <statement name="BEFOREPURCHASE_STACK">
+      <block type="purchase" id="purchase_over">
+        <field name="PURCHASE_LIST">DIGITOVER</field>
+      </block>
+    </statement>
+  </block>
+
+  <block type="after_purchase" id="after_purchase_root" deletable="false" x="0" y="760">
+    <statement name="AFTERPURCHASE_STACK">
+      <block type="notify" id="notify_result">
+        <field name="NOTIFICATION_TYPE">success</field>
+        <field name="NOTIFICATION_SOUND">silent</field>
+        <value name="MESSAGE">
+          <shadow type="text" id="notify_shadow"><field name="TEXT">Trade closed</field></shadow>
+          <block type="total_profit" id="notify_total_profit"></block>
+        </value>
+        <next>
+          <block type="controls_if" id="handle_result">
+            <mutation else="1"></mutation>
+            <value name="IF0">
+              <block type="contract_check_result" id="is_win">
+                <field name="CHECK_RESULT">win</field>
+              </block>
+            </value>
+            <statement name="DO0">
+              <block type="variables_set" id="win_reset_stake">
+                <field name="VAR" id="v_stake" variabletype="">Stake</field>
+                <value name="VALUE">
+                  <block type="variables_get" id="get_initial_stake_win">
+                    <field name="VAR" id="v_initial_stake" variabletype="">Initial Stake</field>
+                  </block>
+                </value>
+                <next>
+                  <block type="variables_set" id="win_reset_prediction">
+                    <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
+                    <value name="VALUE">
+                      <block type="variables_get" id="get_initial_prediction_win">
+                        <field name="VAR" id="v_initial_prediction" variabletype="">Initial Prediction</field>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="math_change" id="win_count_up">
+                        <field name="VAR" id="v_run_count" variabletype="">Run Count</field>
+                        <value name="DELTA">
+                          <shadow type="math_number" id="win_delta_shadow"><field name="NUM">1</field></shadow>
+                          <block type="math_number" id="win_delta"><field name="NUM">1</field></block>
+                        </value>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <statement name="ELSE">
+              <block type="controls_if" id="loss_martingale_gate">
+                <value name="IF0">
+                  <block type="variables_get" id="get_use_martingale">
+                    <field name="VAR" id="v_use_martingale" variabletype="">Use Martingale</field>
+                  </block>
+                </value>
+                <statement name="DO0">
+                  <block type="variables_set" id="loss_scale_stake">
+                    <field name="VAR" id="v_stake" variabletype="">Stake</field>
+                    <value name="VALUE">
+                      <block type="math_arithmetic" id="loss_multiply">
+                        <field name="OP">MULTIPLY</field>
+                        <value name="A">
+                          <shadow type="math_number" id="loss_a_shadow"><field name="NUM">0.5</field></shadow>
+                          <block type="variables_get" id="get_stake_loss">
+                            <field name="VAR" id="v_stake" variabletype="">Stake</field>
+                          </block>
+                        </value>
+                        <value name="B">
+                          <shadow type="math_number" id="loss_b_shadow"><field name="NUM">2</field></shadow>
+                          <block type="variables_get" id="get_martangle">
+                            <field name="VAR" id="v_martangle" variabletype="">Martangle</field>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                  </block>
+                </statement>
+                <next>
+                  <block type="variables_set" id="loss_set_recovery_prediction">
+                    <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
+                    <value name="VALUE">
+                      <block type="variables_get" id="get_recovery_prediction">
+                        <field name="VAR" id="v_recovery_prediction" variabletype="">Recovery Prediction</field>
+                      </block>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="controls_if" id="check_target_wins">
+                <value name="IF0">
+                  <block type="logic_compare" id="cmp_run_count">
+                    <field name="OP">GTE</field>
+                    <value name="A">
+                      <block type="variables_get" id="get_run_count">
+                        <field name="VAR" id="v_run_count" variabletype="">Run Count</field>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <block type="variables_get" id="get_number_of_wins">
+                        <field name="VAR" id="v_number_of_wins" variabletype="">Number of Wins</field>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+                <statement name="DO0">
+                  <block type="variables_set" id="stop_on_target">
+                    <field name="VAR" id="v_loop_stop" variabletype="">Loop Stop</field>
+                    <value name="VALUE">
+                      <block type="logic_boolean" id="stop_true_target"><field name="BOOL">TRUE</field></block>
+                    </value>
+                  </block>
+                </statement>
+                <next>
+                  <block type="controls_if" id="check_stop_loss">
+                    <value name="IF0">
+                      <block type="logic_compare" id="cmp_stop_loss">
+                        <field name="OP">LTE</field>
+                        <value name="A">
+                          <block type="total_profit" id="profit_for_stop_loss"></block>
+                        </value>
+                        <value name="B">
+                          <block type="math_single" id="negate_stop_loss">
+                            <field name="OP">NEG</field>
+                            <value name="NUM">
+                              <shadow type="math_number" id="neg_shadow"><field name="NUM">50</field></shadow>
+                              <block type="variables_get" id="get_stop_loss">
+                                <field name="VAR" id="v_stop_loss" variabletype="">Stop Loss</field>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <statement name="DO0">
+                      <block type="variables_set" id="stop_on_loss">
+                        <field name="VAR" id="v_loop_stop" variabletype="">Loop Stop</field>
+                        <value name="VALUE">
+                          <block type="logic_boolean" id="stop_true_loss"><field name="BOOL">TRUE</field></block>
+                        </value>
+                      </block>
+                    </statement>
+                    <next>
+                      <block type="controls_if" id="continue_gate">
+                        <value name="IF0">
+                          <block type="logic_negate" id="not_loop_stop">
+                            <value name="BOOL">
+                              <block type="variables_get" id="get_loop_stop">
+                                <field name="VAR" id="v_loop_stop" variabletype="">Loop Stop</field>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                        <statement name="DO0">
+                          <block type="variables_set" id="rearm_entry_signal">
+                            <field name="VAR" id="v_entry_signal" variabletype="">Entry Signal</field>
+                            <value name="VALUE">
+                              <block type="logic_boolean" id="rearm_false"><field name="BOOL">FALSE</field></block>
+                            </value>
+                            <next>
+                              <block type="trade_again" id="trade_again_block"></block>
+                            </next>
+                          </block>
+                        </statement>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+
+  <block type="procedures_defnoreturn" id="fixed_variables_def" x="640" y="60">
+    <field name="NAME">Fixed Variables</field>
+    <statement name="STACK">
+      <block type="variables_set" id="fv_loop_stop">
+        <field name="VAR" id="v_loop_stop" variabletype="">Loop Stop</field>
+        <value name="VALUE">
+          <block type="logic_boolean" id="fv_loop_stop_false"><field name="BOOL">FALSE</field></block>
+        </value>
+        <next>
+          <block type="variables_set" id="fv_initial_stake">
+            <field name="VAR" id="v_initial_stake" variabletype="">Initial Stake</field>
+            <value name="VALUE">
+              <block type="variables_get" id="fv_get_stake">
+                <field name="VAR" id="v_stake" variabletype="">Stake</field>
+              </block>
+            </value>
+            <next>
+              <block type="variables_set" id="fv_run_count">
+                <field name="VAR" id="v_run_count" variabletype="">Run Count</field>
+                <value name="VALUE">
+                  <shadow type="math_number" id="fv_rc_shadow"><field name="NUM">0</field></shadow>
+                  <block type="math_number" id="fv_rc_num"><field name="NUM">0</field></block>
+                </value>
+                <next>
+                  <block type="variables_set" id="fv_prediction">
+                    <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
+                    <value name="VALUE">
+                      <block type="variables_get" id="fv_get_initial_prediction">
+                        <field name="VAR" id="v_initial_prediction" variabletype="">Initial Prediction</field>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="variables_set" id="fv_entry_signal">
+                        <field name="VAR" id="v_entry_signal" variabletype="">Entry Signal</field>
+                        <value name="VALUE">
+                          <block type="logic_boolean" id="fv_es_false"><field name="BOOL">FALSE</field></block>
+                        </value>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

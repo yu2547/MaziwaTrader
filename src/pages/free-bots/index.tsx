@@ -64,6 +64,17 @@ export const BOTS: Bot[] = [
         rating: 5,
     },
     {
+        id: 'ai-signal-scanner',
+        name: 'AI SIGNAL SCANNER',
+        description:
+            'AI Signal Scanner - Intelligent market scanner that detects high-probability setups and automates trade execution with built-in risk controls.',
+        fileName: 'AI_Signal_Scanner.xml',
+        category: 'AI Trading',
+        icon: '🤖',
+        is_premium: true,
+        rating: 5,
+    },
+    {
         id: '6',
         name: 'Alpha Version 2026 Edition',
         description:

@@ -1,7 +1,42 @@
+import { VH_SETTINGS_EVENT } from '@/utils/virtual-hook';
 import { localize } from '@deriv-com/translations';
 import ApiHelpers from '../../../../services/api/api-helpers';
 import DBotStore from '../../../dbot-store';
 import { excludeOptionFromContextMenu, modifyContextMenu, runIrreversibleEvents } from '../../../utils';
+
+// The "VH Settings" pill, inline so it needs no asset request and cannot go
+// missing from a build. FieldImage takes a src, and a data URI is a src.
+const VH_SETTINGS_BUTTON =
+    'data:image/svg+xml;charset=utf-8,' +
+    encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="78" height="20">' +
+            '<rect x="0.5" y="0.5" width="77" height="19" rx="4" fill="#fff8e1" stroke="#e0b400"/>' +
+            '<text x="39" y="14" text-anchor="middle" font-family="IBM Plex Sans, Arial, sans-serif" ' +
+            'font-size="11" font-weight="700" fill="#c62828">VH Settings</text>' +
+            '</svg>'
+    );
+
+/**
+ * Writes the checkbox's state into block.data, which is what the engine gate
+ * actually reads (readVirtualHookFromWorkspace in tradeEngine/utils/helpers.js)
+ * and what Blockly serialises into the saved XML.
+ *
+ * Without this the tick would be decoration: the row was removed once, the gate
+ * was moved onto the stored flag at the same time, and putting the row back
+ * without this would give a checkbox that looks like a switch and controls
+ * nothing. Everything else in the stored settings - the step counts, the stake,
+ * the token - is left exactly as the dialog wrote it.
+ */
+const writeEnabledFlag = (block, is_enabled) => {
+    try {
+        const stored = block.data ? JSON.parse(block.data) : {};
+        block.data = JSON.stringify({ ...stored, vh: { ...(stored.vh ?? {}), enabled: is_enabled } });
+    } catch {
+        // Unparseable data means there is nothing of value to preserve; start
+        // a fresh record rather than leaving the tick doing nothing.
+        block.data = JSON.stringify({ vh: { enabled: is_enabled } });
+    }
+};
 
 /* eslint-disable */
 window.Blockly.Blocks.trade_definition_market = {
@@ -39,16 +74,35 @@ window.Blockly.Blocks.trade_definition_market = {
         this.setMovable(false);
         this.setDeletable(false);
 
-        // No Virtual Hook row. This block is the one trade-parameters block
-        // every strategy carries, so the checkbox and its "VH Settings" pill
-        // appeared on every bot in the app - on the Free Bots, on anything
-        // loaded from a saved workspace, and on anything imported.
+        // Second row: the Virtual Hook toggle and its settings button. Added
+        // after jsonInit rather than as another message/args pair because the
+        // button needs a click handler, and a field_image declared in JSON
+        // cannot carry one - FieldImage's fifth argument is the only way, the
+        // same approach the procedures blocks use for their +/- controls.
         //
-        // The hook itself is untouched. Its settings live in block.data, which
-        // Blockly serialises into the XML, so a strategy that already has it
-        // configured keeps exactly the behaviour it had - see
-        // readVirtualHookFromWorkspace in tradeEngine/utils/helpers.js, which
-        // now reads that stored flag rather than the field removed here.
+        // This block is the single trade-parameters block every strategy uses,
+        // so defining the row here is what puts it on every bot: the Free Bots,
+        // anything loaded from a saved workspace, and anything imported. That
+        // breadth is the point - it was taken off once for being on everything,
+        // and is back at the owner's request for the same reason.
+        //
+        // A strategy that has never heard of Virtual Hook gets the field at its
+        // default of unchecked and the engine reads that as disabled, so no bot
+        // XML needs migrating in either direction.
+        this.appendDummyInput('VIRTUAL_HOOK_ROW')
+            .appendField(localize('Virtual Hook:'))
+            .appendField(
+                new window.Blockly.FieldCheckbox('FALSE', value => {
+                    writeEnabledFlag(this, value === 'TRUE' || value === true);
+                    return undefined;
+                }),
+                'VIRTUAL_HOOK'
+            )
+            .appendField(
+                new window.Blockly.FieldImage(VH_SETTINGS_BUTTON, 78, 20, localize('VH Settings'), () =>
+                    window.dispatchEvent(new CustomEvent(VH_SETTINGS_EVENT, { detail: { block_id: this.id } }))
+                )
+            );
     },
     customContextMenu(menu) {
         const menu_items = [localize('Enable Block'), localize('Disable Block')];
@@ -56,6 +110,22 @@ window.Blockly.Blocks.trade_definition_market = {
         modifyContextMenu(menu);
     },
     onchange(event) {
+        // A strategy saved while the row was off the block carries its Virtual
+        // Hook state only in block.data, with no VIRTUAL_HOOK field in its XML,
+        // so the restored checkbox would load unticked while the engine ran the
+        // hook - the switch saying one thing and the behaviour another. Sync it
+        // once, on create, from the stored flag the engine itself reads.
+        if (event?.type === window.Blockly.Events.BLOCK_CREATE && !this.is_vh_synced) {
+            this.is_vh_synced = true;
+            try {
+                const stored = this.data ? JSON.parse(this.data)?.vh : null;
+                if (stored?.enabled) this.setFieldValue?.('TRUE', 'VIRTUAL_HOOK');
+            } catch {
+                // Unreadable data just leaves the box at its unticked default,
+                // which is what the engine reads it as too.
+            }
+        }
+
         const allowed_events = ['BLOCK_CREATE', 'BLOCK_CHANGE', 'BLOCK_DRAG'];
         const is_allowed_event =
             allowed_events.findIndex(event_name => event.type === window.Blockly.Events[event_name]) !== -1;
