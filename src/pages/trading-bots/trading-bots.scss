@@ -62,16 +62,51 @@
     }
 }
 
+// Phones. The reference puts these in one row of cards that scrolls sideways,
+// not a block of pills that wraps: with six of them at this width, wrapping
+// cost two or three stacked lines before the catalogue even began, and which
+// tabs shared a line depended on how long their labels happened to be.
 @media (width <= 600px) {
     .mw-trading-bots {
         &__nav {
-            gap: 0.6rem;
-            padding: 1rem;
+            // One row, scrolled rather than wrapped. The tabs beyond the fold
+            // are reached by dragging the strip, as the reference does it.
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            gap: 0.8rem;
+            padding: 1rem 1.2rem;
+
+            // The strip is dragged, so the bar is noise - and on iOS it would
+            // sit over the tabs rather than beside them.
+            scrollbar-width: none;
+
+            &::-webkit-scrollbar {
+                display: none;
+            }
         }
 
         &__tab {
-            padding: 0.6rem 1.2rem;
-            font-size: 1.2rem;
+            // Cards, not pills: square-ish corners and a white face that reads
+            // as a raised tile against the bar. Never squeezed to fit, since
+            // the row scrolls instead.
+            flex: 0 0 auto;
+
+            // 8.65% of the screen's width in the reference, which is 32px at
+            // 375 - half again the 22px these were. The padding carries it
+            // rather than a fixed height, so a tab is never shorter than the
+            // label inside it.
+            padding: 1rem 1.4rem;
+            border-radius: 1rem;
+            background: #fff;
+            box-shadow: 0 1px 3px rgb(20 50 120 / 8%);
+            font-size: 1.45rem;
+        }
+
+        // White like the rest, picked out by its border and its weight rather
+        // than by a wash of blue - the reference marks the open tab the same
+        // way, and a tinted face competes with the cards below.
+        &__tab--active {
+            background: #fff;
         }
     }
 }

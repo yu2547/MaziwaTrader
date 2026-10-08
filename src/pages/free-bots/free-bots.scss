@@ -416,27 +416,31 @@
         &__ribbon {
             padding: 6px 14px;
             border-radius: 0 18px 0 14px;
-            font-size: 1.2rem;
+            font-size: 1.4rem;
         }
 
         &__rating {
             justify-content: center;
             gap: 3px;
             margin: 8px 0;
-            font-size: 1.5rem;
+            font-size: 1.8rem;
         }
 
-        // Type sizes come from the reference, measured as a fraction of card
-        // width so the comparison survives the screenshots being at different
-        // scales: there the title is 0.041 of the card's width and the body
-        // 0.033, against 0.050 and 0.048 here. These sit just above the
-        // reference's own ratios - matching them exactly would put the body
-        // text near 10px, which is too small to read on a phone.
+        // Type sizes were matched to the reference as a fraction of card
+        // width, which is scale-invariant and so survives the screenshots
+        // being at different zooms. The ratios were right and the result was
+        // still wrong: the body landed at 10.2px and the title at 12.75px on a
+        // 375px screen, which the comment here already called too small to
+        // read and then shipped anyway. Phone text has a floor that has
+        // nothing to do with any reference - roughly 14px for body copy - and
+        // these sizes are set from that floor instead, at the owner's ask.
+        // Everything scales with the root, which is 8.5px on phones
+        // (styles/index.scss), so these rem figures are smaller than they look.
         &__card-title {
             grid-column: 2;
             grid-row: 1;
             margin: 0;
-            font-size: 1.5rem;
+            font-size: 1.95rem;
             font-weight: 700;
             line-height: 1.25;
             text-align: left;
@@ -454,7 +458,7 @@
             height: auto;
             margin: 0 auto 12px;
             overflow: hidden;
-            font-size: 1.2rem;
+            font-size: 1.65rem;
             line-height: 1.45;
             text-align: center;
             -webkit-line-clamp: 3;
@@ -466,7 +470,7 @@
             min-height: 44px;
             margin-top: 0;
             border-radius: 16px;
-            font-size: 1.3rem;
+            font-size: 1.7rem;
             font-weight: 700;
         }
     }
@@ -484,12 +488,16 @@
             padding: 32px 14px 14px;
         }
 
+        // A step down from the sizes above, not a return to the old ones.
+        // These two are the reason raising the type in the 600px block looked
+        // like it had done nothing on a 375px screen: 375 is inside this query
+        // too, so whatever is set here is what a phone actually renders.
         &__card-title {
-            font-size: 1.4rem;
+            font-size: 1.8rem;
         }
 
         &__card-description {
-            font-size: 1.2rem;
+            font-size: 1.55rem;
         }
     }
 }
