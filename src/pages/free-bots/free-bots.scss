@@ -520,10 +520,16 @@
             min-height: 44px;
             margin-top: 0;
 
-            // Squarer. The reference's button corner settles over about 20px
-            // at twice scale, so 10px here; at 16 this read as a lozenge
-            // against a card whose own corners are barely rounded.
-            border-radius: 10px;
+            // 9px, the same corner the desktop card uses, tracked row by row
+            // down the reference's own button: inset 9px on the top row,
+            // straight by the eighth. This was 10, from a coarser read.
+            // The corner is all the phone needed. The desktop fix that went
+            // with it - trimming the card's padding so the button could draw
+            // wider - does not apply here: measured at 414px, this button is
+            // already 89.1% of its card against the reference's 89.3, and 71%
+            // of the screen against 71.7, because the phone card's padding was
+            // 16px rather than the 24 the desktop one was carrying.
+            border-radius: 9px;
             font-size: 1.45rem;
             font-weight: 700;
         }
