@@ -144,25 +144,44 @@
         &--premium {
             position: relative;
             overflow: hidden;
-            border: 2px solid #2f5fe0;
+
+            // #3a7ef1, read off the two border pixels on the reference's own
+            // card edge. This was #2f5fe0, a deeper and greyer blue - next to
+            // the button's #397dee right-hand end it looked like a different
+            // blue rather than the same one.
+            border: 2px solid #3a7ef1;
+
+            // The reference carries a soft blue bloom out from that edge, not
+            // the neutral grey drop this had: sampled outward from the border
+            // it fades #d2dff5 to #e4eaf5 over about twelve pixels before
+            // reaching the page. Kept gentle - it is an edge treatment, not a
+            // glow around the card.
+            box-shadow: 0 2px 14px rgb(58 126 241 / 18%);
 
             &:hover {
-                border-color: #2f5fe0;
-                box-shadow: 0 10px 34px rgb(47 95 224 / 22%);
+                border-color: #3a7ef1;
+                box-shadow: 0 10px 34px rgb(58 126 241 / 28%);
             }
         }
     }
 
     // Sits in the corner the category chip normally occupies, which is why
     // that chip is not rendered on a premium card.
+    // Sampled off the reference's own ribbon: #ffd300 at its top-left corner
+    // running to #ffab00 at its bottom-right, so a 135deg sweep like this one
+    // but a purer yellow at both ends than the #ffd233-to-#f5a300 it carried.
+    // Its lettering is flat black, not the dark brown here, and its corner
+    // turns over about seven pixels rather than ten - tracked row by row, the
+    // left edge holds at 421 to the tenth row from the bottom, then walks in
+    // 422, 423, 424, 425, 427.
     &__ribbon {
         position: absolute;
         top: 0;
         right: 0;
         padding: 0.6rem 1.6rem;
-        border-bottom-left-radius: 10px;
-        background: linear-gradient(135deg, #ffd233 0%, #f5a300 100%);
-        color: #3d2b00;
+        border-bottom-left-radius: 7px;
+        background: linear-gradient(135deg, #ffd300 0%, #ffab00 100%);
+        color: #000;
         font-size: 1.1rem;
         font-weight: 800;
         letter-spacing: 0.08em;
@@ -429,8 +448,11 @@
             column-gap: 8px;
             align-items: center;
 
+            // The same #3a7ef1 the wider card uses. This was #1f438f, darker
+            // again than the #2f5fe0 it replaced there, so the phone card's
+            // edge was the furthest of the three from the reference.
             &--premium {
-                border: 2px solid #1f438f;
+                border: 2px solid #3a7ef1;
                 border-radius: 20px;
             }
         }
