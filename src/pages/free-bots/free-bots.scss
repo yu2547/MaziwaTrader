@@ -108,7 +108,13 @@
         // 12px, measured off the reference, whose card corner turns over about
         // twelve pixels. This was 16.
         border-radius: 12px;
-        padding: 24px;
+
+        // 18px rather than 24. The padding is what sets how wide the button
+        // below can draw, and that was the last thing still off: measured
+        // across the reference's row, its buttons are 324px on a 402px card
+        // pitch - 80.6% - where ours came to 76.8%. Its padding is 5.7% of the
+        // card's width against our 7.9%, which on a 304px card is 17px.
+        padding: 18px;
         box-shadow: 0 4px 20px rgb(0 0 0 / 8%);
         border: 1px solid var(--border-normal);
         transition: all 0.3s ease;
@@ -292,9 +298,11 @@
         &--premium {
             padding: 14px 20px;
 
-            // 8px, matching the reference, whose button corner turns over
-            // about eight pixels. This was 10.
-            border-radius: 8px;
+            // 9px. Measured properly off the reference this time, tracking the
+            // left edge row by row down the corner: inset 9px on the top row,
+            // reaching the straight edge by the eighth. The earlier 8px came
+            // from a coarser read of the same corner.
+            border-radius: 9px;
             font-size: 1.4rem;
             font-weight: 800;
             letter-spacing: 0.06em;
