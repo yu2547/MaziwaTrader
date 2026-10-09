@@ -392,7 +392,12 @@ const FreeBots = observer(({ allowed_categories, subtitle, title }: TFreeBotsPro
                 <input
                     type='text'
                     className='free-bots__search-input'
-                    placeholder='Search bots by name, strategy or category...'
+                    /* The reference's own wording. Searching still matches on
+                       name, description and category - that is unchanged in
+                       filteredBots above - the placeholder simply no longer
+                       recites the list, which is what made this field read as
+                       twice the width of the reference's. */
+                    placeholder='Search bots...'
                     value={search_term}
                     onChange={event => setSearchTerm(event.target.value)}
                     aria-label='Search bots'

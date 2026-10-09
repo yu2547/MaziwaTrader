@@ -26,7 +26,12 @@
         border-radius: 999px;
         background: transparent;
         color: var(--text-general, #333);
-        font-size: 1.4rem;
+
+        // 1.2rem. On the reference the label's glyphs are 11px inside a 45px
+        // tab, so 24.4% of its height; at 1.4rem ours came to about 28.6% of a
+        // shorter tab, which is the "words are bigger" of it - the strip reads
+        // heavier than the reference's even though the tabs are a similar size.
+        font-size: 1.2rem;
         font-weight: 500;
         white-space: nowrap;
         cursor: pointer;

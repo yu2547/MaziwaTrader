@@ -27,12 +27,16 @@
         line-height: 1.6;
     }
 
+    // Left-aligned with the grid under it, which is where the reference puts
+    // it: measured there, the search box's left edge and the first card's left
+    // edge are the same. This was centred, so on a wide screen it floated in
+    // the middle of the row with the cards starting well to its left.
     &__search {
         display: flex;
         align-items: center;
         gap: 10px;
         max-width: 480px;
-        margin: 0 auto 20px;
+        margin: 0 0 20px;
         padding: 10px 16px;
         border-radius: 12px;
         background: var(--general-main-1);
