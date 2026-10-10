@@ -17,6 +17,19 @@
         background: var(--general-main-1, #fff);
     }
 
+    // The drawn mark, sized off the tab's own font-size so the two move
+    // together and stroked in currentColor, so it takes the tab's blue when
+    // open and its grey when not - which an emoji could not do, carrying its
+    // own palette into a strip of one blue and one grey.
+    // 1.15em rather than a fixed size: an em here is the tab's font-size, so
+    // this reads as "a little taller than the label" at any breakpoint, and
+    // the phone block below only has to move the type.
+    &__tab-icon {
+        flex: none;
+        width: 1.15em;
+        height: 1.15em;
+    }
+
     &__tab {
         display: inline-flex;
         align-items: center;
@@ -118,17 +131,6 @@
             background: #fff;
             box-shadow: 0 1px 3px rgb(20 50 120 / 8%);
             font-size: 1.1rem;
-
-            // The emoji sized on its own, below the label. It is the tallest
-            // thing in the tab - an emoji draws about a third taller than its
-            // font-size - so left on the tab's own size it sets the height of
-            // the ink and holds the whole strip open. The reference's icons
-            // are small flat glyphs rather than emoji, which is why its ink
-            // runs so much shorter; sizing this one down is how far that can
-            // be followed without swapping the icon set.
-            > span {
-                font-size: 0.85rem;
-            }
         }
 
         // White like the rest, picked out by its border and its weight rather

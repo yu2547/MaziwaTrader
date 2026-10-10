@@ -3,6 +3,7 @@ import { observer } from 'mobx-react-lite';
 import ChunkLoader from '@/components/loader/chunk-loader';
 import { localize } from '@deriv-com/translations';
 import FreeBots from '../free-bots';
+import { BarsIcon, BoltIcon, BotIcon, CalculatorIcon, RocketIcon, StoreIcon } from './icons';
 import './trading-bots.scss';
 
 const RiskCalculator = lazy(() => import('../risk-calculator'));
@@ -32,13 +33,16 @@ const TAB_IDS = {
 
 type TTabId = (typeof TAB_IDS)[keyof typeof TAB_IDS];
 
-const TABS: Array<{ icon: string; id: TTabId; label: string }> = [
-    { icon: '🤖', id: TAB_IDS.FREE, label: localize('Free Bots') },
-    { icon: '🛍️', id: TAB_IDS.STORE, label: localize('Bots Store') },
-    { icon: '⚡', id: TAB_IDS.SCALPER, label: localize('Scalper Bots') },
-    { icon: '🚀', id: TAB_IDS.SPEED, label: localize('SpeedBots') },
-    { icon: '🧮', id: TAB_IDS.CALCULATOR, label: localize('Calculator') },
-    { icon: '📊', id: TAB_IDS.STRATEGIES, label: localize('Strategies') },
+// Drawn marks rather than emoji - see ./icons for what that was costing the
+// strip. Each is a component rather than a character, so it inherits the tab's
+// colour and is sized by the tab's font-size.
+const TABS: Array<{ Icon: (props: { className?: string }) => JSX.Element; id: TTabId; label: string }> = [
+    { Icon: BotIcon, id: TAB_IDS.FREE, label: localize('Free Bots') },
+    { Icon: StoreIcon, id: TAB_IDS.STORE, label: localize('Bots Store') },
+    { Icon: BoltIcon, id: TAB_IDS.SCALPER, label: localize('Scalper Bots') },
+    { Icon: RocketIcon, id: TAB_IDS.SPEED, label: localize('SpeedBots') },
+    { Icon: CalculatorIcon, id: TAB_IDS.CALCULATOR, label: localize('Calculator') },
+    { Icon: BarsIcon, id: TAB_IDS.STRATEGIES, label: localize('Strategies') },
 ];
 
 // Category names as they appear in the catalogue in ../free-bots. Scalper Bots
@@ -94,18 +98,16 @@ const TradingBots = observer(() => {
     return (
         <div className='mw-trading-bots'>
             <nav className='mw-trading-bots__nav' aria-label={localize('Trading bots sections')}>
-                {TABS.map(tab => (
+                {TABS.map(({ Icon, id, label }) => (
                     <button
-                        key={tab.id}
+                        key={id}
                         type='button'
-                        className={`mw-trading-bots__tab${
-                            active_tab === tab.id ? ' mw-trading-bots__tab--active' : ''
-                        }`}
-                        aria-current={active_tab === tab.id}
-                        onClick={() => setActiveTab(tab.id)}
+                        className={`mw-trading-bots__tab${active_tab === id ? ' mw-trading-bots__tab--active' : ''}`}
+                        aria-current={active_tab === id}
+                        onClick={() => setActiveTab(id)}
                     >
-                        <span aria-hidden='true'>{tab.icon}</span>
-                        {tab.label}
+                        <Icon className='mw-trading-bots__tab-icon' />
+                        {label}
                     </button>
                 ))}
             </nav>
