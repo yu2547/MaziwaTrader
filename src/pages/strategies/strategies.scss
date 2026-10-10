@@ -263,6 +263,118 @@
         }
     }
 
+    // A numbered card inside a section's panel, white against the panel's
+    // grey. Its last child drops the gap so the panel closes evenly.
+    &__card {
+        border: 1px solid #e5e9f0;
+        border-radius: 8px;
+        background: #fff;
+        padding: 14px 16px;
+        margin-bottom: 14px;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+
+        .mw-guide__list {
+            margin-bottom: 12px;
+        }
+    }
+
+    &__card-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #6366f1;
+        margin-bottom: 10px;
+    }
+
+    &__card-text {
+        font-size: 1.35rem;
+        line-height: 1.65;
+        color: #374151;
+        margin: 0;
+    }
+
+    &__text {
+        font-size: 1.35rem;
+        line-height: 1.7;
+        color: #374151;
+        margin: 0;
+    }
+
+    // The aside. Amber rather than the blue used everywhere else, because it
+    // is the one line on the page that says stop.
+    &__note {
+        border-left: 4px solid #f59e0b;
+        border-radius: 0 6px 6px 0;
+        background: #fef3c7;
+        padding: 12px 16px;
+        margin: 14px 0 0;
+        font-size: 1.3rem;
+        font-style: italic;
+        line-height: 1.6;
+        text-transform: uppercase;
+        color: #92400e;
+    }
+
+    // What each bar on the chart means. The label carries the bar's own
+    // colour, which is the whole point of the list.
+    &__key {
+        margin: 0;
+        padding-left: 18px;
+        list-style: none;
+    }
+
+    // The tone rides on a custom property rather than on `color`, so the dot
+    // and the label can take the bar's colour while the sentence after them
+    // stays body grey - the words after the label are a bare text node, which
+    // no sibling selector can reach.
+    &__key-item {
+        position: relative;
+        font-size: 1.35rem;
+        line-height: 1.65;
+        text-transform: uppercase;
+        color: #374151;
+        margin-bottom: 10px;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+
+        &:before {
+            content: '';
+            position: absolute;
+            top: 0.72em;
+            left: -14px;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--mw-key-tone, #3b82f6);
+        }
+    }
+
+    &__key-label {
+        font-weight: 700;
+        color: var(--mw-key-tone, #3b82f6);
+    }
+
+    &__key-item--red {
+        --mw-key-tone: #ef4444;
+    }
+
+    &__key-item--yellow {
+        --mw-key-tone: #f59e0b;
+    }
+
+    &__key-item--green {
+        --mw-key-tone: #10b981;
+    }
+
+    &__key-item--blue {
+        --mw-key-tone: #3b82f6;
+    }
+
     &__entry {
         border: 1px solid #e5e9f0;
         border-radius: 8px;
@@ -295,6 +407,36 @@
         font-size: 1.35rem;
         font-weight: 600;
         color: #1e40af;
+    }
+
+    // The emphasis the guides mark with **. The reference shouts these
+    // phrases, so the uppercase is applied here rather than written into the
+    // text itself - a screen reader then still reads them as words, and the
+    // guide stays legible as prose in ./guides.
+    strong {
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #1e40af;
+    }
+
+    // The Odd guide closes on the call to action as a full-width banner
+    // rather than the small box the Over/Under set-ups carry inside their
+    // panels. Same gradient as the quote below it.
+    &__banner {
+        border-radius: 10px;
+        background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
+        padding: 20px 28px;
+        margin: 0 0 20px;
+        text-align: center;
+        font-size: 1.6rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        color: #fff;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
     }
 
     &__closing {
