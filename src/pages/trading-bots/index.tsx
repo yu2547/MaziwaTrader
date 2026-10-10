@@ -10,6 +10,7 @@ const RiskCalculator = lazy(() => import('../risk-calculator'));
 const BotsStore = lazy(() => import('../bots-store'));
 const ScalperBots = lazy(() => import('../scalper-bots'));
 const SpeedBots = lazy(() => import('../speed-bots'));
+const Strategies = lazy(() => import('../strategies'));
 
 /**
  * Trading Bots is a shell around several scoped views of the same bot
@@ -17,9 +18,9 @@ const SpeedBots = lazy(() => import('../speed-bots'));
  * the panel below it changes, so switching views never takes the navigation
  * away with it.
  *
- * Scalper/Speed/Strategies are filters over the one catalogue in
- * ../free-bots rather than separate hardcoded lists, so adding a bot there
- * automatically surfaces it in whichever view its category belongs to.
+ * Scalper/Speed/Strategies all read the one catalogue in ../free-bots rather
+ * than keeping hardcoded lists, so adding a bot there automatically surfaces
+ * it in whichever view it belongs to.
  */
 
 const TAB_IDS = {
@@ -44,11 +45,6 @@ const TABS: Array<{ flies?: boolean; id: TTabId; label: string; trailing?: strin
     { id: TAB_IDS.CALCULATOR, label: localize('Calculator') },
     { id: TAB_IDS.STRATEGIES, label: localize('Strategies') },
 ];
-
-// Category names as they appear in the catalogue in ../free-bots. Scalper Bots
-// and SpeedBots are their own pages now and scope themselves; only Strategies
-// is still a filtered view of the catalogue.
-const STRATEGY_CATEGORIES = ['AI Trading', 'Pattern Analysis', 'Accumulators', 'Premium'];
 
 const TradingBots = observer(() => {
     const [active_tab, setActiveTab] = useState<TTabId>(TAB_IDS.FREE);
@@ -75,13 +71,9 @@ const TradingBots = observer(() => {
                 );
             case TAB_IDS.STRATEGIES:
                 return (
-                    <FreeBots
-                        allowed_categories={STRATEGY_CATEGORIES}
-                        title={localize('Strategies')}
-                        subtitle={localize(
-                            'Strategy-led bots: AI signals, candlestick patterns, accumulators and premium systems.'
-                        )}
-                    />
+                    <Suspense fallback={<ChunkLoader message={localize('Loading strategies...')} />}>
+                        <Strategies />
+                    </Suspense>
                 );
             case TAB_IDS.CALCULATOR:
                 return (

@@ -274,11 +274,18 @@ export type TFreeBotsProps = {
      * this same catalogue rather than a separate list to keep in sync.
      */
     allowed_categories?: string[];
+    /**
+     * Replaces the default scope outright when given - the scalper exclusion
+     * below included. The Strategies tab needs it: Odd and Even are mostly
+     * scalpers, so scoped by category those two cards would open onto an
+     * almost empty grid.
+     */
+    bot_filter?: (bot: Bot) => boolean;
     subtitle?: string;
     title?: string;
 };
 
-const FreeBots = observer(({ allowed_categories, subtitle, title }: TFreeBotsProps = {}) => {
+const FreeBots = observer(({ allowed_categories, bot_filter, subtitle, title }: TFreeBotsProps = {}) => {
     // useStore() is null for one render on a hard/direct load of this
     // standalone route - StoreProvider's init effect hasn't committed yet -
     // and an unguarded destructure here throws during render, which React
@@ -293,7 +300,7 @@ const FreeBots = observer(({ allowed_categories, subtitle, title }: TFreeBotsPro
     //
     // The scalpers are never listed here: they have a page of their own, and
     // were appearing on both.
-    const listed = BOTS.filter(bot => !isScalper(bot));
+    const listed = bot_filter ? BOTS.filter(bot_filter) : BOTS.filter(bot => !isScalper(bot));
     const bots_in_scope = allowed_categories?.length
         ? listed.filter(bot => allowed_categories.includes(bot.category))
         : listed;

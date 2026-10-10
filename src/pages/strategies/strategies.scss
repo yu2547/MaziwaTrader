@@ -1,0 +1,281 @@
+// The Strategies tab. Four cards that take a gradient under the cursor and
+// give it back when the cursor leaves, over the bots that trade whichever one
+// is open.
+.mw-strategies {
+    padding: 24px;
+
+    &__header {
+        text-align: center;
+        margin-bottom: 28px;
+    }
+
+    &__title {
+        font-size: 3.2rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: #1e3a8a;
+    }
+
+    &__subtitle {
+        font-size: 1.5rem;
+        color: #4b5563;
+        margin: 0;
+    }
+
+    // Only four cards exist, so auto-fit can never open a fifth column: this
+    // is four across on a desktop and folds to one on a phone without a
+    // breakpoint of its own.
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+    }
+
+    &__card {
+        position: relative;
+
+        // The gradient lives on a pseudo-element below the content, and the
+        // hover fades its opacity. A background cannot transition from a flat
+        // colour to a linear-gradient - it would snap on and snap off, and
+        // what was asked for was that it comes back when the cursor leaves.
+        // isolation keeps the negative z-index inside the card: a negative
+        // child paints above its own element's background but below the
+        // element's in-flow content, which is exactly the order wanted here.
+        isolation: isolate;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 22px 18px;
+        border: 1px solid #e3e7ee;
+        border-radius: 16px;
+        background: #f6f7f9;
+        font-family: inherit;
+        text-align: center;
+        cursor: pointer;
+        transition:
+            border-color 220ms ease,
+            box-shadow 220ms ease,
+            transform 220ms ease;
+
+        &:before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            border-radius: inherit;
+            background: linear-gradient(135deg, #ec4899 0%, #2f6fed 52%, #22c55e 100%);
+            opacity: 0;
+            transition: opacity 220ms ease;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--brand-blue, #1a5cff);
+            outline-offset: 3px;
+        }
+    }
+
+    // The glyph tile. Tinted in the card's own accent while resting, solid
+    // white once the gradient is up - the accent stays on the glyph either
+    // way, which is how the reference reads.
+    &__card-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        transition:
+            background 220ms ease,
+            box-shadow 220ms ease;
+
+        svg {
+            width: 24px;
+            height: 24px;
+        }
+    }
+
+    &__card-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #1e3a8a;
+        transition: color 220ms ease;
+    }
+
+    &__card-text {
+        font-size: 1.25rem;
+        line-height: 1.5;
+        color: #4b5563;
+        transition: color 220ms ease;
+    }
+
+    // Pushed to the foot of the card so the four read as one row of buttons
+    // however long the descriptions above them run.
+    &__card-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: auto;
+        padding: 8px 16px;
+        border: 1px solid #dfe4ec;
+        border-radius: 8px;
+        background: #fff;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #204093;
+        transition:
+            background 220ms ease,
+            border-color 220ms ease,
+            color 220ms ease;
+    }
+
+    &__card-arrow {
+        width: 1.1em;
+        height: 1.1em;
+        transition: transform 220ms ease;
+    }
+
+    &__bots {
+        margin-top: 28px;
+        border-top: 1px solid #e3e7ee;
+        padding-top: 20px;
+    }
+
+    &__bots-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1e3a8a;
+        text-align: center;
+        margin-bottom: 4px;
+    }
+}
+
+// The accent each card carries while it is resting.
+.mw-strategies__card--over-under .mw-strategies__card-icon {
+    color: #2f6fed;
+    background: rgb(47 111 237 / 10%);
+}
+
+.mw-strategies__card--odd .mw-strategies__card-icon {
+    color: #ec4899;
+    background: rgb(236 72 153 / 10%);
+}
+
+.mw-strategies__card--even .mw-strategies__card-icon {
+    color: #22c55e;
+    background: rgb(34 197 94 / 12%);
+}
+
+.mw-strategies__card--hit-and-run .mw-strategies__card-icon {
+    color: #ef4444;
+    background: rgb(239 68 68 / 10%);
+}
+
+// The lit state. Written once and shared by the three ways a card can be lit:
+// under the cursor, under the keyboard's focus ring, and left open after a
+// click. Guarded by (hover: hover) only for the cursor - on a touch screen a
+// :hover sticks to whatever was tapped last, which would leave a card lit with
+// nothing pointing at it.
+@mixin strategy-lit {
+    border-color: transparent;
+    box-shadow: 0 10px 28px rgb(32 64 147 / 22%);
+    transform: translateY(-2px);
+
+    &:before {
+        opacity: 1;
+    }
+
+    .mw-strategies__card-icon {
+        background: #fff;
+        box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
+    }
+
+    .mw-strategies__card-title,
+    .mw-strategies__card-text {
+        color: #fff;
+    }
+
+    .mw-strategies__card-cta {
+        border-color: #fff;
+        background: #fff;
+        color: #132a47;
+    }
+
+    .mw-strategies__card-arrow {
+        transform: translateX(2px);
+    }
+}
+
+@media (hover: hover) {
+    .mw-strategies__card:hover {
+        @include strategy-lit;
+    }
+}
+
+.mw-strategies__card:focus-visible,
+.mw-strategies__card--open {
+    @include strategy-lit;
+}
+
+@media (width <= 600px) {
+    .mw-strategies {
+        padding: 1.6rem 1.2rem;
+
+        &__title {
+            font-size: 2.2rem;
+        }
+
+        &__subtitle {
+            font-size: 1.2rem;
+        }
+
+        &__grid {
+            gap: 1.4rem;
+        }
+
+        &__card {
+            padding: 1.8rem 1.4rem;
+            border-radius: 1.4rem;
+        }
+
+        &__card-icon {
+            width: 4rem;
+            height: 4rem;
+            border-radius: 1rem;
+
+            svg {
+                width: 2.1rem;
+                height: 2.1rem;
+            }
+        }
+
+        &__card-title {
+            font-size: 1.7rem;
+        }
+
+        &__card-text {
+            font-size: 1.15rem;
+        }
+
+        &__card-cta {
+            font-size: 1.2rem;
+            padding: 0.7rem 1.6rem;
+        }
+    }
+}
+
+// A reader who has asked for less movement keeps the colour change and loses
+// the lift and the arrow's nudge.
+// Listed at the same specificity as the lit rules above rather than on the
+// bare class, or the lift would simply out-rank this and stay.
+@media (prefers-reduced-motion: reduce) {
+    .mw-strategies__card,
+    .mw-strategies__card:hover,
+    .mw-strategies__card--open,
+    .mw-strategies__card-arrow,
+    .mw-strategies__card:hover .mw-strategies__card-arrow,
+    .mw-strategies__card--open .mw-strategies__card-arrow {
+        transition: none;
+        transform: none;
+    }
+}

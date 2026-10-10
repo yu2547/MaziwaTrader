@@ -1,0 +1,154 @@
+import { useState } from 'react';
+import { observer } from 'mobx-react-lite';
+import { localize } from '@deriv-com/translations';
+import FreeBots, { type Bot } from '../free-bots';
+import { EvenIcon, HitAndRunIcon, OddIcon, OverUnderIcon } from './icons';
+import './strategies.scss';
+
+/**
+ * The Strategies tab: four strategy cards over the slice of the bot catalogue
+ * that trades the one you pick.
+ *
+ * This replaces a plain category-filtered view of ../free-bots, which showed
+ * the same grid of bot cards as every other tab and so said nothing about the
+ * strategies themselves.
+ *
+ * One deliberate departure from the reference: its subtitle offers "detailed
+ * execution guidelines", and clicking through presumably gives them. Ours
+ * doesn't claim that. Writing trading guidance of my own would be inventing
+ * advice, so each card carries a factual description of what the contract is
+ * and opens the bots in our own catalogue that take it - which is a thing the
+ * reader can actually act on.
+ */
+
+const namesOdd = (bot: Bot) => /odd/i.test(bot.name);
+const namesEven = (bot: Bot) => /even/i.test(bot.name);
+const inEvenOdd = (bot: Bot) => bot.category === 'Even/Odd';
+
+type TStrategy = {
+    Icon: (props: { className?: string }) => JSX.Element;
+    description: string;
+    id: string;
+    /**
+     * Which bots this strategy opens. A predicate rather than a category name
+     * because Even/Odd is one category in the catalogue and two cards here.
+     */
+    matches: (bot: Bot) => boolean;
+    title: string;
+};
+
+const STRATEGIES: TStrategy[] = [
+    {
+        Icon: OverUnderIcon,
+        description: localize(
+            'Digit Over and Digit Under contracts: the bot predicts whether the last digit of the exit tick lands above or below a chosen digit.'
+        ),
+        id: 'over-under',
+        matches: bot => bot.category === 'Over/Under',
+        title: localize('Over/Under'),
+    },
+    {
+        Icon: OddIcon,
+        description: localize(
+            'Digit Odd contracts: the bot predicts that the last digit of the exit tick is an odd number.'
+        ),
+        id: 'odd',
+        // Split off the shared Even/Odd category by the bot's own name: a bot
+        // that names only one of the two takes only that one, and a bot that
+        // names both - or neither, like SignalSniper - belongs under each card.
+        matches: bot => inEvenOdd(bot) && (namesOdd(bot) || !namesEven(bot)),
+        title: localize('Odd'),
+    },
+    {
+        Icon: EvenIcon,
+        description: localize(
+            'Digit Even contracts: the bot predicts that the last digit of the exit tick is an even number.'
+        ),
+        id: 'even',
+        matches: bot => inEvenOdd(bot) && (namesEven(bot) || !namesOdd(bot)),
+        title: localize('Even'),
+    },
+    {
+        Icon: HitAndRunIcon,
+        description: localize(
+            'In and out on a short contract - a tick to a few ticks each - on the Rise/Fall pairs and the speed bots.'
+        ),
+        id: 'hit-and-run',
+        matches: bot => bot.category === 'Rise/Fall' || bot.category === 'Speed Trading',
+        title: localize('Hit and Run'),
+    },
+];
+
+const Strategies = observer(() => {
+    const [open_id, setOpenId] = useState<string | null>(null);
+    const open = STRATEGIES.find(strategy => strategy.id === open_id) ?? null;
+
+    return (
+        <div className='mw-strategies'>
+            <div className='mw-strategies__header'>
+                <h1 className='mw-strategies__title'>{localize('Advanced Trading Strategies')}</h1>
+                <p className='mw-strategies__subtitle'>
+                    {localize('Select a trading strategy to see the bots in the catalogue that trade it.')}
+                </p>
+            </div>
+
+            <div className='mw-strategies__grid'>
+                {STRATEGIES.map(({ Icon, description, id, title }) => {
+                    const is_open = open_id === id;
+
+                    return (
+                        // A button rather than a div with a click handler, so
+                        // the card is reachable and operable from the keyboard;
+                        // its contents are spans for the same reason, since a
+                        // button may only hold phrasing content.
+                        <button
+                            key={id}
+                            type='button'
+                            className={`mw-strategies__card mw-strategies__card--${id}${
+                                is_open ? ' mw-strategies__card--open' : ''
+                            }`}
+                            aria-expanded={is_open}
+                            onClick={() => setOpenId(is_open ? null : id)}
+                        >
+                            <span className='mw-strategies__card-icon'>
+                                <Icon />
+                            </span>
+                            <span className='mw-strategies__card-title'>{title}</span>
+                            <span className='mw-strategies__card-text'>{description}</span>
+                            <span className='mw-strategies__card-cta'>
+                                {is_open ? localize('Hide bots') : localize('Explore Strategy')}
+                                <svg
+                                    aria-hidden='true'
+                                    className='mw-strategies__card-arrow'
+                                    fill='none'
+                                    stroke='currentColor'
+                                    strokeLinecap='round'
+                                    strokeLinejoin='round'
+                                    strokeWidth='2'
+                                    viewBox='0 0 24 24'
+                                >
+                                    <path d='M5 12h14M13 6l6 6-6 6' />
+                                </svg>
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+
+            {open && (
+                <div className='mw-strategies__bots'>
+                    <h2 className='mw-strategies__bots-title'>
+                        {localize('{{strategy}} bots', { strategy: open.title })}
+                    </h2>
+                    {/* bot_filter rather than allowed_categories: the scalpers
+                        are kept out of the catalogue views by default, and Odd
+                        and Even are mostly scalpers - filtered by category
+                        these two cards would open onto almost nothing. */}
+                    <FreeBots bot_filter={open.matches} />
+                </div>
+            )}
+        </div>
+    );
+});
+
+export default Strategies;
