@@ -452,11 +452,16 @@
             column-gap: 8px;
             align-items: center;
 
-            // The same #3a7ef1 the wider card uses. This was #1f438f, darker
-            // again than the #2f5fe0 it replaced there, so the phone card's
-            // edge was the furthest of the three from the reference.
+            // Dark navy, #2a3861, read off the phone reference's own border -
+            // scanning inward from the card's left edge gives #2c3c62 then
+            // #2a3861 across its two or three pixels.
+            // Not the #3a7ef1 the desktop card uses. That was measured the
+            // same way off the desktop reference, where the border really is
+            // that brighter blue; carrying it onto phones, as the previous
+            // commit did, replaced a navy that was closer to this one. The two
+            // references differ here, so the two breakpoints do.
             &--premium {
-                border: 2px solid #3a7ef1;
+                border: 2px solid #2a3861;
                 border-radius: 20px;
             }
         }
@@ -542,8 +547,19 @@
         }
 
         &__card-btn {
-            // 44px is the touch floor, and the reference button is no taller.
-            min-height: 44px;
+            // The reference's button is 59px tall in an 828px-wide screenshot
+            // of a 414px viewport - 29.5 CSS px - measured down a column just
+            // inside its left edge, clear of the label. Ours sat at 44, half
+            // again as tall, which is the weight difference the owner has been
+            // pointing at: same width, same colour, a much chunkier bar.
+            // Set to 36px rather than the measured 29.5. Thirty is below the
+            // size a finger reliably hits, and this button loads a trading
+            // strategy - the reference choosing to go that small is not a
+            // reason to follow it the whole way. 36 keeps most of the
+            // difference while staying usable; the note is here so the gap is
+            // a decision rather than a miss.
+            min-height: 36px;
+            padding: 0.7rem 2rem;
             margin-top: 0;
 
             // 9px, the same corner the desktop card uses, tracked row by row
