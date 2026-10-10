@@ -497,11 +497,16 @@
             font-size: 1.7rem;
         }
 
+        // The star row was the furthest off of anything on the card. Measured
+        // as a share of the card's width, which is scale-invariant and so
+        // survives the two screenshots being at different zooms, the
+        // reference's five stars span 17.89% where ours spanned 22.95% - a
+        // row 28% too wide, sitting right under the title.
         &__rating {
             justify-content: center;
-            gap: 3px;
+            gap: 2px;
             margin: 8px 0;
-            font-size: 1.8rem;
+            font-size: 1.4rem;
         }
 
         // Type sizes measured against the reference, finally on equal terms:
@@ -521,7 +526,7 @@
             grid-column: 2;
             grid-row: 1;
             margin: 0;
-            font-size: 1.95rem;
+            font-size: 1.8rem;
             font-weight: 700;
             line-height: 1.25;
             text-align: left;
@@ -539,7 +544,7 @@
             height: auto;
             margin: 0 auto 12px;
             overflow: hidden;
-            font-size: 1.25rem;
+            font-size: 1.15rem;
             line-height: 1.45;
             text-align: center;
             -webkit-line-clamp: 3;
@@ -572,7 +577,7 @@
             // of the screen against 71.7, because the phone card's padding was
             // 16px rather than the 24 the desktop one was carrying.
             border-radius: 9px;
-            font-size: 1.45rem;
+            font-size: 1.35rem;
             font-weight: 700;
         }
     }
@@ -595,11 +600,11 @@
         // like it had done nothing on a 375px screen: 375 is inside this query
         // too, so whatever is set here is what a phone actually renders.
         &__card-title {
-            font-size: 1.8rem;
+            font-size: 1.65rem;
         }
 
         &__card-description {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
         }
     }
 }
