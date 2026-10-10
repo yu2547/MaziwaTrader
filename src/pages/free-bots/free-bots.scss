@@ -557,13 +557,14 @@
             // inside its left edge, clear of the label. Ours sat at 44, half
             // again as tall, which is the weight difference the owner has been
             // pointing at: same width, same colour, a much chunkier bar.
-            // Set to 36px rather than the measured 29.5. Thirty is below the
-            // size a finger reliably hits, and this button loads a trading
-            // strategy - the reference choosing to go that small is not a
-            // reason to follow it the whole way. 36 keeps most of the
-            // difference while staying usable; the note is here so the gap is
-            // a decision rather than a miss.
-            min-height: 36px;
+            // 30px, which is that measurement. It went in at 36 first, held
+            // back from the reference because 30 is under the ~44px a finger
+            // reliably hits and this button loads a trading strategy; that
+            // compromise was flagged rather than hidden, and the owner has
+            // since asked twice for the reference's own size, so it is theirs
+            // to make. The tap target is small - worth knowing if misfires
+            // ever get reported on this card.
+            min-height: 30px;
             padding: 0.7rem 2rem;
             margin-top: 0;
 
