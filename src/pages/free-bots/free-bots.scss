@@ -38,9 +38,16 @@
         max-width: 480px;
         margin: 0 0 20px;
         padding: 10px 16px;
-        border-radius: 12px;
+
+        // Both measured off the reference's own search box, magnified out of
+        // its screenshot: its corner turns over 26px of a 1146px-wide image,
+        // which is about 9 at this width, and its edge is three of those
+        // pixels of dark navy - roughly one here. It was a 12px corner and the
+        // theme's light grey, which is why the field read as a faint tray
+        // where the reference's reads as a bordered box matching its cards.
+        border-radius: 9px;
         background: var(--general-main-1);
-        border: 1px solid var(--border-normal);
+        border: 1px solid #2a3861;
         transition: border-color 0.2s ease;
 
         &:focus-within {

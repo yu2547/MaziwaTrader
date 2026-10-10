@@ -30,6 +30,27 @@
         height: 1.15em;
     }
 
+    // The emoji after the label on the two tabs that carry one. Held at 1em -
+    // an emoji draws about a third taller than its font-size, so left alone it
+    // would be the tallest thing in the row again and reopen the strip that
+    // the drawn mark closed.
+    &__tab-trailing {
+        flex: none;
+        font-size: 1em;
+        line-height: 1;
+    }
+
+    // The rocket climbs, fades out at the top of its run and begins again from
+    // below. It fades before it has travelled far, so it never visibly leaves
+    // the tab and needs no box of its own to fly inside - half an em each way
+    // is the whole journey. Kept slow enough to read as a climb rather than a
+    // twitch, in a strip the eye is meant to scan past.
+    &__tab-trailing--flies {
+        display: inline-block;
+        animation: mw-tab-fly 1.8s ease-in-out infinite;
+        will-change: transform, opacity;
+    }
+
     &__tab {
         display: inline-flex;
         align-items: center;
@@ -139,5 +160,38 @@
         &__tab--active {
             background: #fff;
         }
+    }
+}
+
+// The rocket's climb: in from below, up through the label's line, out at the
+// top, then round again. Opacity is keyed just inside each end so it arrives
+// and leaves rather than popping.
+@keyframes mw-tab-fly {
+    0% {
+        transform: translateY(0.3em);
+        opacity: 0;
+    }
+
+    20% {
+        transform: translateY(0.12em);
+        opacity: 1;
+    }
+
+    72% {
+        transform: translateY(-0.3em);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(-0.52em);
+        opacity: 0;
+    }
+}
+
+// A reader who has asked the system for less movement gets a still rocket,
+// sitting where its flight would put it mid-climb rather than mid-fade.
+@media (prefers-reduced-motion: reduce) {
+    .mw-trading-bots__tab-trailing--flies {
+        animation: none;
     }
 }

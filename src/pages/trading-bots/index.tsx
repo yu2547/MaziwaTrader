@@ -3,7 +3,7 @@ import { observer } from 'mobx-react-lite';
 import ChunkLoader from '@/components/loader/chunk-loader';
 import { localize } from '@deriv-com/translations';
 import FreeBots from '../free-bots';
-import { BarsIcon, BoltIcon, BotIcon, CalculatorIcon, RocketIcon, StoreIcon } from './icons';
+import { PuzzleIcon } from './icons';
 import './trading-bots.scss';
 
 const RiskCalculator = lazy(() => import('../risk-calculator'));
@@ -33,16 +33,16 @@ const TAB_IDS = {
 
 type TTabId = (typeof TAB_IDS)[keyof typeof TAB_IDS];
 
-// Drawn marks rather than emoji - see ./icons for what that was costing the
-// strip. Each is a component rather than a character, so it inherits the tab's
-// colour and is sized by the tab's font-size.
-const TABS: Array<{ Icon: (props: { className?: string }) => JSX.Element; id: TTabId; label: string }> = [
-    { Icon: BotIcon, id: TAB_IDS.FREE, label: localize('Free Bots') },
-    { Icon: StoreIcon, id: TAB_IDS.STORE, label: localize('Bots Store') },
-    { Icon: BoltIcon, id: TAB_IDS.SCALPER, label: localize('Scalper Bots') },
-    { Icon: RocketIcon, id: TAB_IDS.SPEED, label: localize('SpeedBots') },
-    { Icon: CalculatorIcon, id: TAB_IDS.CALCULATOR, label: localize('Calculator') },
-    { Icon: BarsIcon, id: TAB_IDS.STRATEGIES, label: localize('Strategies') },
+// One drawn mark on every tab and an emoji after the label on two of them,
+// which is how the reference's own strip reads - see ./icons.
+const TABS: Array<{ flies?: boolean; id: TTabId; label: string; trailing?: string }> = [
+    { id: TAB_IDS.FREE, label: localize('Free Bots') },
+    { id: TAB_IDS.STORE, label: localize('Bots Store') },
+    { id: TAB_IDS.SCALPER, label: localize('Scalper Bots'), trailing: '⚡' },
+    // The rocket climbs and begins again - see mw-tab-fly in the stylesheet.
+    { flies: true, id: TAB_IDS.SPEED, label: localize('SpeedBots'), trailing: '🚀' },
+    { id: TAB_IDS.CALCULATOR, label: localize('Calculator') },
+    { id: TAB_IDS.STRATEGIES, label: localize('Strategies') },
 ];
 
 // Category names as they appear in the catalogue in ../free-bots. Scalper Bots
@@ -98,7 +98,7 @@ const TradingBots = observer(() => {
     return (
         <div className='mw-trading-bots'>
             <nav className='mw-trading-bots__nav' aria-label={localize('Trading bots sections')}>
-                {TABS.map(({ Icon, id, label }) => (
+                {TABS.map(({ flies, id, label, trailing }) => (
                     <button
                         key={id}
                         type='button'
@@ -106,8 +106,18 @@ const TradingBots = observer(() => {
                         aria-current={active_tab === id}
                         onClick={() => setActiveTab(id)}
                     >
-                        <Icon className='mw-trading-bots__tab-icon' />
+                        <PuzzleIcon className='mw-trading-bots__tab-icon' />
                         {label}
+                        {trailing && (
+                            <span
+                                className={`mw-trading-bots__tab-trailing${
+                                    flies ? ' mw-trading-bots__tab-trailing--flies' : ''
+                                }`}
+                                aria-hidden='true'
+                            >
+                                {trailing}
+                            </span>
+                        )}
                     </button>
                 ))}
             </nav>
