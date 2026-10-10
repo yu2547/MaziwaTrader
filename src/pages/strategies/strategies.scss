@@ -416,7 +416,20 @@
     strong {
         font-weight: 700;
         text-transform: uppercase;
+    }
+
+    // Two kinds of emphasis, which is what the reference does: a lead-in at
+    // the head of a condition is bold and stays the body's grey, while a
+    // phrase emphasised inside running prose goes blue. Sampled - the
+    // condition leads read #374151, the same as the sentence they open.
+    &__text strong,
+    &__entry-text strong {
         color: #1e40af;
+    }
+
+    // Inside a card the whole bullet is shouted, not just a lead-in.
+    &__card &__list li {
+        text-transform: uppercase;
     }
 
     // The Odd guide closes on the call to action as a full-width banner

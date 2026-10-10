@@ -21,7 +21,14 @@ import { localize } from '@deriv-com/translations';
  * Text wrapped in ** is emphasised where it is rendered - see ./guide.
  */
 
-export const STRATEGY_CTA = 'USE Maziwatrader.com TO TRADE';
+/**
+ * The site, named once. The reference puts its own domain both in the call to
+ * action and in the Even guide's heading, which is two places it could have
+ * been renamed in one and not the other.
+ */
+export const SITE_NAME = 'Maziwatrader.com';
+
+export const STRATEGY_CTA = `USE ${SITE_NAME} TO TRADE`;
 
 export type TKeyTone = 'blue' | 'green' | 'red' | 'yellow';
 
@@ -49,7 +56,71 @@ export type TGuide = {
     sections: TGuideSection[];
 };
 
+/** The aside both the Odd and Even guides carry under their entry. */
+const RUNS_NOTE = localize(
+    'NB: after 3 to 7 runs max on profits, stop the bot to confirm the market conditions and wait for another entry trigger.'
+);
+
+/**
+ * The bars key, identical in both. Annotated rather than inferred: `as const`
+ * would make items a readonly tuple, which is not what a block holds, while a
+ * bare object widens tone to string.
+ */
+const BARS_KEY: TGuideBlock = {
+    items: [
+        { label: localize('Red'), text: localize('Least appearing digit'), tone: 'red' },
+        { label: localize('Yellow'), text: localize('2nd least appearing'), tone: 'yellow' },
+        { label: localize('Green'), text: localize('Most appearing'), tone: 'green' },
+        { label: localize('Blue'), text: localize('2nd most appearing'), tone: 'blue' },
+    ],
+    kind: 'key',
+};
+
 export const GUIDES: Record<string, TGuide> = {
+    even: {
+        banner: true,
+        heading: localize('Even Strategy @{{site}}', { site: SITE_NAME }),
+        sections: [
+            {
+                blocks: [
+                    {
+                        bullets: [
+                            localize(
+                                '**Blue & green should be on even digits** - both the blue (2nd most appearing) and green (most appearing) bars must be positioned on even digits (0, 2, 4, 6, 8).'
+                            ),
+                            localize(
+                                '**Both G & B bar should have %ges above 11** - both green and blue bars should have percentages above 11%.'
+                            ),
+                            localize(
+                                '**Red & yellow bar should either be on odd digits, or odd/even** - the red (least appearing) and yellow (2nd least appearing) bars can be on odd digits or a combination of odd/even.'
+                            ),
+                            localize(
+                                '**Red bar %ge: 8.6 and below** - the red bar percentage should be 8.6% or lower.'
+                            ),
+                            localize(
+                                '**Yellow bar %ge: 9.5 and below** - the yellow bar percentage should be 9.5% or lower.'
+                            ),
+                        ],
+                        kind: 'bullets',
+                    },
+                ],
+                title: localize('Conditions to consider'),
+            },
+            {
+                blocks: [
+                    {
+                        kind: 'text',
+                        text: localize(
+                            '**Wait for tick pointer to pick the odd digit among the least appearing pair (red & yellow),** if within the next **3 ticks an even digit is picked, enter immediately.**'
+                        ),
+                    },
+                    { kind: 'note', text: RUNS_NOTE },
+                ],
+                title: localize('Entrypoint'),
+            },
+            { blocks: [BARS_KEY], title: localize('Bars colour key') },
+        ],
+    },
     odd: {
         banner: true,
         heading: localize('Odd Strategy'),
@@ -88,29 +159,11 @@ export const GUIDES: Record<string, TGuide> = {
                             '**Wait for the tick pointer to pick the least appearing digit among the R & Y,** then wait for **consecutive 2 odds to appear within the next 5 ticks,** then enter immediately.'
                         ),
                     },
-                    {
-                        kind: 'note',
-                        text: localize(
-                            'NB: after 3 to 7 runs max on profits, stop the bot to confirm the market conditions and wait for another entry trigger.'
-                        ),
-                    },
+                    { kind: 'note', text: RUNS_NOTE },
                 ],
                 title: localize('Entry point'),
             },
-            {
-                blocks: [
-                    {
-                        items: [
-                            { label: localize('Red'), text: localize('Least appearing digit'), tone: 'red' },
-                            { label: localize('Yellow'), text: localize('2nd least appearing'), tone: 'yellow' },
-                            { label: localize('Green'), text: localize('Most appearing'), tone: 'green' },
-                            { label: localize('Blue'), text: localize('2nd most appearing'), tone: 'blue' },
-                        ],
-                        kind: 'key',
-                    },
-                ],
-                title: localize('Bars colour key'),
-            },
+            { blocks: [BARS_KEY], title: localize('Bars colour key') },
         ],
     },
     'over-under': {
