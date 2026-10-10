@@ -135,6 +135,41 @@
         transition: transform 220ms ease;
     }
 
+    // Leads the opened view, where the cards used to be.
+    &__back {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 20px;
+        padding: 8px 16px;
+        border: 1px solid #dfe4ec;
+        border-radius: 8px;
+        background: #fff;
+        font-family: inherit;
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #204093;
+        cursor: pointer;
+        transition:
+            border-color 150ms ease,
+            background 150ms ease;
+
+        svg {
+            width: 1.15em;
+            height: 1.15em;
+        }
+
+        &:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--brand-blue, #1a5cff);
+            outline-offset: 2px;
+        }
+    }
+
     &__bots {
         margin-top: 28px;
         border-top: 1px solid #e3e7ee;
@@ -147,6 +182,176 @@
         color: #1e3a8a;
         text-align: center;
         margin-bottom: 4px;
+    }
+}
+
+// The written guideline. Colours sampled off the reference's own page rather
+// than guessed: they turn out to be a plain Tailwind ramp - blue-800 for the
+// headings, emerald-500 for the rules under the section titles, gray-50 for
+// the panel behind each block and blue-500 for the bar down its edge.
+.mw-guide {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 28px 32px;
+    border: 1px solid #eceff4;
+    border-radius: 10px;
+    background: #fff;
+
+    &__heading {
+        font-size: 2.6rem;
+        font-weight: 700;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        color: #1e40af;
+        margin-bottom: 26px;
+    }
+
+    &__section {
+        margin-bottom: 26px;
+    }
+
+    // The rule belongs to the title, so it stops where the title's column
+    // does rather than running the width of the card.
+    &__section-title {
+        font-size: 1.9rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #10b981;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #10b981;
+        margin-bottom: 14px;
+    }
+
+    &__panel {
+        border-left: 4px solid #3b82f6;
+        border-radius: 0 8px 8px 0;
+        background: #f9fafb;
+        padding: 18px 20px;
+    }
+
+    &__label {
+        font-size: 1.45rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #1e40af;
+        margin-bottom: 12px;
+    }
+
+    &__list {
+        margin: 0 0 16px;
+        padding-left: 18px;
+        list-style: none;
+
+        li {
+            position: relative;
+            font-size: 1.35rem;
+            line-height: 1.65;
+            color: #374151;
+            margin-bottom: 10px;
+        }
+
+        li:before {
+            content: '';
+            position: absolute;
+            top: 0.72em;
+            left: -14px;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #3b82f6;
+        }
+    }
+
+    &__entry {
+        border: 1px solid #e5e9f0;
+        border-radius: 8px;
+        background: #fff;
+        padding: 14px 16px;
+        margin-bottom: 16px;
+    }
+
+    &__entry-label {
+        font-size: 1.4rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #6366f1;
+        margin-bottom: 8px;
+    }
+
+    &__entry-text {
+        font-size: 1.35rem;
+        line-height: 1.65;
+        color: #374151;
+        margin: 0;
+    }
+
+    &__cta {
+        border-left: 4px solid #3b82f6;
+        border-radius: 0 6px 6px 0;
+        background: #eff6ff;
+        padding: 12px 16px;
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 600;
+        color: #1e40af;
+    }
+
+    &__closing {
+        border-radius: 10px;
+        background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
+        padding: 24px 28px;
+        text-align: center;
+        color: #fff;
+    }
+
+    &__closing-lead {
+        font-size: 1.4rem;
+        line-height: 1.6;
+        margin-bottom: 12px;
+    }
+
+    &__closing-attribution {
+        font-size: 1.35rem;
+        font-style: italic;
+        margin-bottom: 12px;
+    }
+
+    &__closing-verse {
+        font-size: 1.4rem;
+        line-height: 1.6;
+        margin: 0;
+    }
+}
+
+@media (width <= 600px) {
+    .mw-guide {
+        padding: 1.8rem 1.6rem;
+
+        &__heading {
+            font-size: 2rem;
+        }
+
+        &__section-title {
+            font-size: 1.6rem;
+        }
+
+        &__panel {
+            padding: 1.4rem;
+        }
+
+        &__label,
+        &__entry-label {
+            font-size: 1.3rem;
+        }
+
+        &__list li,
+        &__entry-text,
+        &__cta,
+        &__closing-lead,
+        &__closing-verse {
+            font-size: 1.25rem;
+        }
     }
 }
 
