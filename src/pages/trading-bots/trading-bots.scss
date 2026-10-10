@@ -100,11 +100,35 @@
             // 375 - half again the 22px these were. The padding carries it
             // rather than a fixed height, so a tab is never shorter than the
             // label inside it.
-            padding: 1rem 1.4rem;
-            border-radius: 1rem;
+            // Measured off the reference's own strip, as fractions of the
+            // viewport's width so the comparison survives the screenshots
+            // being at different scales. Its tab is 8.89% of that width tall,
+            // and ours was 8.45% - the box was never the problem. What sat
+            // inside it was: the icon and label together take 2.22% there
+            // against 3.86% here, with 3.33% of padding above and below
+            // against our 2.05%. Same size of tab, far more in it, which is
+            // what reads as packed rather than slim.
+            // So the padding roughly doubles and the type comes down, which
+            // also brings the emoji down with it - an emoji draws about a
+            // third taller than its font-size, and that glyph is most of the
+            // ink. The corner follows the same measurement: 0.78% of the
+            // viewport, about 3px at this width, where 1rem drew 8.5.
+            padding: 1.4rem 1.6rem;
+            border-radius: 0.5rem;
             background: #fff;
             box-shadow: 0 1px 3px rgb(20 50 120 / 8%);
-            font-size: 1.45rem;
+            font-size: 1.1rem;
+
+            // The emoji sized on its own, below the label. It is the tallest
+            // thing in the tab - an emoji draws about a third taller than its
+            // font-size - so left on the tab's own size it sets the height of
+            // the ink and holds the whole strip open. The reference's icons
+            // are small flat glyphs rather than emoji, which is why its ink
+            // runs so much shorter; sizing this one down is how far that can
+            // be followed without swapping the icon set.
+            > span {
+                font-size: 0.85rem;
+            }
         }
 
         // White like the rest, picked out by its border and its weight rather
