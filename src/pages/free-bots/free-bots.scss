@@ -460,8 +460,19 @@
             // that brighter blue; carrying it onto phones, as the previous
             // commit did, replaced a navy that was closer to this one. The two
             // references differ here, so the two breakpoints do.
+            // 1px. The reference's edge is two pixels in an 828px-wide
+            // screenshot of a 414px viewport, so one CSS pixel plus its
+            // antialiasing; ours drew two, which is four of those pixels -
+            // twice the line, and the reason the card read as heavy next to
+            // the reference rather than slim. Its own spec said the same
+            // thing from the other direction, asking for 2-3px measured on
+            // that screenshot.
+            // The card is not too tall, which is worth recording because it
+            // is the obvious suspect: measured between its top and bottom
+            // borders the reference's card is 220 CSS px against ours at
+            // 181.5, so ours is already the more compact of the two.
             &--premium {
-                border: 2px solid #2a3861;
+                border: 1px solid #2a3861;
                 border-radius: 20px;
             }
         }
