@@ -216,7 +216,6 @@
     &__section-title {
         font-size: 1.9rem;
         font-weight: 700;
-        text-transform: uppercase;
         color: #10b981;
         padding-bottom: 8px;
         border-bottom: 2px solid #10b981;
@@ -233,15 +232,24 @@
     &__label {
         font-size: 1.45rem;
         font-weight: 700;
-        text-transform: uppercase;
         color: #1e40af;
         margin-bottom: 12px;
+    }
+
+    // A label that opens a panel needs no space above it; one that follows
+    // prose - Hit and Run's CONDITIONS: after its three lines - does.
+    &__text + &__label {
+        margin-top: 16px;
     }
 
     &__list {
         margin: 0 0 16px;
         padding-left: 18px;
         list-style: none;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
 
         li {
             position: relative;
@@ -284,7 +292,6 @@
     &__card-title {
         font-size: 1.4rem;
         font-weight: 700;
-        text-transform: uppercase;
         color: #6366f1;
         margin-bottom: 10px;
     }
@@ -296,11 +303,39 @@
         margin: 0;
     }
 
+    // Prose. A guide that runs to paragraphs needs them spaced from each
+    // other, but not from whatever ends the block they close.
     &__text {
         font-size: 1.35rem;
         line-height: 1.7;
         color: #374151;
-        margin: 0;
+        margin: 0 0 12px;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    // Numbered rather than bulleted, where the reference numbers them. The
+    // list-style is stated because the app's reset strips it from every ol,
+    // which left these numbered items with no numbers.
+    &__ordered {
+        margin: 0 0 12px;
+        padding-left: 32px;
+        list-style: decimal;
+
+        li {
+            font-size: 1.35rem;
+            line-height: 1.65;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+    }
+
+    // A section of prose carries no panel, so its blocks need the space the
+    // panel's padding would have given them.
+    &__section > &__text:first-of-type {
+        margin-top: 4px;
     }
 
     // The aside. Amber rather than the blue used everywhere else, because it
@@ -314,7 +349,6 @@
         font-size: 1.3rem;
         font-style: italic;
         line-height: 1.6;
-        text-transform: uppercase;
         color: #92400e;
     }
 
@@ -334,7 +368,6 @@
         position: relative;
         font-size: 1.35rem;
         line-height: 1.65;
-        text-transform: uppercase;
         color: #374151;
         margin-bottom: 10px;
 
@@ -398,7 +431,15 @@
         margin: 0;
     }
 
-    &__cta {
+    // The lead panel, above the first section.
+    &__lead {
+        margin-bottom: 24px;
+    }
+
+    // The call to action and the aside share a face: a tinted box behind a
+    // blue bar. Only the words differ.
+    &__cta,
+    &__callout {
         border-left: 4px solid #3b82f6;
         border-radius: 0 6px 6px 0;
         background: #eff6ff;
@@ -409,27 +450,21 @@
         color: #1e40af;
     }
 
-    // The emphasis the guides mark with **. The reference shouts these
-    // phrases, so the uppercase is applied here rather than written into the
-    // text itself - a screen reader then still reads them as words, and the
-    // guide stays legible as prose in ./guides.
+    // The emphasis the guides mark with **. Case is not set here: see the
+    // note at the head of ./guides - three of the four shout and Hit and Run
+    // does not, so the reference's own case is written into the text.
     strong {
         font-weight: 700;
-        text-transform: uppercase;
     }
 
     // Two kinds of emphasis, which is what the reference does: a lead-in at
     // the head of a condition is bold and stays the body's grey, while a
     // phrase emphasised inside running prose goes blue. Sampled - the
-    // condition leads read #374151, the same as the sentence they open.
+    // condition leads read #374151, the same as the sentence they open, and
+    // Hit and Run's Entry Digits / Validation / Execution labels read #1e40af.
     &__text strong,
     &__entry-text strong {
         color: #1e40af;
-    }
-
-    // Inside a card the whole bullet is shouted, not just a lead-in.
-    &__card &__list li {
-        text-transform: uppercase;
     }
 
     // The Odd guide closes on the call to action as a full-width banner

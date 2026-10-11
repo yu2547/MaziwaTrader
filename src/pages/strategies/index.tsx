@@ -71,10 +71,15 @@ const STRATEGIES: TStrategy[] = [
     {
         Icon: HitAndRunIcon,
         description: localize(
-            'In and out on a short contract - a tick to a few ticks each - on the Rise/Fall pairs and the speed bots.'
+            'Quick in-and-out entries in the Over/Under market, each one validated against a 3-tick sequence before the trade is taken.'
         ),
         id: 'hit-and-run',
-        matches: bot => bot.category === 'Rise/Fall' || bot.category === 'Speed Trading',
+        // Over/Under, not Rise/Fall and the speed bots as this first read it:
+        // the guideline that arrived for this card is an Over/Under technique
+        // throughout - Over 1 and Under 8 - so those are the bots that trade
+        // it. It overlaps the Over/Under card, which is right: same market,
+        // different technique.
+        matches: bot => bot.category === 'Over/Under',
         title: localize('Hit and Run'),
     },
 ];

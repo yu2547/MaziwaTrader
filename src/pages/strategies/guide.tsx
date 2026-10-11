@@ -57,6 +57,9 @@ const Block = ({ block }: { block: TGuideBlock }) => {
                 </>
             );
 
+        case 'callout':
+            return <p className='mw-guide__callout'>{block.text}</p>;
+
         case 'cta':
             return <p className='mw-guide__cta'>{STRATEGY_CTA}</p>;
 
@@ -79,8 +82,20 @@ const Block = ({ block }: { block: TGuideBlock }) => {
                 </ul>
             );
 
+        case 'label':
+            return <h4 className='mw-guide__label'>{block.text}</h4>;
+
         case 'note':
             return <p className='mw-guide__note'>{block.text}</p>;
+
+        case 'ordered':
+            return (
+                <ol className='mw-guide__ordered'>
+                    {block.items.map(item => (
+                        <li key={item}>{item}</li>
+                    ))}
+                </ol>
+            );
 
         case 'text':
         default:
@@ -88,20 +103,40 @@ const Block = ({ block }: { block: TGuideBlock }) => {
     }
 };
 
+/* eslint-disable react/no-array-index-key */
+const Blocks = ({ blocks }: { blocks: TGuideBlock[] }) => (
+    <>
+        {blocks.map((block, index) => (
+            <Block block={block} key={index} />
+        ))}
+    </>
+);
+/* eslint-enable react/no-array-index-key */
+
 const StrategyGuide = ({ guide }: { guide: TGuide }) => (
     <article className='mw-guide'>
         <h2 className='mw-guide__heading'>{guide.heading}</h2>
+
+        {guide.lead && (
+            <div className='mw-guide__panel mw-guide__lead'>
+                <Blocks blocks={guide.lead} />
+            </div>
+        )}
 
         {guide.sections.map(section => (
             <section className='mw-guide__section' key={section.title}>
                 <h3 className='mw-guide__section-title'>{section.title}</h3>
 
-                <div className='mw-guide__panel'>
-                    {section.blocks.map((block, index) => (
-                        // eslint-disable-next-line react/no-array-index-key
-                        <Block block={block} key={index} />
-                    ))}
-                </div>
+                {/* Prose sections run on the page itself; the ones that hold
+                    conditions sit in a panel, which is how the reference
+                    separates the two. */}
+                {section.plain ? (
+                    <Blocks blocks={section.blocks} />
+                ) : (
+                    <div className='mw-guide__panel'>
+                        <Blocks blocks={section.blocks} />
+                    </div>
+                )}
             </section>
         ))}
 
