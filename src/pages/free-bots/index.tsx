@@ -86,6 +86,17 @@ export const BOTS: Bot[] = [
         rating: 5,
     },
     {
+        id: 'over-2-over-3-switch-under-6',
+        name: 'Over 2 Over 3 Switch Under 6 Trader Bot',
+        description:
+            'The bot trades Over 2, but in case of a loss it trades Over 3, and in case of a second loss it recovers with Under 6. Runs on Volatility 75 (1s).',
+        fileName: 'Over_2_Over_3_Switch_Under_6_Trader_Bot.xml',
+        category: 'Over/Under',
+        icon: '🤖',
+        is_premium: true,
+        rating: 5,
+    },
+    {
         id: 'supatrader',
         name: 'Supatrader',
         description:
