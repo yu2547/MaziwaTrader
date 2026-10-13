@@ -156,6 +156,20 @@
             position: relative;
             overflow: hidden;
 
+            // Room for the ribbon. The heading spans the card's second column
+            // all the way to the right padding, and the ribbon is positioned
+            // over that corner, so on a card whose name runs long the first
+            // line of the heading passed underneath it - "Alpha Version 2026
+            // Edition" and "Maziwa Auto Premium" both lost their last word.
+            // The ribbon measures 92.6 x 27.4px against this card's 18px of
+            // padding, so the heading began 9px inside it. Dropping the top
+            // padding past the ribbon's height clears it outright, which is
+            // what the reference does - its headings sit below the ribbon's
+            // lower edge rather than beside it. Reserving width on the right
+            // instead would have indented every line of a two-line name to
+            // solve a collision only the first line has.
+            padding-top: 30px;
+
             // #3a7ef1, read off the two border pixels on the reference's own
             // card edge. This was #2f5fe0, a deeper and greyer blue - next to
             // the button's #397dee right-hand end it looked like a different
