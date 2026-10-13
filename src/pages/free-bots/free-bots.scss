@@ -340,7 +340,21 @@
         // weight and size instead, which is the difference that survives the
         // two of them sitting in one grid.
         &--premium {
-            padding: 14px 20px;
+            // 35px, which is the reference's own button. Measuring a crop of
+            // it against ours needed a scale that did not depend on either
+            // screenshot's zoom, so the measure is the label: "LOAD PREMIUM
+            // BOT" is the same string in both, 163px wide in the reference's
+            // crop against 159.3px as this renders it, so the two are within
+            // 2% of the same scale and the rest can be compared directly.
+            // On that footing the reference's button is 36px tall where this
+            // one rendered at 46.7 - half as tall again, which is the weight
+            // the owner kept pointing at. 36 x (159.3/163) is 35.2.
+            // Held by min-height rather than padding, as the phone block does
+            // it: the padding then only has to be small enough to stay out of
+            // the way, and the height does not drift if the font or the line
+            // box changes under it.
+            min-height: 35px;
+            padding: 6px 20px;
 
             // 9px. Measured properly off the reference this time, tracking the
             // left edge row by row down the corner: inset 9px on the top row,
