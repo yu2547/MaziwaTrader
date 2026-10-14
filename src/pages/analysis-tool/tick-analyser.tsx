@@ -5,6 +5,7 @@ import useUtcClock from '@/hooks/useUtcClock';
 import { getDigitDistribution, getLastDigit, toDecimalPlaces } from '@/utils/market-data/last-digit';
 import { TActiveSymbol, TTick } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
+import MarketOptions from './market-options';
 import { evaluateWindow, MIN_ENTROPY, MIN_SAMPLE, MIN_SEPARATION_Z, TSide, TStrategy } from './signal-quality';
 import './tick-analyser.scss';
 
@@ -625,11 +626,7 @@ const TickAnalyser = observer(() => {
                         <span>{localize('Market')}</span>
                         <select value={symbol} onChange={event => setSymbol(event.target.value)}>
                             <option value={NO_SYMBOL}>{localize('Select a market')}</option>
-                            {symbols.map(item => (
-                                <option key={item.underlying_symbol} value={item.underlying_symbol}>
-                                    {item.underlying_symbol_name}
-                                </option>
-                            ))}
+                            <MarketOptions symbols={symbols} />
                         </select>
                     </label>
                     <label className='mw-tick__field'>

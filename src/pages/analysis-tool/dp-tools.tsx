@@ -4,6 +4,7 @@ import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
 import { getLastDigit, toDecimalPlaces } from '@/utils/market-data/last-digit';
 import { TActiveSymbol } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
+import MarketOptions from './market-options';
 import './dp-tools.scss';
 
 /**
@@ -374,11 +375,7 @@ const DpTools = observer(() => {
                     <span className='mw-dp__label'>{localize('Volatility Index')}</span>
                     <select value={selected_symbol} onChange={event => setSelectedSymbol(event.target.value)}>
                         {market_options.length ? (
-                            market_options.map(item => (
-                                <option key={item.underlying_symbol} value={item.underlying_symbol}>
-                                    {item.underlying_symbol_name}
-                                </option>
-                            ))
+                            <MarketOptions symbols={market_options} />
                         ) : (
                             <option value={selected_symbol}>{selected_symbol}</option>
                         )}

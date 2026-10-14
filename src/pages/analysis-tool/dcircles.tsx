@@ -5,6 +5,7 @@ import { getDigitDistribution, getLastDigit, toDecimalPlaces } from '@/utils/mar
 import { TActiveSymbol, TTick } from '@/utils/market-data/public-market-feed';
 import { useTranslations } from '@deriv-com/translations';
 import AiScan from './ai-scan';
+import MarketOptions from './market-options';
 import TradingConfiguration from './trading-configuration';
 
 const DEFAULT_SYMBOL = '1HZ100V';
@@ -342,11 +343,7 @@ const Dcircles = observer(() => {
                     <span>{localize('Select Market:')}</span>
                     <select value={selected_symbol} onChange={event => setSelectedSymbol(event.target.value)}>
                         {market_options.length === 0 && <option value={selected_symbol}>{selected_symbol}</option>}
-                        {market_options.map(item => (
-                            <option key={item.underlying_symbol} value={item.underlying_symbol}>
-                                {item.underlying_symbol_name}
-                            </option>
-                        ))}
+                        <MarketOptions symbols={market_options} />
                     </select>
                 </label>
 
