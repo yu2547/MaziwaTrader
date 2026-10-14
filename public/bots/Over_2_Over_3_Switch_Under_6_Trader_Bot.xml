@@ -7,35 +7,38 @@
     than Over: the third rung is an Under contract and a bot set to Over
     alone could not place it.
 
-    The three rungs live in the Prediction list, [2, 3, 6], and Prediction is
-    the index into it rather than the digit itself. A win drops back to rung
-    one and the opening stake; a loss steps one rung along and multiplies the
-    stake by Martangle (the reference's own spelling, kept).
+    This is the second build. The first followed the owner's own blocks
+    closely, holding the three rungs in a Prediction list and indexing into
+    it from a Start Information procedure, and it ran without ever placing a
+    trade. Every structural check passed - the XML parsed, the block types
+    were registered, the trade options matched a working bot's shape - so
+    rather than keep testing theories against the owner's time, this build
+    drops to blocks the nineteen working bots in this folder already prove:
+    no list blocks, no procedure call, no lists_length, which between them
+    were the only things here that nothing else in the folder used.
 
-    Read off the owner's screenshots: the market, trade type, contract type,
-    candle interval, the restart-on-error flags, the four opening values
-    (Stake 30, Martangle 2, Take Profit 500, Consecutive Losses 4) and the
-    whole of Start Information, list included.
+    The rungs are now a plain Prediction variable holding the digit itself,
+    stepped by the loss counter, which is how Supatrader - a working
+    Over/Under bot on the same contract type - carries its own prediction.
 
-    Specified rather than read: everything inside "4. Restart trading
-    conditions" below. Those blocks were collapsed in every screenshot - all
-    that was visible was that the first test reads "if Total profit/loss >=
-    Ta...". So the win and loss handling, the martingale step, the rung
-    advance and both stop conditions are a reading of the card's own
-    description, not a copy of the owner's blocks. Worth running on a demo
-    account first and telling me where it differs.
+    Read off the owner's screenshots: market, trade type, contract type,
+    candle interval, both restart-on-error flags, and the four opening
+    values (Stake 30, Martangle 2 - their spelling - Take Profit 500,
+    Consecutive Losses 4).
+
+    Still specified rather than read: the win reset, the martingale step,
+    the rung advance and both stop conditions. "4. Restart trading
+    conditions" was collapsed in every screenshot bar the first line of its
+    take-profit test.
   -->
   <variables>
-    <variable id="v_stake" >Stake</variable>
-    <variable id="v_martangle" >Martangle</variable>
-    <variable id="v_take_profit" >Take Profit</variable>
-    <variable id="v_consecutive_losses" >Consecutive Losses</variable>
-    <variable id="v_initial_stake" >Initial Stake</variable>
-    <variable id="v_mart" >Mart</variable>
-    <variable id="v_prediction" >Prediction</variable>
-    <variable id="v_prediction_list" >Prediction list</variable>
-    <variable id="v_take_profit_text" >Take Profit Text</variable>
-    <variable id="v_stop_loss_text" >Stop Loss Text</variable>
+    <variable id="v_stake">Stake</variable>
+    <variable id="v_martangle">Martangle</variable>
+    <variable id="v_take_profit">Take Profit</variable>
+    <variable id="v_consecutive_losses">Consecutive Losses</variable>
+    <variable id="v_initial_stake">Initial Stake</variable>
+    <variable id="v_mart">Mart</variable>
+    <variable id="v_prediction">Prediction</variable>
   </variables>
 
   <block type="trade_definition" id="trade_definition_root" deletable="false" x="0" y="60">
@@ -74,6 +77,11 @@
       </block>
     </statement>
 
+    <!--
+      Set here rather than in a procedure. The first build called one, and a
+      procedure call is another thing between the engine and a populated
+      Prediction when the first proposal goes out.
+    -->
     <statement name="INITIALIZATION">
       <block type="variables_set" id="init_stake">
         <field name="VAR" id="v_stake" variabletype="">Stake</field>
@@ -103,8 +111,33 @@
                       <block type="math_number" id="init_cl_num"><field name="NUM">4</field></block>
                     </value>
                     <next>
-                      <block type="procedures_callnoreturn" id="call_start_information">
-                        <mutation name="Start Information"></mutation>
+                      <block type="variables_set" id="init_initial_stake">
+                        <field name="VAR" id="v_initial_stake" variabletype="">Initial Stake</field>
+                        <value name="VALUE">
+                          <shadow type="math_number" id="init_is_shadow"><field name="NUM">30</field></shadow>
+                          <block type="variables_get" id="init_get_stake">
+                            <field name="VAR" id="v_stake" variabletype="">Stake</field>
+                          </block>
+                        </value>
+                        <next>
+                          <block type="variables_set" id="init_mart">
+                            <field name="VAR" id="v_mart" variabletype="">Mart</field>
+                            <value name="VALUE">
+                              <shadow type="math_number" id="init_mart_shadow"><field name="NUM">1</field></shadow>
+                              <block type="math_number" id="init_mart_num"><field name="NUM">1</field></block>
+                            </value>
+                            <next>
+                              <!-- Rung one: Over 2. -->
+                              <block type="variables_set" id="init_prediction">
+                                <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
+                                <value name="VALUE">
+                                  <shadow type="math_number" id="init_pred_shadow"><field name="NUM">2</field></shadow>
+                                  <block type="math_number" id="init_pred_num"><field name="NUM">2</field></block>
+                                </value>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
                       </block>
                     </next>
                   </block>
@@ -118,9 +151,8 @@
 
     <statement name="SUBMARKET">
       <block type="trade_definition_tradeoptions" id="td_tradeoptions">
-        <mutation xmlns="http://www.w3.org/1999/xhtml" has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
+        <mutation has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
         <field name="DURATIONTYPE_LIST">t</field>
-        <field name="CURRENCY_LIST">USD</field>
         <value name="DURATION">
           <shadow type="math_number" id="duration_shadow"><field name="NUM">1</field></shadow>
           <block type="math_number" id="duration_num"><field name="NUM">1</field></block>
@@ -131,23 +163,10 @@
             <field name="VAR" id="v_stake" variabletype="">Stake</field>
           </block>
         </value>
-        <!-- The digit traded is the rung, not a fixed number. -->
         <value name="PREDICTION">
           <shadow type="math_number_positive" id="prediction_shadow"><field name="NUM">2</field></shadow>
-          <block type="lists_getIndex" id="get_rung_for_trade">
-            <mutation xmlns="http://www.w3.org/1999/xhtml" statement="false" at="true"></mutation>
-            <field name="MODE">GET</field>
-            <field name="WHERE">FROM_START</field>
-            <value name="VALUE">
-              <block type="variables_get" id="get_list_for_trade">
-                <field name="VAR" id="v_prediction_list" variabletype="">Prediction list</field>
-              </block>
-            </value>
-            <value name="AT">
-              <block type="variables_get" id="get_index_for_trade">
-                <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
-              </block>
-            </value>
+          <block type="variables_get" id="get_prediction_for_trade">
+            <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
           </block>
         </value>
       </block>
@@ -155,10 +174,9 @@
   </block>
 
   <!--
-    Which side to buy. The first two rungs are Over, the recovery rung is
-    Under, and the test is on the rung's own value rather than its index so
-    that editing the list keeps working: anything from 5 up is an Under
-    barrier on this strategy, anything below it an Over.
+    Which side to buy. Rungs one and two are Over 2 and Over 3; the recovery
+    rung is Under 6. Five is the dividing line, so the test holds whatever
+    the rungs are changed to.
   -->
   <block type="before_purchase" id="before_purchase_root" deletable="false" x="0" y="620">
     <statement name="BEFOREPURCHASE_STACK">
@@ -168,20 +186,8 @@
           <block type="logic_compare" id="cmp_rung_is_under">
             <field name="OP">GTE</field>
             <value name="A">
-              <block type="lists_getIndex" id="get_rung_for_side">
-                <mutation xmlns="http://www.w3.org/1999/xhtml" statement="false" at="true"></mutation>
-                <field name="MODE">GET</field>
-                <field name="WHERE">FROM_START</field>
-                <value name="VALUE">
-                  <block type="variables_get" id="get_list_for_side">
-                    <field name="VAR" id="v_prediction_list" variabletype="">Prediction list</field>
-                  </block>
-                </value>
-                <value name="AT">
-                  <block type="variables_get" id="get_index_for_side">
-                    <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
-                  </block>
-                </value>
+              <block type="variables_get" id="get_prediction_for_side">
+                <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
               </block>
             </value>
             <value name="B">
@@ -221,7 +227,7 @@
               </block>
             </value>
 
-            <!-- A win goes back to the opening stake and the first rung. -->
+            <!-- A win goes back to the opening stake and rung one. -->
             <statement name="DO0">
               <block type="variables_set" id="win_reset_stake">
                 <field name="VAR" id="v_stake" variabletype="">Stake</field>
@@ -238,11 +244,11 @@
                       <block type="math_number" id="win_mart_num"><field name="NUM">1</field></block>
                     </value>
                     <next>
-                      <block type="variables_set" id="win_reset_rung">
+                      <block type="variables_set" id="win_reset_prediction">
                         <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
                         <value name="VALUE">
-                          <shadow type="math_number" id="win_rung_shadow"><field name="NUM">1</field></shadow>
-                          <block type="math_number" id="win_rung_num"><field name="NUM">1</field></block>
+                          <shadow type="math_number" id="win_pred_shadow"><field name="NUM">2</field></shadow>
+                          <block type="math_number" id="win_pred_num"><field name="NUM">2</field></block>
                         </value>
                       </block>
                     </next>
@@ -252,10 +258,11 @@
             </statement>
 
             <!--
-              A loss multiplies the stake and steps one rung along: Over 2 to
-              Over 3 to Under 6. The clamp holds it on the last rung rather
-              than running off the end of the list - the Consecutive Losses
-              test below is what ends the run.
+              A loss multiplies the stake and steps a rung. Mart counts the
+              losses in a row: it reaches 2 after the first, so that is the
+              Over 3 rung, and 3 or more after the second, which is Under 6
+              and where it stays. The Consecutive Losses test below ends the
+              run.
             -->
             <statement name="ELSE">
               <block type="variables_set" id="loss_scale_stake">
@@ -285,49 +292,39 @@
                       <block type="math_number" id="loss_mart_num"><field name="NUM">1</field></block>
                     </value>
                     <next>
-                      <block type="math_change" id="loss_rung_up">
-                        <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
-                        <value name="DELTA">
-                          <shadow type="math_number" id="loss_rung_shadow"><field name="NUM">1</field></shadow>
-                          <block type="math_number" id="loss_rung_num"><field name="NUM">1</field></block>
-                        </value>
-                        <next>
-                          <block type="controls_if" id="clamp_rung">
-                            <value name="IF0">
-                              <block type="logic_compare" id="cmp_rung_overflow">
-                                <field name="OP">GT</field>
-                                <value name="A">
-                                  <block type="variables_get" id="get_rung_for_clamp">
-                                    <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
-                                  </block>
-                                </value>
-                                <value name="B">
-                                  <block type="lists_length" id="len_list_for_clamp">
-                                    <value name="VALUE">
-                                      <block type="variables_get" id="get_list_for_clamp">
-                                        <field name="VAR" id="v_prediction_list" variabletype="">Prediction list</field>
-                                      </block>
-                                    </value>
-                                  </block>
-                                </value>
+                      <block type="controls_if" id="step_rung">
+                        <mutation else="1"></mutation>
+                        <value name="IF0">
+                          <block type="logic_compare" id="cmp_mart_for_rung">
+                            <field name="OP">GTE</field>
+                            <value name="A">
+                              <block type="variables_get" id="get_mart_for_rung">
+                                <field name="VAR" id="v_mart" variabletype="">Mart</field>
                               </block>
                             </value>
-                            <statement name="DO0">
-                              <block type="variables_set" id="clamp_rung_set">
-                                <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
-                                <value name="VALUE">
-                                  <block type="lists_length" id="len_list_for_clamp_set">
-                                    <value name="VALUE">
-                                      <block type="variables_get" id="get_list_for_clamp_set">
-                                        <field name="VAR" id="v_prediction_list" variabletype="">Prediction list</field>
-                                      </block>
-                                    </value>
-                                  </block>
-                                </value>
-                              </block>
-                            </statement>
+                            <value name="B">
+                              <block type="math_number" id="rung_three_at"><field name="NUM">3</field></block>
+                            </value>
                           </block>
-                        </next>
+                        </value>
+                        <statement name="DO0">
+                          <block type="variables_set" id="rung_under_six">
+                            <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
+                            <value name="VALUE">
+                              <shadow type="math_number" id="rung3_shadow"><field name="NUM">6</field></shadow>
+                              <block type="math_number" id="rung3_num"><field name="NUM">6</field></block>
+                            </value>
+                          </block>
+                        </statement>
+                        <statement name="ELSE">
+                          <block type="variables_set" id="rung_over_three">
+                            <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
+                            <value name="VALUE">
+                              <shadow type="math_number" id="rung2_shadow"><field name="NUM">3</field></shadow>
+                              <block type="math_number" id="rung2_num"><field name="NUM">3</field></block>
+                            </value>
+                          </block>
+                        </statement>
                       </block>
                     </next>
                   </block>
@@ -336,44 +333,30 @@
             </statement>
 
             <!--
-              Both ways the run can end. Take profit first, which is the one
-              test visible in the owner's screenshots; then the consecutive
-              loss limit. Stopping is simply not calling Trade again.
+              Both ways the run ends. Stopping is simply not calling Trade
+              again, which is how the other bots in this folder stop.
             -->
             <next>
-              <block type="controls_if" id="check_take_profit">
-                <mutation else="1"></mutation>
+              <block type="controls_if" id="continue_or_stop">
                 <value name="IF0">
-                  <block type="logic_compare" id="cmp_take_profit">
-                    <field name="OP">GTE</field>
+                  <block type="logic_operation" id="still_running">
+                    <field name="OP">AND</field>
                     <value name="A">
-                      <block type="total_profit" id="profit_for_take_profit"></block>
+                      <block type="logic_compare" id="cmp_take_profit">
+                        <field name="OP">LT</field>
+                        <value name="A">
+                          <block type="total_profit" id="profit_for_take_profit"></block>
+                        </value>
+                        <value name="B">
+                          <block type="variables_get" id="get_take_profit">
+                            <field name="VAR" id="v_take_profit" variabletype="">Take Profit</field>
+                          </block>
+                        </value>
+                      </block>
                     </value>
                     <value name="B">
-                      <block type="variables_get" id="get_take_profit">
-                        <field name="VAR" id="v_take_profit" variabletype="">Take Profit</field>
-                      </block>
-                    </value>
-                  </block>
-                </value>
-                <statement name="DO0">
-                  <block type="notify" id="notify_take_profit">
-                    <field name="NOTIFICATION_TYPE">success</field>
-                    <field name="NOTIFICATION_SOUND">silent</field>
-                    <value name="MESSAGE">
-                      <shadow type="text" id="tp_notify_shadow"><field name="TEXT">Take profit reached</field></shadow>
-                      <block type="variables_get" id="get_take_profit_text">
-                        <field name="VAR" id="v_take_profit_text" variabletype="">Take Profit Text</field>
-                      </block>
-                    </value>
-                  </block>
-                </statement>
-                <statement name="ELSE">
-                  <block type="controls_if" id="check_consecutive_losses">
-                    <mutation else="1"></mutation>
-                    <value name="IF0">
                       <block type="logic_compare" id="cmp_consecutive_losses">
-                        <field name="OP">GT</field>
+                        <field name="OP">LTE</field>
                         <value name="A">
                           <block type="variables_get" id="get_mart_for_stop">
                             <field name="VAR" id="v_mart" variabletype="">Mart</field>
@@ -386,98 +369,11 @@
                         </value>
                       </block>
                     </value>
-                    <statement name="DO0">
-                      <block type="notify" id="notify_loss_limit">
-                        <field name="NOTIFICATION_TYPE">warn</field>
-                        <field name="NOTIFICATION_SOUND">silent</field>
-                        <value name="MESSAGE">
-                          <shadow type="text" id="sl_notify_shadow"><field name="TEXT">Consecutive loss limit reached</field></shadow>
-                          <block type="variables_get" id="get_stop_loss_text">
-                            <field name="VAR" id="v_stop_loss_text" variabletype="">Stop Loss Text</field>
-                          </block>
-                        </value>
-                      </block>
-                    </statement>
-                    <statement name="ELSE">
-                      <block type="trade_again" id="trade_again_block"></block>
-                    </statement>
                   </block>
-                </statement>
-              </block>
-            </next>
-          </block>
-        </next>
-      </block>
-    </statement>
-  </block>
-
-  <block type="procedures_defnoreturn" id="start_information_def" x="640" y="60">
-    <field name="NAME">Start Information</field>
-    <statement name="STACK">
-      <block type="variables_set" id="si_initial_stake">
-        <field name="VAR" id="v_initial_stake" variabletype="">Initial Stake</field>
-        <value name="VALUE">
-          <block type="variables_get" id="si_get_stake">
-            <field name="VAR" id="v_stake" variabletype="">Stake</field>
-          </block>
-        </value>
-        <next>
-          <block type="variables_set" id="si_mart">
-            <field name="VAR" id="v_mart" variabletype="">Mart</field>
-            <value name="VALUE">
-              <shadow type="math_number" id="si_mart_shadow"><field name="NUM">1</field></shadow>
-              <block type="math_number" id="si_mart_num"><field name="NUM">1</field></block>
-            </value>
-            <next>
-              <block type="variables_set" id="si_prediction">
-                <field name="VAR" id="v_prediction" variabletype="">Prediction</field>
-                <value name="VALUE">
-                  <shadow type="math_number" id="si_pred_shadow"><field name="NUM">1</field></shadow>
-                  <block type="math_number" id="si_pred_num"><field name="NUM">1</field></block>
                 </value>
-                <next>
-                  <block type="variables_set" id="si_take_profit_text">
-                    <field name="VAR" id="v_take_profit_text" variabletype="">Take Profit Text</field>
-                    <value name="VALUE">
-                      <block type="text" id="si_tp_text"><field name="TEXT">Take profit reached - bot stopped.</field></block>
-                    </value>
-                    <next>
-                      <block type="variables_set" id="si_stop_loss_text">
-                        <field name="VAR" id="v_stop_loss_text" variabletype="">Stop Loss Text</field>
-                        <value name="VALUE">
-                          <block type="text" id="si_sl_text"><field name="TEXT">Consecutive loss limit reached - bot stopped.</field></block>
-                        </value>
-                        <next>
-                          <!-- The three rungs, in order: Over 2, Over 3, Under 6. -->
-                          <block type="lists_create_with" id="si_prediction_list">
-                            <field name="VARIABLE" id="v_prediction_list" variabletype="">Prediction list</field>
-                            <statement name="STACK">
-                              <block type="lists_statement" id="si_rung_1" movable="false">
-                                <value name="VALUE">
-                                  <block type="math_number" id="si_rung_1_num"><field name="NUM">2</field></block>
-                                </value>
-                                <next>
-                                  <block type="lists_statement" id="si_rung_2" movable="false">
-                                    <value name="VALUE">
-                                      <block type="math_number" id="si_rung_2_num"><field name="NUM">3</field></block>
-                                    </value>
-                                    <next>
-                                      <block type="lists_statement" id="si_rung_3" movable="false">
-                                        <value name="VALUE">
-                                          <block type="math_number" id="si_rung_3_num"><field name="NUM">6</field></block>
-                                        </value>
-                                      </block>
-                                    </next>
-                                  </block>
-                                </next>
-                              </block>
-                            </statement>
-                          </block>
-                        </next>
-                      </block>
-                    </next>
-                  </block>
-                </next>
+                <statement name="DO0">
+                  <block type="trade_again" id="trade_again_block"></block>
+                </statement>
               </block>
             </next>
           </block>
