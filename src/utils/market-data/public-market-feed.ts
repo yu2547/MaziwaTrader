@@ -113,6 +113,22 @@ class PublicMarketFeed {
     private req_id = 0;
     private pending = new Map<number, TPending>();
     private tick_subscribers = new Map<string, Set<(tick: TTick) => void>>();
+
+    /**
+     * Symbols with a live server-side tick subscription on the CURRENT socket.
+     *
+     * Distinct from tick_subscribers, which is who wants ticks. These two drift
+     * apart constantly: a socket is replaced and every server-side subscription
+     * dies with it while the wanters are all still mounted, or a forget_all
+     * below clears the lot in order to drop one of them. Subscribing used to be
+     * keyed off tick_subscribers alone - "this symbol is already in the map, so
+     * it must already be subscribed" - which is only true until the first time
+     * those two disagree. After that the symbol is permanently assumed live, no
+     * subscribe is ever re-sent, and no tick arrives again for as long as some
+     * component keeps it in the map. History kept working throughout, because
+     * every history call is a fresh request.
+     */
+    private subscribed_symbols = new Set<string>();
     private reconnect_timer: ReturnType<typeof setTimeout> | null = null;
     private ping_timer: ReturnType<typeof setInterval> | null = null;
     private should_reconnect = false;
@@ -130,6 +146,7 @@ class PublicMarketFeed {
         this.stopPing();
         this.ws?.close(1000, 'client disconnect');
         this.ws = null;
+        this.subscribed_symbols.clear();
         feedConnectionState$.next('idle');
     }
 
@@ -155,7 +172,24 @@ class PublicMarketFeed {
         const ws = new WebSocket(PUBLIC_WS_URL);
         this.ws = ws;
 
+        // Nothing is subscribed on a socket that has just been created, whatever
+        // was subscribed on the one it replaces.
+        this.subscribed_symbols.clear();
+
+        /**
+         * Whether this handler still speaks for the live connection.
+         *
+         * A socket that has been replaced goes on firing - close in particular
+         * arrives well after the replacement exists - and these handlers all
+         * write shared state. The close handler nulling this.ws was the worst
+         * of it: it would null out the NEW socket, after which every tick
+         * subscribe silently returned (sendTicksSubscribe needs a socket) and
+         * the feed looked connected while delivering nothing.
+         */
+        const is_current = () => this.ws === ws;
+
         ws.onopen = () => {
+            if (!is_current()) return;
             log('open');
             feedConnectionState$.next('open');
             this.startPing();
@@ -163,6 +197,7 @@ class PublicMarketFeed {
         };
 
         ws.onmessage = event => {
+            if (!is_current()) return;
             let data: Record<string, unknown>;
             try {
                 data = JSON.parse(event.data);
@@ -188,15 +223,24 @@ class PublicMarketFeed {
         };
 
         ws.onerror = () => {
+            if (!is_current()) return;
             log('error');
             feedConnectionState$.next('error');
         };
 
         ws.onclose = event => {
+            // A superseded socket closing is housekeeping, not a disconnection:
+            // reporting it would mark a healthy connection closed, and the
+            // reconnect below would open a third socket nobody asked for.
+            if (!is_current()) {
+                log('stale socket closed - ignored', { code: event.code });
+                return;
+            }
             log('closed', { code: event.code, reason: event.reason });
             feedConnectionState$.next('closed');
             this.stopPing();
             this.ws = null;
+            this.subscribed_symbols.clear();
             if (this.should_reconnect) {
                 this.reconnect_timer = setTimeout(() => this.openSocket(), RECONNECT_DELAY_MS);
             }
@@ -327,29 +371,37 @@ class PublicMarketFeed {
     private sendTicksSubscribe(symbol: string) {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
         this.ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
+        this.subscribed_symbols.add(symbol);
     }
 
     /** Subscribes to live ticks for a symbol; returns an unsubscribe function. */
     subscribeTicks(symbol: string, callback: (tick: TTick) => void): () => void {
         let subs = this.tick_subscribers.get(symbol);
-        const is_new_symbol = !subs;
         if (!subs) {
             subs = new Set();
             this.tick_subscribers.set(symbol, subs);
         }
         subs.add(callback);
-        if (is_new_symbol) this.sendTicksSubscribe(symbol);
+        // Keyed on what is actually subscribed, not on whether this symbol is
+        // new to the map. Those agree right up until the socket is replaced or
+        // a forget_all clears the server side, and the old test then decided
+        // the symbol was already live and sent nothing - for good.
+        if (!this.subscribed_symbols.has(symbol)) this.sendTicksSubscribe(symbol);
 
         return () => {
             subs?.delete(callback);
             if (subs && subs.size === 0) {
                 this.tick_subscribers.delete(symbol);
+                this.subscribed_symbols.delete(symbol);
                 // The public feed has no per-symbol forget in what we've verified,
                 // so drop every server-side tick subscription and re-issue the
                 // ones still wanted - simple and correct for a small, dashboard-
                 // widget-scale set of subscriptions rather than high-churn use.
                 if (this.ws?.readyState === WebSocket.OPEN) {
                     this.ws.send(JSON.stringify({ forget_all: 'ticks' }));
+                    // forget_all took every symbol with it, so nothing is live
+                    // until the re-issue below says so.
+                    this.subscribed_symbols.clear();
                     this.tick_subscribers.forEach((_s, sym) => this.sendTicksSubscribe(sym));
                 }
             }
