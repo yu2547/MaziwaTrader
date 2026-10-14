@@ -63,6 +63,11 @@ const Chart = observer(({ show_digits_stats }: { show_digits_stats: boolean }) =
         chart_subscription_id,
     } = chart_store;
     const chartSubscriptionIdRef = useRef(chart_subscription_id);
+
+    // The last stream SmartChart asked for, kept so it can be asked for again
+    // on a replaced socket. A ref rather than state: nothing renders from it,
+    // and writing it must not cost a render on every subscribe.
+    const last_subscribe_ref = useRef<{ callback: (data: any) => void; req: TicksStreamRequest } | null>(null);
     const { isDesktop, isMobile } = useDevice();
     const { is_drawer_open } = run_panel;
     const { is_chart_modal_visible } = dashboard;
@@ -138,6 +143,11 @@ const Chart = observer(({ show_digits_stats }: { show_digits_stats: boolean }) =
     const requestSubscribe = useCallback(
         async (req: TicksStreamRequest, callback: (data: any) => void) => {
             try {
+                // Held so the stream can be asked for again on a new socket -
+                // see the reconnect effect below. SmartChart calls this once
+                // per symbol/granularity and then expects ticks to keep
+                // arriving, so this is the only record of what it asked for.
+                last_subscribe_ref.current = { callback, req };
                 requestForgetStream(chartSubscriptionIdRef.current);
                 const history = await chart_api.api.send(req);
                 setChartSubscriptionId(history?.subscription.id);
@@ -156,6 +166,43 @@ const Chart = observer(({ show_digits_stats }: { show_digits_stats: boolean }) =
             }
         },
         [requestForgetStream, setChartSubscriptionId]
+    );
+
+    // Re-asks for the tick stream whenever the chart's socket is replaced.
+    //
+    // Without this the chart reconnects and then stays silent for the rest of
+    // the session: the rxjs listener in requestSubscribe is bound to the socket
+    // that existed when SmartChart first subscribed, and the ticks_history
+    // stream it asked for belonged to that socket too. Both die with it,
+    // SmartChart has no idea anything happened, and the only cure was reloading
+    // the page - which is exactly what the frozen tick pointer was.
+    //
+    // Replays the last request rather than trying to revive the old
+    // subscription: its id names a stream on a socket that no longer exists,
+    // so there is nothing on the new one to forget or resume.
+    //
+    // Placed below requestSubscribe rather than beside the other effects
+    // because it depends on it - read before it is initialised, the dependency
+    // array alone would throw during render.
+    useEffect(
+        () =>
+            chart_api.onReconnected(() => {
+                const last = last_subscribe_ref.current;
+                if (!last) return;
+
+                Object.keys(subscriptions).forEach(id => {
+                    subscriptions[id]?.unsubscribe?.();
+                    delete subscriptions[id];
+                });
+
+                // Cleared before replaying so requestSubscribe does not try to
+                // forget the dead socket's id on the new connection.
+                chartSubscriptionIdRef.current = '';
+                setChartSubscriptionId('');
+
+                requestSubscribe(last.req, last.callback);
+            }),
+        [requestSubscribe, setChartSubscriptionId]
     );
 
     // Same reasoning as requestAPI/requestSubscribe above - stable references for

@@ -7,13 +7,70 @@ import { wsLog } from './ws-logger';
 class ChartAPI {
     api;
 
+    /**
+     * Things that need to know this socket has been replaced.
+     *
+     * The heartbeat and the reconnect below bring the connection back, but a
+     * new socket is a blank one: anything subscribed to the old socket's
+     * message stream is now listening to a dead object, and the server-side
+     * streams it had asked for belonged to that socket too. api_base solves
+     * the same problem with subscription_manager.restoreAll() plus a
+     * reconnected callback; this connection had neither, so the chart came
+     * back connected and permanently silent - the tick pointer stopped and
+     * only a page reload fixed it.
+     *
+     * A set with an unsubscribe, rather than api_base's single overwritable
+     * slot: the consumer here is a React effect that can mount more than once
+     * over a session, and returning the remover from the effect is what keeps
+     * this from becoming the listener leak that the single slot was avoiding.
+     */
+    reconnect_listeners = new Set();
+
+    // The first open is the connection being established, not a reconnection,
+    // and nothing has subscribed yet for it to tell.
+    has_opened_once = false;
+
     // Owns socket creation/open/close listeners, reconnect backoff, and heartbeat -
     // see connection-manager.ts. This used to be a near-duplicate of api-base.ts's
     // own inline implementation.
     connection_manager = new ConnectionManager({
         label: 'chart',
+        onOpen: () => this.handleOpen(),
         onClose: source => this.reconnectIfNotConnected(source),
     });
+
+    handleOpen = () => {
+        if (!this.has_opened_once) {
+            this.has_opened_once = true;
+            return;
+        }
+
+        wsLog('Connection', `chart: socket replaced - notifying ${this.reconnect_listeners.size} listener(s)`);
+        this.reconnect_listeners.forEach(callback => {
+            try {
+                callback();
+            } catch (error) {
+                // One listener failing must not stop the others from being
+                // restored, and must not throw inside the socket's open event.
+                wsLog('Connection', 'chart: a reconnect listener threw', error);
+            }
+        });
+    };
+
+    /**
+     * Registers a listener for "the socket was replaced"; returns its remover.
+     *
+     * The remover returns nothing on purpose. Set.delete() answers with a
+     * boolean, and this is meant to be handed straight back from a React
+     * effect, whose cleanup has to be void - returning the delete's result
+     * made it an invalid destructor.
+     */
+    onReconnected = callback => {
+        this.reconnect_listeners.add(callback);
+        return () => {
+            this.reconnect_listeners.delete(callback);
+        };
+    };
 
     // True once an OTP session has been detected, so a later reconnect never
     // silently falls back to the classic endpoint this connection used to
