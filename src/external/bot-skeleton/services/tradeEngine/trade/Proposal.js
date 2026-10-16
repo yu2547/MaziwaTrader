@@ -168,10 +168,32 @@ export default Engine =>
             if (!api_base.api) return;
             const subscription = api_base.api.onMessage().subscribe(response => {
                 if (response.data.msg_type === 'proposal') {
-                    const { passthrough, proposal } = response.data;
+                    const { echo_req, passthrough, proposal } = response.data;
+
+                    /**
+                     * The two fields checkProposalReady() matches on -
+                     * contract_type and purchase_reference - reach a proposal
+                     * only through its passthrough, and the Options API does
+                     * not send one back. Checked against the live endpoint: a
+                     * proposal response there carries ask_price, id, payout,
+                     * spot and validation_params, with no contract_type and no
+                     * top-level passthrough, so nothing in it says which of the
+                     * requested contracts it prices. The request is echoed
+                     * under echo_req, which is where the passthrough survives -
+                     * and is already how the ContractBuyValidationError branch
+                     * above recovers the same two fields.
+                     *
+                     * Without this, a run on that transport priced both
+                     * contracts and then matched neither, reporting "2 of 2
+                     * prices came back but could not be matched to this trade"
+                     * and never buying. Classic responses carry passthrough and
+                     * take the first branch, unchanged.
+                     */
+                    const identity = passthrough ?? echo_req?.passthrough;
+
                     if (proposal && this.data.proposals.findIndex(p => p.id === proposal.id) === -1) {
                         // Add proposals based on the ID returned by the API.
-                        this.data.proposals.push({ ...proposal, ...passthrough });
+                        this.data.proposals.push({ ...proposal, ...identity });
                         this.checkProposalReady();
                     }
                 }
