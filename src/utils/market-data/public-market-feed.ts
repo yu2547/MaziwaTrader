@@ -273,7 +273,17 @@ class PublicMarketFeed {
                 await this.send({ ping: 1 });
                 feedLatencyMs$.next(Math.round(performance.now() - start));
             } catch {
-                // Connection state already reflects the problem; latency just stays stale.
+                // A ping that never answers means the socket is half-open: the
+                // browser still reports readyState OPEN, so no close event is
+                // ever coming and nothing else here would notice. This used to
+                // swallow the failure on the grounds that the connection state
+                // already reflected it, which is exactly what it does not do -
+                // the feed stayed 'open', every consumer kept believing it was
+                // subscribed, and ticks never arrived again for the rest of
+                // the session. It is the same fault connection-manager.ts
+                // handles for the trading and chart sockets, which treat a
+                // missed pong as stale and force a reconnect.
+                this.handleStaleConnection();
             }
         };
         probe();
@@ -284,6 +294,39 @@ class PublicMarketFeed {
         if (this.ping_timer) clearInterval(this.ping_timer);
         this.ping_timer = null;
         feedLatencyMs$.next(null);
+    }
+
+    /**
+     * Forces the close the browser is never going to deliver.
+     *
+     * Order matters: this.ws is cleared before close() is called, so the dying
+     * socket's own close handler sees that it is no longer current and leaves
+     * the reconnect to this - otherwise both would schedule one.
+     *
+     * Reporting 'closed' is half the point. Consumers key off that state, so
+     * it is what tells them to tear down and re-subscribe once the
+     * replacement is up; a silently stale socket left them waiting forever.
+     */
+    private handleStaleConnection() {
+        if (!this.ws) return;
+        log('ping unanswered - treating connection as stale');
+
+        const dead_socket = this.ws;
+        this.ws = null;
+        this.subscribed_symbols.clear();
+        this.stopPing();
+        feedConnectionState$.next('closed');
+
+        try {
+            dead_socket.close(1000, 'stale connection');
+        } catch {
+            // Already closing or closed - nothing to do.
+        }
+
+        if (this.should_reconnect) {
+            if (this.reconnect_timer) clearTimeout(this.reconnect_timer);
+            this.reconnect_timer = setTimeout(() => this.openSocket(), RECONNECT_DELAY_MS);
+        }
     }
 
     async getActiveSymbols(): Promise<TActiveSymbol[]> {

@@ -179,7 +179,13 @@ const Dcircles = observer(() => {
                 const places = toDecimalPlaces(pip_size) ?? 2;
                 setHistoryDecimals(places);
                 // History arrives oldest-first; this list is newest-first.
-                setDigits(prices.map(price => getLastDigit(price, places)).reverse());
+                const history_digits = prices.map(price => getLastDigit(price, places)).reverse();
+                // Merged, not assigned. The subscription is live while this
+                // request is in flight, so any tick that arrived meanwhile is
+                // newer than everything in the response - replacing the list
+                // outright threw those away and briefly walked the pointer
+                // backwards onto a digit that was no longer current.
+                setDigits(live => [...live, ...history_digits].slice(0, MAX_TICK_WINDOW));
             })
             .catch(() => {
                 // Non-fatal: the live stream still fills the sample.
