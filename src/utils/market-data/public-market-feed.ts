@@ -432,8 +432,29 @@ class PublicMarketFeed {
         if (!this.subscribed_symbols.has(symbol)) this.sendTicksSubscribe(symbol);
 
         return () => {
-            subs?.delete(callback);
-            if (subs && subs.size === 0) {
+            /**
+             * Re-read, rather than closing over the Set captured above.
+             *
+             * If this symbol is fully released and then wanted again - which
+             * every market switch does, and every remount of the last consumer
+             * holding it - the entry is deleted and the next subscribe builds
+             * a new Set. The captured one is then a different object that is
+             * already empty, so an unsubscribe arriving late ran the whole
+             * teardown a second time: it deleted the map entry belonging to
+             * whoever had subscribed in the meantime and sent a forget_all
+             * that stopped the stream for them. They were left registered with
+             * nobody, receiving nothing, until something happened to release
+             * and re-subscribe the symbol all over again - which is why a
+             * reload or a market switch brought the ticks back for a while.
+             *
+             * Checking membership makes the unsubscribe idempotent: a stale
+             * one no longer matches and does nothing.
+             */
+            const current_subs = this.tick_subscribers.get(symbol);
+            if (!current_subs?.has(callback)) return;
+
+            current_subs.delete(callback);
+            if (current_subs.size === 0) {
                 this.tick_subscribers.delete(symbol);
                 this.subscribed_symbols.delete(symbol);
                 // The public feed has no per-symbol forget in what we've verified,
