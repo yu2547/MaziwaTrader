@@ -129,6 +129,12 @@ class PublicMarketFeed {
      * every history call is a fresh request.
      */
     private subscribed_symbols = new Set<string>();
+    // The server supplies an individual subscription ID with its tick messages.
+    // Keep it so releasing one market doesn't cancel every other market.
+    private tick_subscription_ids = new Map<string, string>();
+    // A market can be released before its first tick supplies the ID.
+    // Wait for that ID before cancelling the abandoned stream.
+    private abandoned_symbols = new Set<string>();
     private reconnect_timer: ReturnType<typeof setTimeout> | null = null;
     private ping_timer: ReturnType<typeof setInterval> | null = null;
     private should_reconnect = false;
@@ -147,6 +153,8 @@ class PublicMarketFeed {
         this.ws?.close(1000, 'client disconnect');
         this.ws = null;
         this.subscribed_symbols.clear();
+        this.tick_subscription_ids.clear();
+        this.abandoned_symbols.clear();
         feedConnectionState$.next('idle');
     }
 
@@ -175,6 +183,8 @@ class PublicMarketFeed {
         // Nothing is subscribed on a socket that has just been created, whatever
         // was subscribed on the one it replaces.
         this.subscribed_symbols.clear();
+        this.tick_subscription_ids.clear();
+        this.abandoned_symbols.clear();
 
         /**
          * Whether this handler still speaks for the live connection.
@@ -207,6 +217,17 @@ class PublicMarketFeed {
 
             if (data.msg_type === 'tick' && (data.tick as TTick)?.symbol) {
                 const tick = data.tick as TTick;
+                const subscription_id = (data.subscription as { id?: string } | undefined)?.id;
+                if (subscription_id) {
+                    this.tick_subscription_ids.set(tick.symbol, subscription_id);
+                    // A symbol may have been released before its first tick arrived.
+                    // Only forget that individual server stream, never the others.
+                    if (!this.tick_subscribers.has(tick.symbol)) {
+                        this.forgetTickSubscription(tick.symbol);
+                        return;
+                    }
+                    this.abandoned_symbols.delete(tick.symbol);
+                }
                 this.tick_subscribers.get(tick.symbol)?.forEach(cb => cb(tick));
                 return;
             }
@@ -241,6 +262,8 @@ class PublicMarketFeed {
             this.stopPing();
             this.ws = null;
             this.subscribed_symbols.clear();
+            this.tick_subscription_ids.clear();
+            this.abandoned_symbols.clear();
             if (this.should_reconnect) {
                 this.reconnect_timer = setTimeout(() => this.openSocket(), RECONNECT_DELAY_MS);
             }
@@ -314,6 +337,8 @@ class PublicMarketFeed {
         const dead_socket = this.ws;
         this.ws = null;
         this.subscribed_symbols.clear();
+        this.tick_subscription_ids.clear();
+        this.abandoned_symbols.clear();
         this.stopPing();
         feedConnectionState$.next('closed');
 
@@ -417,6 +442,16 @@ class PublicMarketFeed {
         this.subscribed_symbols.add(symbol);
     }
 
+    /** Cancel only this symbol's confirmed server subscription. */
+    private forgetTickSubscription(symbol: string) {
+        const id = this.tick_subscription_ids.get(symbol);
+        if (!id || this.ws?.readyState !== WebSocket.OPEN) return;
+        this.ws.send(JSON.stringify({ forget: id }));
+        this.tick_subscription_ids.delete(symbol);
+        this.subscribed_symbols.delete(symbol);
+        this.abandoned_symbols.delete(symbol);
+    }
+
     /** Subscribes to live ticks for a symbol; returns an unsubscribe function. */
     subscribeTicks(symbol: string, callback: (tick: TTick) => void): () => void {
         let subs = this.tick_subscribers.get(symbol);
@@ -425,6 +460,7 @@ class PublicMarketFeed {
             this.tick_subscribers.set(symbol, subs);
         }
         subs.add(callback);
+        this.abandoned_symbols.delete(symbol);
         // Keyed on what is actually subscribed, not on whether this symbol is
         // new to the map. Those agree right up until the socket is replaced or
         // a forget_all clears the server side, and the old test then decided
@@ -456,17 +492,13 @@ class PublicMarketFeed {
             current_subs.delete(callback);
             if (current_subs.size === 0) {
                 this.tick_subscribers.delete(symbol);
-                this.subscribed_symbols.delete(symbol);
-                // The public feed has no per-symbol forget in what we've verified,
-                // so drop every server-side tick subscription and re-issue the
-                // ones still wanted - simple and correct for a small, dashboard-
-                // widget-scale set of subscriptions rather than high-churn use.
-                if (this.ws?.readyState === WebSocket.OPEN) {
-                    this.ws.send(JSON.stringify({ forget_all: 'ticks' }));
-                    // forget_all took every symbol with it, so nothing is live
-                    // until the re-issue below says so.
-                    this.subscribed_symbols.clear();
-                    this.tick_subscribers.forEach((_s, sym) => this.sendTicksSubscribe(sym));
+                if (this.tick_subscription_ids.has(symbol)) {
+                    this.forgetTickSubscription(symbol);
+                } else if (this.subscribed_symbols.has(symbol)) {
+                    // The initial tick (and its ID) has not arrived yet.
+                    // Keep the pending request so a quick re-subscribe can reuse it.
+                    // If no consumer returns, forget it when its first tick arrives.
+                    this.abandoned_symbols.add(symbol);
                 }
             }
         };
