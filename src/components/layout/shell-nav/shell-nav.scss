@@ -1,123 +1,189 @@
-// Lives in the shell, directly under the header and above the routed content.
-// Deliberately in normal document flow - no position:fixed, no z-index games -
-// so it occupies real layout space and cannot overlap page content.
-// Painted dark on purpose, in both themes: it is the app's own spine, and
-// keeping it a constant deep navy separates it from the account bar above and
-// the page below far more strongly than a light bar with a hairline border
-// managed. The literal colours here are that decision, not theme tokens the
-// light theme would wash out.
-$shell-nav-bg: #0e2237;
-$shell-nav-active: #1a5cff;
-$shell-nav-icon: #4da3ff;
+
+/*
+ * MAZIWA TRADER — PREMIUM NAVIGATION
+ * Dark navy bar, cyan icons, white text,
+ * and faded-blue selected tabs.
+ *
+ * The navigation stays in normal document flow.
+ * Horizontal scrolling is handled inside the bar.
+ */
+
+$shell-nav-bg: #061b2b;
+$shell-nav-active: #194c91;
+$shell-nav-hover: #123a61;
+$shell-nav-icon: #16b8f4;
+$shell-nav-text: #ffffff;
 
 .shell-nav {
     flex-shrink: 0;
     width: 100%;
-    background: $shell-nav-bg;
-
-    // The scroller below is the only thing here allowed to scroll. Without
-    // these the items overflowed the shell as a flex item (min-width defaults
-    // to auto), and the whole page picked up a horizontal scrollbar on
-    // narrow screens instead of the strip swiping on its own.
     min-width: 0;
     max-width: 100%;
     overflow: hidden;
 
-    // Horizontal scroll rather than wrapping keeps the bar exactly one row
-    // tall at every width, so the content below never shifts down.
+    background: $shell-nav-bg;
+    border-bottom: 1px solid rgba(22, 184, 244, 0.12);
+
+    // Keep all navigation items on one row.
     &__scroller {
         display: flex;
         align-items: stretch;
+
+        width: 100%;
+        min-width: 0;
+
         overflow-x: auto;
+        overflow-y: hidden;
+
         scrollbar-width: none;
+        overscroll-behavior-x: contain;
 
         &::-webkit-scrollbar {
             display: none;
         }
     }
 
+    // Navigation buttons.
     &__item {
         display: inline-flex;
         align-items: center;
-        gap: 0.8rem;
+        justify-content: center;
+
+        gap: 8px;
         flex-shrink: 0;
-        padding: 1.2rem 1.6rem;
-        border: none;
+
+        min-height: 43px;
+        padding: 9px 14px;
+
+        border: 0;
+        border-radius: 0;
+
         background: transparent;
-        color: #fff;
-        font-size: 1.5rem;
+        color: $shell-nav-text;
+
+        font-family: Inter, -apple-system,
+            BlinkMacSystemFont, 'Segoe UI',
+            Arial, sans-serif;
+
+        font-size: 14px;
         font-weight: 700;
-        line-height: 1;
+        line-height: 1.2;
+        letter-spacing: 0.1px;
+
         white-space: nowrap;
         text-decoration: none;
-        cursor: pointer;
-        transition: background 150ms ease;
 
-        svg,
-        svg > path,
-        svg > g > path {
+        cursor: pointer;
+
+        transition:
+            background-color 180ms ease,
+            color 180ms ease;
+
+        // Keep icon proportions consistent.
+        svg {
+            flex-shrink: 0;
+            width: 22px;
+            height: 22px;
+
+            color: $shell-nav-icon;
             fill: $shell-nav-icon;
         }
 
-        &:hover {
-            background: rgb(255 255 255 / 8%);
+        // Existing filled Quill icons.
+        svg path,
+        svg > g > path,
+        svg rect,
+        svg circle {
+            fill: $shell-nav-icon;
         }
 
+        // Preserve the stroke-only icons introduced
+        // in index.tsx (Home, Settings, Search).
+        // Without this rule they could appear as
+        // filled shapes instead of clean outlines.
+        svg[fill='none'][stroke] {
+            fill: none;
+            stroke: $shell-nav-icon;
+
+            path,
+            circle,
+            rect,
+            line,
+            polyline {
+                fill: none;
+                stroke: $shell-nav-icon;
+            }
+        }
+
+        // Subtle highlight when the cursor hovers.
+        &:hover:not(.shell-nav__item--active) {
+            background: $shell-nav-hover;
+            color: #ffffff;
+        }
+
+        // Keyboard accessibility.
         &:focus-visible {
             outline: 2px solid $shell-nav-icon;
             outline-offset: -2px;
         }
 
-        // A filled block rather than an underline: at this weight and on this
-        // ground an underline barely registers.
+        // Faded blue background on selected page.
         &--active {
             background: $shell-nav-active;
-
-            svg,
-            svg > path,
-            svg > g > path {
-                fill: #fff;
-            }
+            color: #ffffff;
+            font-weight: 700;
         }
     }
 
+    &__label {
+        display: inline-block;
+        color: inherit;
+        white-space: nowrap;
+    }
+
+    // Retained for compatibility with older layouts.
     &__divider {
         flex-shrink: 0;
         width: 1px;
-        margin: 0.8rem 0.4rem;
-        background: rgb(255 255 255 / 15%);
+        margin: 8px 4px;
+        background: rgba(255, 255, 255, 0.12);
     }
 }
 
-// On phones the strip keeps its labels and swipes sideways instead. Icons
-// alone were ambiguous - several sections share an icon here, so "Dashboard"
-// and "Trading Bots" were the same glyph with nothing to tell them apart, and
-// there is no hover to fall back on. The row is already horizontally
-// scrollable, so there is no need to make everything fit at once; it just has
-// to be readable and reachable, which it now is on every route.
-@media (width <= 768px) {
+// Smaller screens retain full navigation labels.
+// Users can swipe horizontally without forcing
+// the entire page to scroll sideways.
+
+@media (max-width: 768px) {
     .shell-nav {
         &__scroller {
-            // Momentum scrolling and snapping make the strip feel like a
-            // native pager rather than a clipped row.
             -webkit-overflow-scrolling: touch;
             scroll-snap-type: x proximity;
         }
 
         &__item {
-            gap: 0.6rem;
-            padding: 1rem 1.2rem;
-            font-size: 1.3rem;
+            min-height: 41px;
+            gap: 7px;
+            padding: 9px 11px;
+            font-size: 13px;
+
             scroll-snap-align: start;
 
             svg {
-                width: 18px;
-                height: 18px;
+                width: 19px;
+                height: 19px;
             }
         }
 
         &__divider {
-            margin: 1rem 0.2rem;
+            margin: 8px 3px;
         }
+    }
+}
+
+// Respect reduced-motion preferences.
+@media (prefers-reduced-motion: reduce) {
+    .shell-nav__item {
+        transition: none;
     }
 }
