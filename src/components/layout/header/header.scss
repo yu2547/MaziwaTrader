@@ -8,7 +8,7 @@
         position: sticky;
         top: 0;
         z-index: 100;
-        background: linear-gradient(180deg, rgb(47 182 224 / 4%) 0%, transparent 60%), var(--glass-bg) !important;
+        background: #eafbf2 !important;
         backdrop-filter: blur(20px) saturate(160%);
         border-bottom: 1px solid var(--glass-border);
         box-shadow:
@@ -18,7 +18,8 @@
         transition: box-shadow 0.25s ease;
 
         @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-            background: var(--glass-bg-solid) !important;
+    background: #eafbf2 !important;
+}
         }
     }
 
