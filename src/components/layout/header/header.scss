@@ -412,3 +412,11 @@
 .deriv-accordion--underline {
     border-bottom: none;
 }
+
+/* MaziwaTrader top account bar — light theme only */
+/* Preserve the KSh/USD rocker design and dimensions. */
+
+body.theme--light .mw-premium-nav {
+    background-color: #eafbf2 !important;
+    background-image: none !important;
+}
