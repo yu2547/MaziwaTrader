@@ -96,7 +96,20 @@ const NAV_DESTINATIONS: TNavDestination[] = [
     },
     {
         kind: 'tab',
-        icon: <LabelPairedObjectsColumnCaptionRegularIcon {...ICON_PROPS} />,
+       
+icon: (
+    <svg width='22' height='22' viewBox='0 0 24 24'
+        fill='none' stroke='#16b8f4'
+        strokeWidth='1.8' strokeLinecap='round'
+        strokeLinejoin='round'>
+        <path d='M12 3v4M9 3h6' />
+        <rect x='5' y='7' width='14' height='12'
+            rx='2' style={{ fill: 'none' }} />
+        <path d='M2.5 11v4H5M19 11h2.5v4H19M9 19v2M15 19v2' />
+        <path d='M9 12h1M14 12h1M10 16h4' />
+    </svg>
+),
+
         label: <Localize i18n_default_text='Trading Bots' />,
         tab_index: DBOT_TABS.FREE_BOTS,
     },
@@ -120,18 +133,19 @@ const NAV_DESTINATIONS: TNavDestination[] = [
     },
     {
         kind: 'route',
-        
+       
 icon: (
     <svg width='22' height='22' viewBox='0 0 24 24'
-        style={{ fill: 'none', stroke: '#16b8f4' }}
+        fill='none' stroke='#16b8f4'
         strokeWidth='1.8' strokeLinecap='round'
         strokeLinejoin='round'>
-        <rect x='3' y='7' width='18' height='14' rx='2'
-            style={{ fill: 'none' }} />
-        <path d='M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18'
-            style={{ fill: 'none' }} />
+        <path d='M8 7V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V7' />
+        <rect x='3' y='7' width='18' height='14'
+            rx='2' style={{ fill: 'none' }} />
+        <path d='M8 7v14M16 7v14' />
     </svg>
 ),
+
 
         label: <Localize i18n_default_text='Copy Trading' />,
         path: '/copy-trading',
@@ -144,7 +158,23 @@ icon: (
     },
     {
         kind: 'route',
-        icon: <LabelPairedShieldCheckCaptionRegularIcon {...ICON_PROPS} />,
+        
+icon: (
+    <svg width='22' height='22' viewBox='0 0 24 24'
+        fill='none' stroke='#16b8f4'
+        strokeWidth='1.8' strokeLinecap='round'
+        strokeLinejoin='round'>
+        <rect x='5' y='2' width='14' height='20'
+            rx='2' style={{ fill: 'none' }} />
+        <rect x='8' y='5' width='8' height='4'
+            rx='0.5' style={{ fill: 'none' }} />
+        <path
+            d='M9 12h.1M12 12h.1M15 12h.1M9 15h.1M12 15h.1M15 15h.1M9 18h.1M12 18h.1M15 18h.1'
+            strokeWidth='2.4'
+        />
+    </svg>
+),
+
         label: <Localize i18n_default_text='Risk Calculator' />,
         path: '/risk-calculator',
     },
