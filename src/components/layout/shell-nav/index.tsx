@@ -120,7 +120,19 @@ const NAV_DESTINATIONS: TNavDestination[] = [
     },
     {
         kind: 'route',
-        icon: <LabelPairedCopyCaptionRegularIcon {...ICON_PROPS} />,
+        
+icon: (
+    <svg width='22' height='22' viewBox='0 0 24 24'
+        style={{ fill: 'none', stroke: '#16b8f4' }}
+        strokeWidth='1.8' strokeLinecap='round'
+        strokeLinejoin='round'>
+        <rect x='3' y='7' width='18' height='14' rx='2'
+            style={{ fill: 'none' }} />
+        <path d='M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18'
+            style={{ fill: 'none' }} />
+    </svg>
+),
+
         label: <Localize i18n_default_text='Copy Trading' />,
         path: '/copy-trading',
     },
@@ -136,18 +148,46 @@ const NAV_DESTINATIONS: TNavDestination[] = [
         label: <Localize i18n_default_text='Risk Calculator' />,
         path: '/risk-calculator',
     },
+    
+    {
+        kind: 'route',
+        
+icon: (
+    <svg
+        width='22'
+        height='22'
+        viewBox='0 0 24 24'
+        fill='none'
+        stroke='#16b8f4'
+        strokeWidth='1.8'
+        strokeLinecap='round'
+        strokeLinejoin='round'
+    >
+        <rect
+            x='3'
+            y='6'
+            width='18'
+            height='13'
+            rx='2'
+            style={{ fill: 'none' }}
+        />
+        <path
+            d='M8 3l4 3 4-3M9 22h6'
+            style={{ fill: 'none' }}
+        />
+    </svg>
+),
+
+        label: <Localize i18n_default_text='Manual Trader' />,
+        path: '/dtrader',
+    },
     {
         kind: 'route',
         icon: <LabelPairedChartTradingviewCaptionRegularIcon {...ICON_PROPS} />,
         label: <Localize i18n_default_text='TradingView' />,
         path: '/tradingview',
     },
-    {
-        kind: 'route',
-        icon: <LabelPairedChartCandlestickCaptionRegularIcon {...ICON_PROPS} />,
-        label: <Localize i18n_default_text='DTrader' />,
-        path: '/dtrader',
-    },
+
 ];
 
 const ShellNav = observer(() => {
