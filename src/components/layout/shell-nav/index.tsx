@@ -1,8 +1,10 @@
+
 import { startTransition } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { DBOT_TABS, TAB_IDS } from '@/constants/bot-contents';
 import { useStore } from '@/hooks/useStore';
+
 import {
     LabelPairedChartCandlestickCaptionRegularIcon,
     LabelPairedChartLineCaptionRegularIcon,
@@ -10,182 +12,280 @@ import {
     LabelPairedCopyCaptionRegularIcon,
     LabelPairedGrid2CaptionRegularIcon,
     LabelPairedObjectsColumnCaptionRegularIcon,
-    LabelPairedPuzzlePieceTwoCaptionRegularIcon,
     LabelPairedShieldCheckCaptionRegularIcon,
 } from '@deriv/quill-icons/LabelPaired';
+
 import { Localize } from '@deriv-com/translations';
 import './shell-nav.scss';
 
-/**
- * The application's main navigation, owned by the shell rather than by any
- * page.
- *
- * It previously lived inside pages/main (the index route), which meant every
- * `navigate()` to a sibling route - Bulk Trader, Risk Calculator, Copy
- * Trading - unmounted the navigation along with the page, leaving no way back
- * except the browser's own Back button. Mounting it in Layout, as a sibling of
- * the <Outlet/> rather than a descendant, is what makes it survive route
- * changes.
- *
- * Two kinds of destination live here, and they behave differently on purpose:
- * - Tab destinations are panels *within* the index route, so they set
- *   dashboard.active_tab (and return to '/' first if we are on another route).
- * - Route destinations are real routes, so they navigate.
- */
+// Preserve the existing navigation behavior.
+// Tabs change the active dashboard tab.
+// Routes navigate to a separate page.
 
-type TTabDestination = {
+type TNavDestination = {
     icon: React.ReactElement;
     label: React.ReactNode;
-    tab_index: number;
-};
+} & (
+    | { kind: 'tab'; tab_index: number }
+    | { kind: 'route'; path: string }
+);
 
-type TRouteDestination = {
-    icon: React.ReactElement;
-    label: React.ReactNode;
-    path: string;
-};
+const ICON_PROPS = {
+    height: '22px',
+    width: '22px',
+    fill: '#16B8F4',
+} as const;
 
-// The bar paints its own ground, so the icons carry its accent rather than
-// the page's text colour. shell-nav.scss overrides the fill to white on the
-// active item.
-const ICON_PROPS = { height: '24px', width: '24px', fill: '#4da3ff' } as const;
+// Crisp outline icons without additional dependencies.
 
-const TAB_DESTINATIONS: TTabDestination[] = [
+const NavigationIcon = ({
+    kind,
+}: {
+    kind: 'home' | 'settings' | 'search';
+}) => (
+    <svg
+        width='22'
+        height='22'
+        viewBox='0 0 24 24'
+        fill='none'
+        stroke='#16B8F4'
+        strokeWidth='1.9'
+        strokeLinecap='round'
+        strokeLinejoin='round'
+        aria-hidden='true'
+        style={{ fill: 'none' }}
+    >
+        {kind === 'home' && (
+            <>
+                <path d='M3 10.5 12 3l9 7.5V21h-6v-7H9v7H3z' />
+            </>
+        )}
+
+        {kind === 'settings' && (
+            <>
+                <circle cx='12' cy='12' r='4' />
+                <circle cx='12' cy='12' r='8.5' strokeDasharray='3 2' />
+                <path d='M12 1v3M12 20v3M1 12h3M20 12h3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M19.8 4.2l-2.1 2.1M6.3 17.7l-2.1 2.1' />
+            </>
+        )}
+
+        {kind === 'search' && (
+            <>
+                <circle cx='10.7' cy='10.7' r='7' />
+                <path d='m16 16 5 5' />
+            </>
+        )}
+    </svg>
+);
+
+// Navigation in the exact requested order.
+// Existing tab IDs and routes remain unchanged.
+
+const NAV_DESTINATIONS: TNavDestination[] = [
     {
-        icon: <LabelPairedObjectsColumnCaptionRegularIcon {...ICON_PROPS} />,
+        kind: 'tab',
+        icon: <NavigationIcon kind='home' />,
         label: <Localize i18n_default_text='Dashboard' />,
         tab_index: DBOT_TABS.DASHBOARD,
     },
     {
-        icon: <LabelPairedPuzzlePieceTwoCaptionRegularIcon {...ICON_PROPS} />,
+        kind: 'tab',
+        icon: <NavigationIcon kind='settings' />,
         label: <Localize i18n_default_text='Bot Builder' />,
         tab_index: DBOT_TABS.BOT_BUILDER,
     },
     {
-        icon: <LabelPairedChartLineCaptionRegularIcon {...ICON_PROPS} />,
-        label: <Localize i18n_default_text='Charts' />,
-        tab_index: DBOT_TABS.CHART,
-    },
-    {
-        icon: <LabelPairedObjectsColumnCaptionRegularIcon {...ICON_PROPS} />,
+        kind: 'tab',
+       
+icon: (
+    <svg width='22' height='22' viewBox='0 0 24 24'
+        fill='none' stroke='#16b8f4'
+        strokeWidth='1.8' strokeLinecap='round'
+        strokeLinejoin='round'>
+        <path d='M12 3v4M9 3h6' />
+        <rect x='5' y='7' width='14' height='12'
+            rx='2' style={{ fill: 'none' }} />
+        <path d='M2.5 11v4H5M19 11h2.5v4H19M9 19v2M15 19v2' />
+        <path d='M9 12h1M14 12h1M10 16h4' />
+    </svg>
+),
+
         label: <Localize i18n_default_text='Trading Bots' />,
         tab_index: DBOT_TABS.FREE_BOTS,
     },
     {
+        kind: 'route',
         icon: <LabelPairedChartLineCaptionRegularIcon {...ICON_PROPS} />,
-        label: <Localize i18n_default_text='Analysis Tool' />,
-        tab_index: DBOT_TABS.ANALYSIS_TOOL,
+        label: <Localize i18n_default_text='Bulk Trader' />,
+        path: '/bulk-trader',
     },
-];
-
-const ROUTE_DESTINATIONS: TRouteDestination[] = [
     {
+        kind: 'route',
         icon: <LabelPairedGrid2CaptionRegularIcon {...ICON_PROPS} />,
         label: <Localize i18n_default_text='Manual' />,
         path: '/manual',
     },
     {
-        icon: <LabelPairedGrid2CaptionRegularIcon {...ICON_PROPS} />,
-        label: <Localize i18n_default_text='Bulk Trader' />,
-        path: '/bulk-trader',
+        kind: 'tab',
+        icon: <NavigationIcon kind='search' />,
+        label: <Localize i18n_default_text='Analysis Tool' />,
+        tab_index: DBOT_TABS.ANALYSIS_TOOL,
     },
     {
-        icon: <LabelPairedShieldCheckCaptionRegularIcon {...ICON_PROPS} />,
-        label: <Localize i18n_default_text='Risk Calculator' />,
-        path: '/risk-calculator',
-    },
-    {
-        icon: <LabelPairedCopyCaptionRegularIcon {...ICON_PROPS} />,
+        kind: 'route',
+       
+icon: (
+    <svg width='22' height='22' viewBox='0 0 24 24'
+        fill='none' stroke='#16b8f4'
+        strokeWidth='1.8' strokeLinecap='round'
+        strokeLinejoin='round'>
+        <path d='M8 7V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V7' />
+        <rect x='3' y='7' width='18' height='14'
+            rx='2' style={{ fill: 'none' }} />
+        <path d='M8 7v14M16 7v14' />
+    </svg>
+),
+
+
         label: <Localize i18n_default_text='Copy Trading' />,
         path: '/copy-trading',
     },
-    // A route rather than the draggable modal it used to open. That modal is
-    // 526x595 and floats over the Bot Builder, which is fine beside a workspace
-    // and no way to read a candlestick series - so from here the chart gets the
-    // whole content area. The Bot Builder's own button still opens the
-    // draggable one, in place, where it belongs.
     {
+        kind: 'tab',
+        icon: <LabelPairedChartLineCaptionRegularIcon {...ICON_PROPS} />,
+        label: <Localize i18n_default_text='Charts' />,
+        tab_index: DBOT_TABS.CHART,
+    },
+    {
+        kind: 'route',
+        
+icon: (
+    <svg width='22' height='22' viewBox='0 0 24 24'
+        fill='none' stroke='#16b8f4'
+        strokeWidth='1.8' strokeLinecap='round'
+        strokeLinejoin='round'>
+        <rect x='5' y='2' width='14' height='20'
+            rx='2' style={{ fill: 'none' }} />
+        <rect x='8' y='5' width='8' height='4'
+            rx='0.5' style={{ fill: 'none' }} />
+        <path
+            d='M9 12h.1M12 12h.1M15 12h.1M9 15h.1M12 15h.1M15 15h.1M9 18h.1M12 18h.1M15 18h.1'
+            strokeWidth='2.4'
+        />
+    </svg>
+),
+
+        label: <Localize i18n_default_text='Risk Calculator' />,
+        path: '/risk-calculator',
+    },
+    
+    {
+        kind: 'route',
+        
+icon: (
+    <svg
+        width='22'
+        height='22'
+        viewBox='0 0 24 24'
+        fill='none'
+        stroke='#16b8f4'
+        strokeWidth='1.8'
+        strokeLinecap='round'
+        strokeLinejoin='round'
+    >
+        <rect
+            x='3'
+            y='6'
+            width='18'
+            height='13'
+            rx='2'
+            style={{ fill: 'none' }}
+        />
+        <path
+            d='M8 3l4 3 4-3M9 22h6'
+            style={{ fill: 'none' }}
+        />
+    </svg>
+),
+
+        label: <Localize i18n_default_text='Manual Trader' />,
+        path: '/dtrader',
+    },
+    {
+        kind: 'route',
         icon: <LabelPairedChartTradingviewCaptionRegularIcon {...ICON_PROPS} />,
         label: <Localize i18n_default_text='TradingView' />,
         path: '/tradingview',
     },
-    // A page in this app rather than a link out to app.deriv.com. Deriv's own
-    // DTrader cannot be embedded - measured: an iframe pointed at it lands on
-    // deriv.com's homepage, because the page needs a session and an iframe is a
-    // third-party context - so this is our own, on our own execution path.
-    {
-        icon: <LabelPairedChartCandlestickCaptionRegularIcon {...ICON_PROPS} />,
-        label: <Localize i18n_default_text='DTrader' />,
-        path: '/dtrader',
-    },
-    // Signal analysis is a view of Analysis Tool - see its Signals tab - not a
-    // destination of its own.
+
 ];
 
 const ShellNav = observer(() => {
     const { dashboard } = useStore() ?? {};
     const navigate = useNavigate();
-    // useLocation, not window.location: this has to re-render when the route
-    // changes so the active item stays correct.
     const { pathname } = useLocation();
 
     const is_index_route = pathname === '/';
 
     const goToTab = (tab_index: number) => {
-        // Tab panels are lazy-loaded, so switching one mounts a chunk that may
-        // suspend. Doing that straight out of a click handler is a synchronous
-        // update, which React rejects with "A component suspended while
-        // responding to synchronous input" - and the resulting throw takes the
-        // content area down. startTransition marks it interruptible, which is
-        // exactly what that message asks for.
+        // Keep React's safe transition behavior for lazy-loaded tabs.
         startTransition(() => {
             dashboard?.setActiveTab(tab_index);
         });
-        // The tab panels only exist on the index route, so a tab pressed from
-        // Bulk Trader (or any other route) has to return there first.
+
         if (!is_index_route) {
             navigate('/');
             return;
         }
+
         const el_tab = document.getElementById(TAB_IDS[tab_index]);
+
         setTimeout(() => {
-            el_tab?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+            el_tab?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+                inline: 'center',
+            });
         }, 10);
     };
 
     return (
         <nav className='shell-nav' aria-label='Main navigation'>
             <div className='shell-nav__scroller'>
-                {TAB_DESTINATIONS.map(({ icon, label, tab_index }) => {
-                    const is_active = is_index_route && dashboard?.active_tab === tab_index;
+                {NAV_DESTINATIONS.map(destination => {
+                    const is_tab = destination.kind === 'tab';
+
+                    const is_active = is_tab
+                        ? is_index_route &&
+                          dashboard?.active_tab === destination.tab_index
+                        : pathname === destination.path;
+
+                    const key = is_tab
+                        ? `tab-${destination.tab_index}`
+                        : `route-${destination.path}`;
+
+                    const handleClick = () => {
+                        if (destination.kind === 'tab') {
+                            goToTab(destination.tab_index);
+                        } else {
+                            navigate(destination.path);
+                        }
+                    };
+
                     return (
                         <button
-                            key={tab_index}
+                            key={key}
                             type='button'
-                            className={`shell-nav__item${is_active ? ' shell-nav__item--active' : ''}`}
+                            className={`shell-nav__item${
+                                is_active ? ' shell-nav__item--active' : ''
+                            }`}
                             aria-current={is_active ? 'page' : undefined}
-                            onClick={() => goToTab(tab_index)}
+                            onClick={handleClick}
                         >
-                            {icon}
-                            <span className='shell-nav__label'>{label}</span>
-                        </button>
-                    );
-                })}
-
-                <span className='shell-nav__divider' aria-hidden='true' />
-
-                {ROUTE_DESTINATIONS.map(({ icon, label, path }) => {
-                    const is_active = pathname === path;
-                    return (
-                        <button
-                            key={path}
-                            type='button'
-                            className={`shell-nav__item${is_active ? ' shell-nav__item--active' : ''}`}
-                            aria-current={is_active ? 'page' : undefined}
-                            onClick={() => navigate(path)}
-                        >
-                            {icon}
-                            <span className='shell-nav__label'>{label}</span>
+                            {destination.icon}
+                            <span className='shell-nav__label'>
+                                {destination.label}
+                            </span>
                         </button>
                     );
                 })}

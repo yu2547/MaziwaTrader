@@ -135,16 +135,18 @@ $mw-dial-tilt: 8deg;
     // Slightly larger where there is room. Same component, same proportions -
     // only the scale changes: the keys stay close to square rather than
     // widening into buttons.
-    @media (width >= 1024px) {
-        height: 3.2rem;
-        padding: 0.45rem;
+    
+@media (width >= 1024px) {
+    height: 2.6rem;
+    padding: 0.35rem;
 
-        .mw-dial__label {
-            min-width: 2.8rem;
-            padding: 0 0.45rem;
-            font-size: 1.2rem;
-        }
+    .mw-dial__label {
+        min-width: 2.2rem;
+        padding: 0 0.3rem;
+        font-size: 1rem;
     }
+}
+
 
     // Narrow phones: tighten before the text does, so the balance keeps its
     // room and the labels stay readable.
