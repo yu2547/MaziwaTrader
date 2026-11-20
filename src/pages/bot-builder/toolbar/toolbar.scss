@@ -168,11 +168,19 @@
 }
 
 /* MaziwaTrader - Quick Strategy button only */
-.toolbar .toolbar__btn--start {
+
+/* MaziwaTrader - Quick Strategy blue button */
+#dt_toolbar_get_started_button {
     background: #3b82f6 !important;
+    background-color: #3b82f6 !important;
     color: #ffffff !important;
 
     &:hover {
         background: #2563eb !important;
+        background-color: #2563eb !important;
+    }
+
+    * {
+        color: #ffffff !important;
     }
 }
