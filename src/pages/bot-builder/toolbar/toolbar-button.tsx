@@ -21,7 +21,7 @@ const ToolbarButton = ({
     is_bot_running,
 }: TToolbarButton) => {
     const button = (
-        <Button id={button_id} className={button_classname} has_effect onClick={buttonOnClick} icon={icon} green>
+       <Button id={button_id} className={button_classname} has_effect onClick={buttonOnClick} icon={icon} blue>
             {button_text}
         </Button>
     );
