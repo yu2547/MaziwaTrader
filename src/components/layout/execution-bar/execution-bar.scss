@@ -1994,3 +1994,75 @@ $mw-ai-white: #faf2fb; // lettering
         cursor: not-allowed;
     }
 }
+
+/* MaziwaTrader — Floating AI refinements */
+
+/* Soft, staggered lighting around the three rings */
+.mw-exec-bar__ai-ring {
+    animation: mw-ai-ring-glow 2.8s ease-in-out infinite;
+}
+
+.mw-exec-bar__ai-ring--mid {
+    animation-delay: -0.9s;
+}
+
+.mw-exec-bar__ai-ring--wide {
+    animation-delay: -1.8s;
+}
+
+@keyframes mw-ai-ring-glow {
+    0%, 100% {
+        opacity: 0.65;
+        box-shadow: 0 0 0.2rem rgb(172 157 244 / 20%);
+    }
+
+    50% {
+        opacity: 1;
+        box-shadow: 0 0 0.8rem rgb(172 157 244 / 45%);
+    }
+}
+
+/* Show a message when the cursor rests on the AI */
+@media (hover: hover) {
+    .mw-exec-bar__ai::after {
+        content: 'AI Market Scanner\A Click here to scan markets';
+        white-space: pre-line;
+        position: absolute;
+        top: 50%;
+        right: calc(100% + 1rem);
+        width: 19rem;
+        padding: 1rem 1.2rem;
+        background: #151b3a;
+        color: #ffffff;
+        border: 1px solid #8575dc;
+        border-radius: 10px;
+        box-shadow: 0 6px 20px rgb(72 49 143 / 30%);
+        font-size: 1.2rem;
+        line-height: 1.5;
+        text-align: left;
+        opacity: 0;
+        visibility: hidden;
+        transform: translate(6px, -50%);
+        transition: opacity 200ms ease, transform 200ms ease,
+            visibility 200ms ease;
+        pointer-events: none;
+    }
+
+    .mw-exec-bar__ai:hover::after {
+        opacity: 1;
+        visibility: visible;
+        transform: translate(0, -50%);
+    }
+
+    .mw-exec-bar__ai--dragging::after {
+        opacity: 0 !important;
+        visibility: hidden !important;
+    }
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .mw-exec-bar__ai-ring {
+        animation: none;
+    }
+}
