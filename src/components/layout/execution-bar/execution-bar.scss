@@ -848,23 +848,23 @@ $mw-ai-white: #faf2fb; // lettering
     // legible as a system when you stop and study it, and at a glance read as
     // scribble around a sphere. A closed circle needs no rotation to be a
     // circle, and three of them concentric and still is what the reference is.
-    &__ai-ring {
-        position: absolute;
-        inset: 1.2rem; // 4.8rem circle around the 4.6rem core
-        border: 1px solid rgb(185 184 226 / 88%);
-        border-radius: 50%;
-        pointer-events: none;
-    }
+   &__ai-ring {
+    position: absolute;
+    inset: 1.2rem;
+    border: 1px solid rgb(191 188 242 / 82%);
+    border-radius: 50%;
+    pointer-events: none;
+}
 
-    &__ai-ring--mid {
-        inset: 0.65rem; // 5.9rem
-        border-color: rgb(185 184 226 / 76%);
-    }
+&__ai-ring--mid {
+    inset: 0.65rem;
+    border-color: rgb(191 188 242 / 68%);
+}
 
-    &__ai-ring--wide {
-        inset: 0; // 7.2rem, the button's own extent
-        border-color: rgb(193 192 226 / 64%);
-    }
+&__ai-ring--wide {
+    inset: 0;
+    border-color: rgb(191 188 242 / 54%);
+}
 
     // Roughly 1-2 o'clock and well inside the sphere's edge - on the reference
     // its centre is 70% of the way out, not overlapping the rim. The ring round
@@ -902,11 +902,11 @@ $mw-ai-white: #faf2fb; // lettering
 @keyframes mw-ai-bob {
     0%,
     100% {
-        translate: 0 -1.9px;
+        translate: 0 -2.2px;
     }
 
     50% {
-        translate: 0 1.9px;
+        translate: 0 2.2px;
     }
 }
 
@@ -1998,71 +1998,39 @@ $mw-ai-white: #faf2fb; // lettering
 /* MaziwaTrader — Floating AI refinements */
 
 /* Soft, staggered lighting around the three rings */
-.mw-exec-bar__ai-ring {
-    animation: mw-ai-ring-glow 2.8s ease-in-out infinite;
+/* MaziwaTrader – Floating AI refinements */
+
+.mw-exec-bar__ai-ring,
+.mw-exec-bar__ai-ring--mid,
+.mw-exec-bar__ai-ring--wide {
+    animation: mw-ai-ring-breathe 2.8s ease-in-out infinite;
 }
 
 .mw-exec-bar__ai-ring--mid {
-    animation-delay: -0.9s;
+    animation-delay: 0.35s;
 }
 
 .mw-exec-bar__ai-ring--wide {
-    animation-delay: -1.8s;
+    animation-delay: 0.7s;
 }
 
-@keyframes mw-ai-ring-glow {
-    0%, 100% {
-        opacity: 0.65;
-        box-shadow: 0 0 0.2rem rgb(172 157 244 / 20%);
+@keyframes mw-ai-ring-breathe {
+    0%,
+    100% {
+        opacity: 0.7;
+        transform: scale(1);
     }
 
     50% {
         opacity: 1;
-        box-shadow: 0 0 0.8rem rgb(172 157 244 / 45%);
+        transform: scale(1.04);
     }
 }
 
-/* Show a message when the cursor rests on the AI */
-@media (hover: hover) {
-    .mw-exec-bar__ai::after {
-        content: 'AI Market Scanner\A Click here to scan markets';
-        white-space: pre-line;
-        position: absolute;
-        top: 50%;
-        right: calc(100% + 1rem);
-        width: 19rem;
-        padding: 1rem 1.2rem;
-        background: #151b3a;
-        color: #ffffff;
-        border: 1px solid #8575dc;
-        border-radius: 10px;
-        box-shadow: 0 6px 20px rgb(72 49 143 / 30%);
-        font-size: 1.2rem;
-        line-height: 1.5;
-        text-align: left;
-        opacity: 0;
-        visibility: hidden;
-        transform: translate(6px, -50%);
-        transition: opacity 200ms ease, transform 200ms ease,
-            visibility 200ms ease;
-        pointer-events: none;
-    }
-
-    .mw-exec-bar__ai:hover::after {
-        opacity: 1;
-        visibility: visible;
-        transform: translate(0, -50%);
-    }
-
-    .mw-exec-bar__ai--dragging::after {
-        opacity: 0 !important;
-        visibility: hidden !important;
-    }
-}
-
-/* Respect reduced-motion preferences */
 @media (prefers-reduced-motion: reduce) {
-    .mw-exec-bar__ai-ring {
+    .mw-exec-bar__ai-ring,
+    .mw-exec-bar__ai-ring--mid,
+    .mw-exec-bar__ai-ring--wide {
         animation: none;
     }
 }
