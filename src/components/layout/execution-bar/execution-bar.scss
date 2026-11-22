@@ -1995,37 +1995,96 @@ $mw-ai-white: #faf2fb; // lettering
     }
 }
 
-/* MaziwaTrader — Floating AI refinements */
+/* MaziwaTrader — Floating AI responsive refinements */
 
-/* Soft, staggered lighting around the three rings */
-/* MaziwaTrader – Floating AI refinements */
-
+/* Shared ring behaviour */
 .mw-exec-bar__ai-ring,
 .mw-exec-bar__ai-ring--mid,
 .mw-exec-bar__ai-ring--wide {
-    animation: mw-ai-ring-breathe 2.8s ease-in-out infinite;
+    transform-origin: center center;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
 }
 
+/* Inner ring */
+.mw-exec-bar__ai-ring {
+    animation:
+        mw-ai-ring-intro 1.2s ease-out 0s 1 both,
+        mw-ai-ring-breathe 2.8s ease-in-out 1.6s infinite;
+}
+
+/* Middle ring */
 .mw-exec-bar__ai-ring--mid {
-    animation-delay: 0.35s;
+    animation:
+        mw-ai-ring-intro 1.2s ease-out 0.18s 1 both,
+        mw-ai-ring-breathe 2.8s ease-in-out 1.6s infinite;
 }
 
+/* Outer ring */
 .mw-exec-bar__ai-ring--wide {
-    animation-delay: 0.7s;
+    animation:
+        mw-ai-ring-intro 1.2s ease-out 0.36s 1 both,
+        mw-ai-ring-breathe 2.8s ease-in-out 1.6s infinite;
 }
 
-@keyframes mw-ai-ring-breathe {
-    0%,
+/* Brief layered appearance when AI first mounts */
+@keyframes mw-ai-ring-intro {
+    0% {
+        opacity: 0.15;
+        transform: scale(0.90);
+    }
+
+    45% {
+        opacity: 1;
+        transform: scale(1.055);
+    }
+
+    75% {
+        opacity: 0.85;
+        transform: scale(0.99);
+    }
+
     100% {
-        opacity: 0.7;
+        opacity: 0.78;
+        transform: scale(1);
+    }
+}
+
+/* Continuous gentle ring movement */
+@keyframes mw-ai-ring-breathe {
+    0%, 100% {
+        opacity: 0.78;
         transform: scale(1);
     }
 
     50% {
         opacity: 1;
-        transform: scale(1.04);
+        transform: scale(1.025);
     }
 }
+
+/* Consistent appearance on phone and computer */
+@media (max-width: 768px) {
+    .mw-exec-bar__ai {
+        isolation: isolate;
+    }
+
+    .mw-exec-bar__ai-ring {
+        pointer-events: none;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .mw-exec-bar__ai-ring,
+    .mw-exec-bar__ai-ring--mid,
+    .mw-exec-bar__ai-ring--wide {
+        animation: none;
+        transform: none;
+        opacity: 0.85;
+    }
+}
+
 
 @media (prefers-reduced-motion: reduce) {
     .mw-exec-bar__ai-ring,
