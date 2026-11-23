@@ -55,6 +55,17 @@ type TIntroPhase = 'waiting' | 'shown' | 'leaving' | 'done';
 type TIntroPlacement = { left: number; placement: 'above' | 'below'; pointer: number; top: number };
 
 const AssistantOrbs = () => {
+    
+    const [isIntroPulse, setIsIntroPulse] = useState(true);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            setIsIntroPulse(false);
+        }, 7500);
+
+        return () => window.clearTimeout(timer);
+    }, []);
+
     const [is_ai_open, setIsAiOpen] = useState(false);
     // Kept mounted for the length of its exit animation - see closeAi below.
     const [is_ai_closing, setIsAiClosing] = useState(false);
@@ -162,9 +173,11 @@ const AssistantOrbs = () => {
                 untouched orb keeps the corner the stylesheet gives it. */}
             <button
                 type='button'
-                className={`mw-exec-bar__ai${ai_orb.is_dragging ? ' mw-exec-bar__ai--dragging' : ''}${
-                    is_scanning ? ' mw-exec-bar__ai--scanning' : ''
-                }`}
+               
+className={`mw-exec-bar__ai${ai_orb.is_dragging ? ' mw-exec-bar__ai--dragging' : ''}${
+    is_scanning ? ' mw-exec-bar__ai--scanning' : ''
+}${isIntroPulse ? ' mw-exec-bar__ai--intro' : ''}`}
+
                 style={ai_orb.style}
                 aria-expanded={is_ai_open}
                 aria-haspopup='dialog'
