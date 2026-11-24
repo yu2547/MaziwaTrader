@@ -176,7 +176,7 @@ const AssistantOrbs = () => {
                
 className={`mw-exec-bar__ai${ai_orb.is_dragging ? ' mw-exec-bar__ai--dragging' : ''}${
     is_scanning ? ' mw-exec-bar__ai--scanning' : ''
-}${isIntroPulse ? ' mw-exec-bar__ai--intro' : ''}`}
+${isIntroPulse ? ' mw-exec-bar__ai--intro' : ''}
 
                 style={ai_orb.style}
                 aria-expanded={is_ai_open}
