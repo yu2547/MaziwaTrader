@@ -2008,23 +2008,30 @@ $mw-ai-white: #faf2fb; // lettering
 
 /* Inner ring */
 .mw-exec-bar__ai-ring {
-    animation:
-        mw-ai-ring-intro 1.2s ease-out 0s 1 both,
-        mw-ai-ring-breathe 2.8s ease-in-out 1.6s infinite;
+    animation: mw-ai-ring-breathe 2.8s ease-in-out infinite;
 }
 
 /* Middle ring */
 .mw-exec-bar__ai-ring--mid {
-    animation:
-        mw-ai-ring-intro 1.2s ease-out 0.18s 1 both,
-        mw-ai-ring-breathe 2.8s ease-in-out 1.6s infinite;
+    animation-delay: -0.9s;
 }
 
 /* Outer ring */
 .mw-exec-bar__ai-ring--wide {
-    animation:
-        mw-ai-ring-intro 1.2s ease-out 0.36s 1 both,
-        mw-ai-ring-breathe 2.8s ease-in-out 1.6s infinite;
+    animation-delay: -1.8s;
+}
+
+/* Four expanding pulses on reload */
+.mw-exec-bar__ai--intro .mw-exec-bar__ai-ring {
+    animation: mw-ai-four-pulses 1.7s ease-in-out 0s 4 both;
+}
+
+.mw-exec-bar__ai--intro .mw-exec-bar__ai-ring--mid {
+    animation-delay: 0.12s;
+}
+
+.mw-exec-bar__ai--intro .mw-exec-bar__ai-ring--wide {
+    animation-delay: 0.24s;
 }
 
 /* Brief layered appearance when AI first mounts */
