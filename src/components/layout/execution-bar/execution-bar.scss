@@ -748,7 +748,9 @@ $mw-ai-white: #faf2fb; // lettering
         width: 2.1rem;
         height: 1.71rem;
         margin: auto;
-        animation: mw-ai-square 4.4s ease-in-out infinite;
+        
+animation: mw-ai-square 3.2s ease-in-out infinite;
+
         will-change: transform, opacity;
 
         // The corner brackets, drawn as eight background layers. The reference
@@ -928,23 +930,19 @@ $mw-ai-white: #faf2fb; // lettering
 // The travel is centred on the 3% right-of-centre the still puts it at and is
 // a twentieth of the reticle's own width each way - which is the whole of the
 // clearance it has over the lettering inside it.
-@keyframes mw-ai-square {
-    0%,
-    100% {
-        transform: translate(-2%, 2%);
-        opacity: 0.62;
-    }
 
-    25%,
-    75% {
-        opacity: 1;
+@keyframes mw-ai-square {
+    0%, 100% {
+        transform: translate(-7%, 2%);
+        opacity: 0.55;
     }
 
     50% {
-        transform: translate(8%, 2%);
-        opacity: 0.62;
+        transform: translate(7%, 2%);
+        opacity: 0.82;
     }
 }
+
 
 // The card rising into place over the orb, and settling away again.
 @keyframes mw-ai-hint-in {
@@ -2110,10 +2108,11 @@ $mw-ai-white: #faf2fb; // lettering
 
 
 
-/* Very gentle floating movement */
+
+/* Gentle whole-orb bounce */
 .mw-exec-bar__ai {
     scale: 1.22;
-    animation: mw-ai-subtle-float 6s ease-in-out infinite !important;
+    animation: mw-ai-subtle-float 3.2s ease-in-out infinite !important;
 }
 
 /* Dark glossy purple AI center */
@@ -2163,15 +2162,17 @@ border: 1.5px solid #7756bc !important;
 }
 
 /* Almost unnoticeable bouncing */
+
 @keyframes mw-ai-subtle-float {
     0%, 100% {
-        translate: 0 -1px;
+        translate: 0 -1.9px;
     }
 
     50% {
-        translate: 0 1px;
+        translate: 0 1.9px;
     }
 }
+
 
 /* Keep orb stable during dragging */
 .mw-exec-bar__ai--dragging {
