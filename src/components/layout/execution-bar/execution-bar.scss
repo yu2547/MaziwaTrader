@@ -2117,16 +2117,25 @@ $mw-ai-white: #faf2fb; // lettering
 }
 
 /* Dark glossy purple AI center */
-.mw-exec-bar__ai-core {
 
+/* Dark glossy purple AI center */
+.mw-exec-bar__ai-core {
+    width: 4.2rem;
+    height: 4.2rem;
 
     background: radial-gradient(
-        circle at 65% 75%,
-        #aa68d0 0%,
-        #8550b1 45%,
-        #58318b 100%
+        circle at 35% 22%,
+        #ad6ad5 0%,
+        #873fb4 32%,
+        #6b2697 66%,
+        #552077 100%
     ) !important;
+
+    box-shadow:
+        inset 0 0.35rem 0.6rem rgb(255 233 255 / 35%),
+        0 0 0.65rem rgb(108 43 162 / 45%);
 }
+
 
 /* Three clear, stable purple rings */
 .mw-exec-bar__ai-ring,
