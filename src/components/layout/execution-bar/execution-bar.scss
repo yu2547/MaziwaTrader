@@ -2107,15 +2107,19 @@ $mw-ai-white: #faf2fb; // lettering
     }
 }
 
-/* MaziwaTrader - Final Floating AI Design */
+
+
 
 /* Very gentle floating movement */
 .mw-exec-bar__ai {
+    scale: 1.22;
     animation: mw-ai-subtle-float 6s ease-in-out infinite !important;
 }
 
 /* Dark glossy purple AI center */
 .mw-exec-bar__ai-core {
+
+
     background: radial-gradient(
         circle at 65% 75%,
         #aa68d0 0%,
