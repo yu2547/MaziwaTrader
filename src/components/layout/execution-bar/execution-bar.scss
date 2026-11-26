@@ -2188,10 +2188,12 @@ border: 1.5px solid #7756bc !important;
 
 /* MaziwaTrader AI orb - responsive rings */
 
-/* Phone: show only two rings */
-@media (max-width: 768px) {
+
+/* Phone: show only 2 AI rings */
+@media (max-width: 768px), (hover: none) and (pointer: coarse) {
     .mw-exec-bar__ai-ring--mid {
         display: none !important;
     }
 }
+
 
