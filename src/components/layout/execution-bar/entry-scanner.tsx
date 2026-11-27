@@ -6,6 +6,7 @@ import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
 import { useStore } from '@/hooks/useStore';
 import { getLastDigit, toDecimalPlaces } from '@/utils/market-data/last-digit';
 import type { TActiveSymbol } from '@/utils/market-data/public-market-feed';
+import { armScannerSession, resetScannerSession } from '@/utils/market-data/scanner-entry-session';
 import { allowsSide, evaluateOverUnder, type TStrategyMatch } from '@/utils/market-data/over-under-strategy';
 import { useTranslations } from '@deriv-com/translations';
 
@@ -248,6 +249,7 @@ const EntryScanner = observer(
             wins: 5,
             digits_to_check: 1,
             stop_loss: 50,
+            max_stake: 10,
             use_martingale: true,
         });
 
@@ -518,67 +520,88 @@ const EntryScanner = observer(
         }, [best, feed, scan_depth]);
 
         /**
-         * Hands the scan result to Quick Strategy - the app's own strategy
-         * builder. It loads the bundled Martingale XML and injects these
-         * values, so the bot that trades is the one this app already ships and
-         * tests, not a strategy written here from a screenshot.
-         *
-         * `action: 'EDIT'` rather than 'RUN' is the whole point: quick-strategy
-         * -store.ts:201 treats 'RUN' as "load the strategy AND press Run",
-         * calling run_panel.onRunButtonClick() as soon as the trade_definition
-         * block appears. Loading a scanner result therefore started trading
-         * real money on its own, with no further confirmation - a scan result
-         * is a suggestion, and committing funds has to stay a separate,
-         * deliberate act by the user.
-         *
-         * 'EDIT' is the app's own existing value for "load it into the
-         * workspace and stop there" (useQsSubmitHandler.tsx:36), so this
-         * reuses the established path rather than inventing a mode. The bot
-         * still loads, still lands in the Bot Builder, and the existing Run
-         * control is what starts it.
+         * Launch the scanner-specific strategy. The launch is the explicit
+         * user action to run the bot, but the engine will not buy until
+         * the *live* Over entry sequence is confirmed on the chosen market.
+         * Under setups stay informational because no Under entry timing rule
+         * has been provided. The shared engine enforces max stake/stop loss.
          */
         const launchBot = async () => {
-            if (!best?.strategy || !quick_strategy) return;
+            if (!best?.strategy || !quick_strategy || run_panel?.is_running) return;
+            if (best.strategy.side === 'UNDER') {
+                setIsError(true);
+                setStatus(localize(
+                    'Under {{prediction}} qualified historically, but the Under entry-point trigger was not supplied. Automatic Under trades are blocked.',
+                    { prediction: best.strategy.prediction }
+                ));
+                return;
+            }
+            if (!Number.isFinite(params.stake) || params.stake <= 0 ||
+                !Number.isFinite(params.max_stake) || params.max_stake < params.stake ||
+                !Number.isFinite(params.stop_loss) || params.stop_loss < params.stake ||
+                !Number.isInteger(params.wins) || params.wins < 1) {
+                setIsError(true);
+                setStatus(localize('Enter valid stake, maximum stake, stop loss, and win limit before launching.'));
+                return;
+            }
             try {
                 const availableContracts = await feed.getContractsFor(best.symbol);
                 if (!allowsSide(availableContracts, best.strategy.side)) {
                     setIsError(true);
-                    setStatus(
-                        localize('Digit {{side}} contracts are not available for {{market}}.', {
-                            side: best.strategy.side,
-                            market: best.name,
-                        })
-                    );
+                    setStatus(localize('Digit {{side}} contracts are not offered on {{market}}.', {
+                        side: best.strategy.side,
+                        market: best.name,
+                    }));
                     return;
                 }
+
+                // Arm before RUN: quick-strategy may start the engine as soon as
+                // Blockly creates the trade definition block.
+                armScannerSession({
+                    market: best.name,
+                    symbol: best.symbol,
+                    side: best.strategy.side,
+                    prediction: best.strategy.prediction,
+                    digits: best.historyDigits,
+                    stake: params.stake,
+                    maxStake: params.max_stake,
+                    stopLoss: params.stop_loss,
+                    maxWins: params.wins,
+                });
+
+                startTransition(() => {
+                    navigate('/');
+                    dashboard?.setActiveTab(DBOT_TABS.BOT_BUILDER);
+                });
+                await quick_strategy.onSubmit({
+                    scanner_strategy: true,
+                    symbol: best.symbol,
+                    tradetype: 'overunder',
+                    type: best.strategy.side === 'OVER' ? 'DIGITOVER' : 'DIGITUNDER',
+                    last_digit_prediction: best.strategy.prediction,
+                    stake: params.stake,
+                    size: params.use_martingale ? params.martingale : 1,
+                    max_stake: params.max_stake,
+                    boolean_max_stake: true,
+                    loss: params.stop_loss,
+                    // Live session enforces the win limit; the XML requires
+                    // a profit parameter but does not encode Number of Wins.
+                    profit: 1000000,
+                    duration: 1,
+                    durationtype: 't',
+                    unit: 't',
+                    action: 'RUN',
+                });
+                setShowParams(false);
+                onClose();
             } catch (error) {
-                console.warn('[MW-Scanner] Contract availability check failed:', best.symbol, error);
+                resetScannerSession();
                 setIsError(true);
-                setStatus(localize('Could not verify which Over/Under contracts this market supports.'));
-                return;
+                setStatus(localize('Could not launch scanner-only bot: {{reason}}', {
+                    reason: error instanceof Error ? error.message : String(error),
+                }));
+                console.error('[MW-Scanner] Scanner bot launch failed:', error);
             }
-            if (!is_live.current) return;
-            startTransition(() => {
-                navigate('/');
-                dashboard?.setActiveTab(DBOT_TABS.BOT_BUILDER);
-            });
-            quick_strategy.setSelectedStrategy('MARTINGALE');
-            quick_strategy.onSubmit({
-                symbol: best.symbol,
-                tradetype: 'overunder',
-                type: best.strategy.side === 'OVER' ? 'DIGITOVER' : 'DIGITUNDER',
-                prediction: best.strategy.prediction,
-                stake: params.stake,
-                // Martingale off means every stake is the first stake.
-                size: params.use_martingale ? params.martingale : 1,
-                loss: params.stop_loss,
-                profit: 0,
-                duration: 1,
-                unit: 't',
-                action: 'EDIT',
-            });
-            setShowParams(false);
-            onClose();
         };
 
         const percent = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
@@ -876,6 +899,17 @@ const EntryScanner = observer(
                                     />
                                 </label>
 
+                                <label>
+                                    <span>{localize('MAXIMUM STAKE')}</span>
+                                    <input
+                                        type='number'
+                                        value={params.max_stake}
+                                        min={params.stake}
+                                        step={0.1}
+                                        onChange={e => setParams(p => ({ ...p, max_stake: Number(e.target.value) || 0 }))}
+                                    />
+                                </label>
+
                                 {/* In the grid rather than under it: the
                                     screenshot puts the switch in the cell beside
                                     Stop loss, which is what keeps the dialog
@@ -896,7 +930,7 @@ const EntryScanner = observer(
 
                             <p className='mw-scanner__note'>
                                 {localize(
-                                    'Launch loads the bundled Martingale strategy with these values into the Bot Builder - the same builder the Bot Builder uses. It does not start trading: press Run when you are ready. Number of wins and digits to check have no field in that strategy, so they are not applied; send me the scanner bot XML and I will wire them.'
+                                    'Launch opens the AI Scanner-only bot and starts its monitoring engine. Purchases require a fresh qualifying live Over entry signal; they do not occur immediately merely because a historical scan qualified. Number of wins and digits to check have no field in that strategy, so they are not applied; send me the scanner bot XML and I will wire them.'
                                 )}
                             </p>
 
