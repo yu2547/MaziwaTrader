@@ -62,6 +62,8 @@ const MODES: {
 const MIN_DEPTH = 100;
 const MAX_DEPTH = 5000;
 const RECENT_WINDOW = 200;
+// Share one socket without sending all 18 histories at once (rate-limit risk).
+const SCAN_CONCURRENCY = 4;
 
 // The requested scan universe, ordered by preferred groups: 1-second
 // Volatility indices, regular Volatility indices, then Jump indices.
@@ -189,7 +191,8 @@ const EntryScanner = observer(
         // on the way. usePublicMarketFeed releases its handle on unmount too,
         // so those requests were being made against a feed this panel had
         // already let go of.
-        // The loop checks this between markets and stops at the next boundary.
+        // Workers check this before each new request, and abandon UI updates
+        // if the scanner has closed.
         const is_live = useRef(true);
         useEffect(() => {
             is_live.current = true;
@@ -306,46 +309,75 @@ const EntryScanner = observer(
             let usableHistories = 0;
             let shortHistories = 0;
             let historyErrors = 0;
-            for (let i = 0; i < symbols.length; i += 1) {
-                // Abandoned scanner: stop requesting, stop reporting.
-                if (!is_live.current) return;
-                const item = symbols[i];
-                setProgress({ done: i + 1, total: symbols.length, market: item.underlying_symbol_name });
-                setStatus(
-                    localize('Scanning {{market}} ({{done}}/{{total}})…', {
-                        market: item.underlying_symbol_name,
-                        done: i + 1,
-                        total: symbols.length,
-                    })
-                );
-                try {
-                    // eslint-disable-next-line no-await-in-loop
-                    const { prices, pip_size } = await feed.getTickHistory(item.underlying_symbol, scan_depth);
-                    if (prices.length < MIN_DEPTH) {
-                        shortHistories += 1;
-                        continue;
+            let nextIndex = 0;
+            let completed = 0;
+            const total = symbols.length;
+
+            // Use a small worker pool: history calls share one socket, and can
+            // be outstanding together using the feed's per-request IDs. Four
+            // in flight avoids the full 18 x timeout sequential wait, without
+            // dispatching every market at once and risking API rate limits.
+            // A market only counts as completed AFTER its request settles.
+            setProgress({ done: 0, total, market: localize('Starting scan…') });
+            setStatus(localize('Scanning {{total}} markets (up to {{concurrent}} at once)…', {
+                total,
+                concurrent: Math.min(SCAN_CONCURRENCY, total),
+            }));
+
+            const scanWorker = async () => {
+                while (is_live.current) {
+                    const index = nextIndex;
+                    nextIndex += 1;
+                    if (index >= total) return;
+                    const item = symbols[index];
+
+                    try {
+                        const { prices, pip_size } = await feed.getTickHistory(item.underlying_symbol, scan_depth);
+                        if (!is_live.current) return;
+                        if (prices.length < MIN_DEPTH) {
+                            shortHistories += 1;
+                        } else {
+                            usableHistories += 1;
+                            const places = toDecimalPlaces(pip_size) ?? 2;
+                            const digits = prices.map(price => getLastDigit(price, places)).reverse();
+                            const eligibleMatches = evaluateOverUnder(digits).filter(
+                                match =>
+                                    match.eligible &&
+                                    ((match.side === 'OVER' && match.prediction === active_mode.over) ||
+                                        (match.side === 'UNDER' && match.prediction === active_mode.under))
+                            );
+                            if (eligibleMatches.length) {
+                                results.push({
+                                    symbol: item.underlying_symbol,
+                                    name: item.underlying_symbol_name,
+                                    ...analyse(digits, active_mode.over, active_mode.under),
+                                    strategy: eligibleMatches[0],
+                                });
+                            }
+                        }
+                    } catch (error) {
+                        if (!is_live.current) return;
+                        historyErrors += 1;
+                        console.warn('[MW-Scanner] Tick history failed:', item.underlying_symbol, error);
+                    } finally {
+                        if (is_live.current) {
+                            completed += 1;
+                            setProgress({ done: completed, total, market: item.underlying_symbol_name });
+                            setStatus(
+                                localize('Completed {{done}}/{{total}} markets; most recent: {{market}}.', {
+                                    done: completed,
+                                    total,
+                                    market: item.underlying_symbol_name,
+                                })
+                            );
+                        }
                     }
-                    usableHistories += 1;
-                    const places = toDecimalPlaces(pip_size) ?? 2;
-                    const digits = prices.map(price => getLastDigit(price, places)).reverse();
-                    const eligibleMatches = evaluateOverUnder(digits).filter(
-                        match =>
-                            match.eligible &&
-                            ((match.side === 'OVER' && match.prediction === active_mode.over) ||
-                                (match.side === 'UNDER' && match.prediction === active_mode.under))
-                    );
-                    if (!eligibleMatches.length) continue;
-                    results.push({
-                        symbol: item.underlying_symbol,
-                        name: item.underlying_symbol_name,
-                        ...analyse(digits, active_mode.over, active_mode.under),
-                        strategy: eligibleMatches[0],
-                    });
-                } catch (error) {
-                    historyErrors += 1;
-                    console.warn('[MW-Scanner] Tick history failed:', item.underlying_symbol, error);
                 }
-            }
+            };
+
+            await Promise.all(
+                Array.from({ length: Math.min(SCAN_CONCURRENCY, total) }, () => scanWorker())
+            );
 
             // The last market's request can still land after the panel closes.
             if (!is_live.current) return;
@@ -358,15 +390,15 @@ const EntryScanner = observer(
             if (winner) {
                 setStatus(
                     localize(
-                        'Scanned {{scanned}} of {{total}} synthetic markets with tick history; {{matched}} met historical rules. Live entry not confirmed.',
-                        { scanned: usableHistories, total: symbols.length, matched: results.length }
+                        'Completed {{total}} requested markets; {{scanned}} had tick history; {{matched}} met historical rules. Live entry not confirmed.',
+                        { total: symbols.length, scanned: usableHistories, matched: results.length }
                     )
                 );
             } else if (usableHistories > 0) {
                 setStatus(
                     localize(
-                        'Scanned {{scanned}} markets with tick history, but none met the selected Over/Under percentage conditions.',
-                        { scanned: usableHistories }
+                        'Completed {{total}} requested markets; {{scanned}} had tick history, but none met the selected Over/Under conditions.',
+                        { total: symbols.length, scanned: usableHistories }
                     )
                 );
             } else {
