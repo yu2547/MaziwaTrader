@@ -99,6 +99,21 @@
 
 // Two visible rings on phones and other touch-screen interfaces.
 @media (max-width: 768px), (hover: none) and (pointer: coarse) {
+    // Reference: outer diameter about 18% of a 400px phone viewport.
+    // Keep the existing drag box and shrink the visual scale only.
+    .mw-exec-bar__ai {
+        scale: 0.98;
+    }
+
+    .mw-exec-bar__ai-ring {
+        inset: 1.05rem;
+        border-width: 1px;
+    }
+
+    .mw-exec-bar__ai-ring--wide {
+        inset: 0.15rem;
+    }
+
     .mw-exec-bar__ai-ring--mid {
         display: none;
     }
