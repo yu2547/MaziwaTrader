@@ -68,6 +68,7 @@ function hasWorkspaceGuard(): boolean {
     }
 }
 let controlled = false;
+let scannerFeedAcquired = false;
 let subscribed: (() => void) | null = null;
 let digits: number[] = [];
 let historyLimit = 1000;
@@ -86,7 +87,10 @@ export const scannerIsControlling = () => controlled || hasWorkspaceGuard();
 export function resetScannerSession() {
     subscribed?.();
     subscribed = null;
-    if (controlled) public_market_feed.release();
+    if (scannerFeedAcquired) {
+        public_market_feed.release();
+        scannerFeedAcquired = false;
+    }
     controlled = false;
     digits = [];
     lastTickId = null;
@@ -179,6 +183,7 @@ export function armScannerSession(options: TArmOptions) {
         status: 'waiting',
     });
     public_market_feed.acquire();
+    scannerFeedAcquired = true;
     subscribed = public_market_feed.subscribeTicks(options.symbol, onTick);
 }
 
@@ -245,7 +250,10 @@ export function finishScannerSession(message?: string) {
     if (!controlled) return;
     subscribed?.();
     subscribed = null;
-    public_market_feed.release();
+    if (scannerFeedAcquired) {
+        public_market_feed.release();
+        scannerFeedAcquired = false;
+    }
     // Keep the guard armed but inactive. Pressing Run again on this XML
     // cannot place trades without a fresh scanner launch/requalification.
     entryPermission = false;
