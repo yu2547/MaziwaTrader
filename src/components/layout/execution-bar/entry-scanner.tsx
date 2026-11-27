@@ -646,7 +646,8 @@ const EntryScanner = observer(
             }
         };
 
-        const percent = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+        const currentPosition = progress.total ? Math.min(progress.total, progress.done + 1) : 0;
+        const percent = progress.total ? Math.round((currentPosition / progress.total) * 100) : 0;
 
         return (
             <div className='mw-scanner' role='dialog' aria-modal='true' aria-label={localize('Entry Scanner')}>
@@ -747,7 +748,7 @@ const EntryScanner = observer(
                                 <span>{localize('TRADE TYPE')}</span>
                                 <strong>
                                     {best?.strategy
-                                        ? `${best.strategy.side === 'OVER' ? 'Over' : 'Under'} ${best.strategy.prediction}${best.strategy.side === 'OVER' ? ' · Recovery Over 4' : ' · Monitor only'}`
+                                        ? `${best.strategy.side === 'OVER' ? 'Over' : 'Under'} ${best.strategy.prediction}${best.strategy.side === 'OVER' ? ' · Martingale recovery' : ' · Monitor only'}`
                                         : localize('Waiting for scan')}
                                 </strong>
                             </div>
@@ -830,7 +831,7 @@ const EntryScanner = observer(
                                 <div className='mw-scanner__progress-head'>
                                     <span>{localize('Scanning {{market}}', { market: progress.market })}</span>
                                     <span>
-                                        {progress.done}/{progress.total}
+                                        {currentPosition}/{progress.total}
                                     </span>
                                 </div>
                                 <div className='mw-scanner__progress-track'>
@@ -867,12 +868,12 @@ const EntryScanner = observer(
                             </button>
                         </div>
 
-                        <p className='mw-scanner__note'>
-                            {localize(
-                                'Every figure above is counted from real tick history on the market it names. AI score blends the full sample with the last {{recent}} ticks and is reduced when the two disagree. Past behaviour is not a prediction.',
-                                { recent: RECENT_WINDOW }
-                            )}
-                        </p>
+                        <details className='mw-scanner__advanced mw-scanner__advanced--foot'>
+                            <summary>{localize('About scanner scores')}</summary>
+                            <p className='mw-scanner__note'>
+                                {localize('Scores and digit rates use real historical ticks, not predictions. Results can change on the next tick.')}
+                            </p>
+                        </details>
                     </div>
                 </div>
 
@@ -928,17 +929,6 @@ const EntryScanner = observer(
                                     />
                                 </label>
 
-                                <label>
-                                    <span>{localize('MAXIMUM STAKE')}</span>
-                                    <input
-                                        type='number'
-                                        value={params.max_stake}
-                                        min={params.stake}
-                                        step={0.1}
-                                        onChange={e => setParams(p => ({ ...p, max_stake: Number(e.target.value) || 0 }))}
-                                    />
-                                </label>
-
                                 {/* In the grid rather than under it: the
                                     screenshot puts the switch in the cell beside
                                     Stop loss, which is what keeps the dialog
@@ -957,11 +947,22 @@ const EntryScanner = observer(
                                 </button>
                             </div>
 
-                            <p className='mw-scanner__note'>
-                                {localize(
-                                    'For Over, Launch Bot loads the scanner-only strategy and starts watching the one-tick live entry sequence before allowing a purchase. Under mode is monitoring-only because its live entry trigger has not been defined. Historical scan results do not guarantee trades or profit.'
-                                )}
-                            </p>
+                            <details className='mw-scanner__advanced'>
+                                <summary>{localize('Advanced settings and entry safeguards')}</summary>
+                                <label>
+                                    <span>{localize('MAXIMUM STAKE')}</span>
+                                    <input
+                                        type='number'
+                                        value={params.max_stake}
+                                        min={params.stake}
+                                        step={0.1}
+                                        onChange={e => setParams(p => ({ ...p, max_stake: Number(e.target.value) || 0 }))}
+                                    />
+                                </label>
+                                <p className='mw-scanner__note'>
+                                    {localize('The loaded bot waits for the exact qualifying live entry sequence. Under contracts are monitor-only until an entry rule is supplied. No strategy guarantees a profit.')}
+                                </p>
+                            </details>
 
                             {best?.strategy.side === 'UNDER' && (
                                 <div className='mw-scanner__params-info' role='status'>
