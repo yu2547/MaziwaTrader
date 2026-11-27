@@ -36,3 +36,82 @@
         --mw-orb-end: calc(30rem + 1.6rem + 1.6rem);
     }
 }
+
+
+/* AI orb visual refresh: Diagnose Deriv Tick Hangs (appearance ONLY).
+   No scanner, market-analysis, launch, or trading code is changed.
+   The button, its three concentric rings and the AI letters rise and fall
+   together; the rings themselves never scale or pulse. */
+.mw-exec-bar__ai {
+    scale: 1.22;
+    animation: mw-ai-orb-subtle-bounce 3.2s ease-in-out infinite;
+}
+
+.mw-exec-bar__ai-core {
+    width: 4.2rem;
+    height: 4.2rem;
+    background: radial-gradient(
+        circle at 35% 22%,
+        #ad6ad5 0%,
+        #873fb4 32%,
+        #6b2697 66%,
+        #552077 100%
+    );
+    box-shadow:
+        inset 0 0.35rem 0.6rem rgb(255 233 255 / 35%),
+        0 0 0.65rem rgb(108 43 162 / 45%);
+}
+
+// Three static, clearly outlined rings on desktop.
+.mw-exec-bar__ai-ring,
+.mw-exec-bar__ai-ring--mid,
+.mw-exec-bar__ai-ring--wide {
+    animation: none;
+    transform: none;
+    opacity: 1;
+    border-width: 1.5px;
+}
+
+.mw-exec-bar__ai-ring { border-color: #6d47ad; }
+.mw-exec-bar__ai-ring--mid { border-color: #7756bc; }
+.mw-exec-bar__ai-ring--wide { border-color: #8969c5; }
+
+// Only the faint reticle moves sideways; the AI glyphs never animate alone.
+.mw-exec-bar__ai-frame {
+    animation: mw-ai-orb-reticle-slide 3.2s ease-in-out infinite;
+}
+
+@keyframes mw-ai-orb-subtle-bounce {
+    0%, 100% { translate: 0 -1.9px; }
+    50% { translate: 0 1.9px; }
+}
+
+@keyframes mw-ai-orb-reticle-slide {
+    0%, 100% {
+        transform: translate(-7%, 2%);
+        opacity: 0.55;
+    }
+    50% {
+        transform: translate(7%, 2%);
+        opacity: 0.82;
+    }
+}
+
+// Two visible rings on phones and other touch-screen interfaces.
+@media (max-width: 768px), (hover: none) and (pointer: coarse) {
+    .mw-exec-bar__ai-ring--mid {
+        display: none;
+    }
+}
+
+// Dragging and motion preferences take priority over decorative animation.
+.mw-exec-bar__ai--dragging {
+    animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mw-exec-bar__ai,
+    .mw-exec-bar__ai-frame {
+        animation: none;
+    }
+}
