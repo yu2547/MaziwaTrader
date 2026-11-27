@@ -2,6 +2,7 @@ import { action, makeObservable, observable, reaction } from 'mobx';
 import { ApiHelpers, config as qs_config, load } from '@/external/bot-skeleton';
 import { save_types } from '@/external/bot-skeleton/constants/save-type';
 import { addDynamicBlockToDOM } from '@/utils/xml-dom-quick-strategy';
+import { resetScannerSession, scannerIsControlling } from '@/utils/market-data/scanner-entry-session';
 import { STRATEGIES } from '../pages/bot-builder/quick-strategy/config';
 import { TFormData } from '../pages/bot-builder/quick-strategy/types';
 import RootStore from './root-store';
@@ -143,6 +144,14 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
     };
 
     onSubmit = async (data: TFormData) => {
+        // Switching away from a scanner workspace is a deliberate action:
+        // only clear its persistent buy lock if the existing bot is stopped.
+        if (data.scanner_strategy !== true && scannerIsControlling()) {
+            if (this.root_store.run_panel.is_running) {
+                throw new Error('Stop the AI Scanner Bot before loading another Quick Strategy.');
+            }
+            resetScannerSession();
+        }
         const { contracts_for } = ApiHelpers?.instance ?? {};
         if (!contracts_for) return;
         const market = await contracts_for.getMarketBySymbol(data.symbol);
