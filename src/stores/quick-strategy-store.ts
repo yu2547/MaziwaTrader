@@ -228,18 +228,11 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
             throw new Error('Bot Builder workspace is not initialized. Open Bot Builder and try again.');
         }
 
-        // The AI Scanner must await BOTH a successful Blockly load and its
-        // trade definition creation before Run. Otherwise the UI closes and
-        // reports success even if no bot was actually started. Keep the old
-        // Quick Strategy behavior unchanged for non-scanner callers.
-        const scannerReady = data.scanner_strategy === true && action === 'RUN'
-            ? workspace.waitForBlockEvent({
-                block_type: 'trade_definition',
-                event_type: window.Blockly.Events.BLOCK_CREATE,
-                timeout: 10000,
-            })
-            : null;
-        if (action === 'RUN' && !scannerReady) {
+        // The scanner must not wait only for BLOCK_CREATE: importing an XML
+        // workspace can restore an existing trade definition without emitting
+        // that event. This was causing a 10-second false timeout after the bot
+        // had already been loaded. Await the actual workspace import instead.
+        if (action === 'RUN' && data.scanner_strategy !== true) {
             workspace
                 ?.waitForBlockEvent({
                     block_type: 'trade_definition',
@@ -248,9 +241,7 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
                 })
                 .then(() => this.root_store.run_panel.onRunButtonClick());
         }
-
         this.setFormVisibility(false);
-
         await load({
             block_string: window.Blockly.Xml.domToText(strategy_dom),
             file_name: selected_strategy.label,
@@ -260,9 +251,18 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
             strategy_id: null,
             showIncompatibleStrategyDialog: null,
         });
-        if (scannerReady) {
-            await scannerReady;
+        if (data.scanner_strategy === true && action === 'RUN') {
+            // The loaded XML is the source of truth, not a transient event.
+            // If load did not create the trade definition, fail visibly and
+            // leave the scanner's purchase gate closed.
+            const definitions = workspace.getBlocksByType('trade_definition', false);
+            if (!definitions?.length) {
+                throw new Error('AI Scanner bot could not create Trade Parameters. Retry loading the strategy.');
+            }
             await this.root_store.run_panel.onRunButtonClick();
+            if (!this.root_store.run_panel.is_running) {
+                throw new Error('Trading did not start. Check your Deriv account connection, authorization and Journal, then retry.');
+            }
         }
     };
 
