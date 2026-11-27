@@ -211,6 +211,18 @@
         &--odd {
             background: #e35d5b;
         }
+
+        &--rise {
+            background: #4eaaa5;
+        }
+
+        &--fall {
+            background: #e35d5b;
+        }
+
+        &--flat {
+            background: #6b7280;
+        }
     }
 
     &__actions {
@@ -284,6 +296,24 @@
     &__shortfall {
         color: #e8b64c;
         font-weight: 600;
+    }
+
+    &__progress {
+        display: inline-block;
+        padding: 0.3rem 0.6rem;
+        border-radius: 4px;
+        background: rgb(56 130 217 / 10%);
+        color: var(--text-prominent);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__caution {
+        margin: 0.2rem 0 0;
+        font-size: 1.1rem;
+        line-height: 1.5;
+        text-align: center;
+        color: var(--text-less-prominent);
     }
 
     &__error {
