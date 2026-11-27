@@ -2049,6 +2049,61 @@ animation: mw-ai-square 3.2s ease-in-out infinite;
     }
 }
 
+.mw-scanner__direction {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0.8rem 0;
+    padding: 0.4rem;
+    border-radius: 10px;
+    background: var(--general-section-1);
+}
+
+.mw-scanner__direction-btn {
+    min-width: 0;
+    padding: 0.85rem 1rem;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text-prominent);
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+
+    &--active {
+        background: #2563eb;
+        color: #fff;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: wait;
+    }
+}
+
+.mw-scanner__params-error,
+.mw-scanner__params-info {
+    margin: 1.2rem 2rem 0;
+    padding: 1rem 1.2rem;
+    border-radius: 8px;
+    font-size: 1.25rem;
+    line-height: 1.5;
+}
+
+.mw-scanner__params-error {
+    background: #fef2f2;
+    border: 1px solid #ef4444;
+    color: #991b1b;
+    font-weight: 600;
+}
+
+.mw-scanner__params-info {
+    background: #eff6ff;
+    border: 1px solid #93c5fd;
+    color: #1e40af;
+}
+
 .mw-scanner__params-launch {
     border-color: transparent !important;
     background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
