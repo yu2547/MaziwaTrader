@@ -178,7 +178,9 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
                 el_block.innerHTML = value;
             });
         };
-        const { unit, action, type, growth_rate, scanner_strategy, ...rest_data } = data;
+        const { unit, action, type, growth_rate, ...rest_data } = data;
+        // This is a routing flag, not a field in the XML strategy.
+        delete rest_data.scanner_strategy;
         const fields_to_update = {
             market,
             submarket,
