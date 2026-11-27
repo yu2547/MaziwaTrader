@@ -114,6 +114,13 @@ class PublicMarketFeed {
     private pending = new Map<number, TPending>();
     private tick_subscribers = new Map<string, Set<(tick: TTick) => void>>();
 
+    // active_symbols changes infrequently, but scanners and market widgets can
+    // mount together. Share the same response and in-flight request instead of
+    // repeatedly calling Deriv until the API returns a rate-limit error.
+    private active_symbols_cache: { symbols: TActiveSymbol[]; fetched_at: number } | null = null;
+    private active_symbols_request: Promise<TActiveSymbol[]> | null = null;
+    private active_symbols_retry_after = 0;
+
     /**
      * Symbols with a live server-side tick subscription on the CURRENT socket.
      *
@@ -355,8 +362,46 @@ class PublicMarketFeed {
     }
 
     async getActiveSymbols(): Promise<TActiveSymbol[]> {
-        const response = await this.send({ active_symbols: 'brief' });
-        return (response.active_symbols as TActiveSymbol[]) ?? [];
+        const now = Date.now();
+        const cache = this.active_symbols_cache;
+        const cache_ttl_ms = 5 * 60 * 1000;
+        const rate_limit_cooldown_ms = 60 * 1000;
+
+        if (cache && now - cache.fetched_at < cache_ttl_ms) {
+            return cache.symbols;
+        }
+        if (this.active_symbols_request) {
+            return this.active_symbols_request;
+        }
+        if (now < this.active_symbols_retry_after) {
+            // A stale market list is preferable to repeatedly hitting the
+            // active_symbols limit; trade eligibility is checked separately.
+            if (cache) return cache.symbols;
+            throw new Error('Market list rate-limited. Wait before retrying.');
+        }
+
+        const request = this.send({ active_symbols: 'brief' })
+            .then(response => {
+                const symbols = (response.active_symbols as TActiveSymbol[]) ?? [];
+                this.active_symbols_cache = { symbols, fetched_at: Date.now() };
+                this.active_symbols_retry_after = 0;
+                return symbols;
+            })
+            .catch(error => {
+                const message = error instanceof Error ? error.message : String(error);
+                if (/rate.limit|too many requests/i.test(message)) {
+                    this.active_symbols_retry_after = Date.now() + rate_limit_cooldown_ms;
+                    if (this.active_symbols_cache) {
+                        return this.active_symbols_cache.symbols;
+                    }
+                }
+                throw error;
+            })
+            .finally(() => {
+                this.active_symbols_request = null;
+            });
+        this.active_symbols_request = request;
+        return request;
     }
 
     /**
