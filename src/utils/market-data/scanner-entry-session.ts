@@ -167,14 +167,15 @@ function onTick(tick: TTick) {
 }
 
 export function armScannerSession(options: TArmOptions) {
-    // Always clear an old scanner session, including subscriptions/signals.
-    resetScannerSession();
+    // Validate BEFORE touching an old workspace lock. A rejected launch must
+    // never leave a previously loaded scanner XML free to buy ungated.
     if (!Number.isFinite(options.stake) || options.stake <= 0 ||
         !Number.isFinite(options.stopLoss) || options.stopLoss <= 0 ||
         !Number.isFinite(options.maxStake) || options.maxStake < options.stake ||
         !Number.isInteger(options.maxWins) || options.maxWins < 1) {
         throw new Error('Invalid scanner stake, stop-loss, max-stake or win-limit.');
     }
+    resetScannerSession();
     controlled = true;
     markWorkspaceGuard(true);
     digits = [...options.digits];
