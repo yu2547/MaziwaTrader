@@ -74,14 +74,20 @@ const RECENT_WINDOW = 200;
 // Share one socket without sending all 18 histories at once (rate-limit risk).
 const SCAN_CONCURRENCY = 4;
 
-// The requested scan universe, ordered by preferred groups: 1-second
-// Volatility indices, regular Volatility indices, then Jump indices.
-// An index is scanned only when Deriv reports it as active.
+// The video starts at Jump 10 (1/18), then moves through Volatility
+// indices, ending at Volatility 90 (1s) (18/18). Preserve the exact
+// 18-market scope supplied by the user, and include only currently
+// available symbols returned by Deriv's active_symbols API.
 const SCAN_MARKETS = [
-    '1HZ100V', '1HZ75V', '1HZ50V', '1HZ30V',
-    '1HZ15V', '1HZ10V', '1HZ25V', '1HZ90V',
-    'R_100', 'R_50', 'R_75', 'R_25', 'R_10',
     'JD10', 'JD25', 'JD50', 'JD75', 'JD100',
+    '1HZ10V', 'R_10',
+    '1HZ100V', 'R_100',
+    '1HZ15V',
+    '1HZ25V', 'R_25',
+    '1HZ30V',
+    '1HZ50V', 'R_50',
+    '1HZ75V', 'R_75',
+    '1HZ90V',
 ] as const;
 
 type TResult = {
@@ -418,7 +424,7 @@ const EntryScanner = observer(
             if (winner) {
                 setStatus(
                     localize(
-                        'Completed {{total}} requested markets; {{scanned}} had tick history; {{matched}} met historical rules. Live entry not confirmed.',
+                        'Completed {{total}} requested markets; {{scanned}} had tick history; {{matched}} qualified under the selected digit conditions. Live entry not confirmed.',
                         { total: symbols.length, scanned: usableHistories, matched: results.length }
                     )
                 );
@@ -682,6 +688,30 @@ const EntryScanner = observer(
                                         <strong>{best.samples}</strong>
                                     </div>
                                 </div>
+                                {best.strategy && (
+                                    <>
+                                        <div className='mw-scanner__digit-distribution' aria-label={localize('Last-digit percentages')}>
+                                            {best.strategy.percentages.map((share, digit) => (
+                                                <div className='mw-scanner__digit' key={digit}>
+                                                    <span className='mw-scanner__digit-name'>{digit}</span>
+                                                    <span className='mw-scanner__digit-track'>
+                                                        <span
+                                                            className={`mw-scanner__digit-fill mw-scanner__digit-fill--${best.strategy?.barColors[digit] ?? 'neutral'}`}
+                                                            style={{ width: `${Math.min(100, share * 5)}%` }}
+                                                        />
+                                                    </span>
+                                                    <strong>{share.toFixed(1)}%</strong>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className='mw-scanner__rule-detail'>
+                                            {localize('Conditions: digits {{low}} below 10% and decreasing; at least two digits {{strong}} at 11% or higher. Red/yellow mark low digits; blue/green mark strong digits.', {
+                                                low: best.strategy.lowDigits.join(', '),
+                                                strong: best.strategy.strongDigits.join(', '),
+                                            })}
+                                        </div>
+                                    </>
+                                )}
                                 <div className='mw-scanner__heat'>
                                     {localize(
                                         'Heatmap: hottest digit {{hot}} | coldest digit {{cold}} | missing {{missing}} | low streak {{low}} | high streak {{high}}',
@@ -744,7 +774,9 @@ const EntryScanner = observer(
                                 onClick={scanMarkets}
                                 disabled={is_scanning || symbols.length === 0}
                             >
-                                {is_scanning ? localize('Scanning Markets…') : localize('Scan Markets')}
+                                {is_scanning
+                                    ? localize('Scanning {{done}}/{{total}}…', { done: progress.done, total: progress.total })
+                                    : localize('Scan Markets')}
                             </button>
                             <button
                                 type='button'
