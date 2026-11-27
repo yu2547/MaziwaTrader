@@ -36,3 +36,62 @@
         --mw-orb-end: calc(30rem + 1.6rem + 1.6rem);
     }
 }
+
+
+/* Scanner-only run monitor remains visible when the entry dialog closes.
+   Read-only, so it cannot steal clicks from Blockly or the Run/Stop button. */
+.mw-scanner-session {
+    position: fixed;
+    right: clamp(1.6rem, 23vw, 43rem);
+    bottom: 11rem;
+    z-index: 8;
+    width: min(35rem, calc(100vw - 3.2rem));
+    max-height: min(45vh, 28rem);
+    overflow-y: auto;
+    padding: 1.2rem 1.4rem;
+    border: 1px solid #2563eb;
+    border-radius: 12px;
+    background: rgb(13 34 55 / 96%);
+    box-shadow: 0 12px 32px rgb(0 0 0 / 20%);
+    color: #fff;
+    pointer-events: none;
+    font-size: 1.2rem;
+    line-height: 1.5;
+
+    &__head,
+    &__details {
+        display: flex;
+        gap: 0.8rem;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    &__head {
+        align-items: center;
+        margin-bottom: 0.6rem;
+
+        strong { font-size: 1.4rem; }
+        span { color: #93c5fd; }
+    }
+
+    &__market {
+        margin-bottom: 0.6rem;
+        font-weight: 700;
+    }
+
+    &__details {
+        font-size: 1.1rem;
+        color: #bfdbfe;
+        font-variant-numeric: tabular-nums;
+    }
+
+    p {
+        margin: 0.9rem 0;
+    }
+
+    @media (width <= 768px) {
+        right: 1.6rem;
+        bottom: 12rem;
+        max-height: 23vh;
+    }
+}
