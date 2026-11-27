@@ -143,6 +143,7 @@ const useManualTrade = () => {
     const [is_selling, setIsSelling] = useState(false);
     const [pending_count, setPendingCount] = useState(0);
     const [error_message, setErrorMessage] = useState<string | null>(null);
+    const first_error = useRef<string | null>(null);
 
     // Contracts bought here and not yet settled. Kept in a ref because the
     // onMessage subscription below is registered once and must see the
@@ -323,8 +324,6 @@ const useManualTrade = () => {
                 return false;
             }
 
-            setErrorMessage(null);
-
             try {
                 const currency = (api_base.account_info as { currency?: string })?.currency || 'USD';
                 const proposal_request: Record<string, unknown> = {
@@ -370,6 +369,7 @@ const useManualTrade = () => {
                         const unconfirmed =
                             'Deriv did not confirm the purchase in time. It may still have been placed - check your open positions before buying again.';
                         stop_batch.current = true;
+                        first_error.current ??= unconfirmed;
                         if (is_mounted.current) setErrorMessage(unconfirmed);
                         globalObserver.emit('ui.log.error', unconfirmed);
                         return false;
@@ -422,12 +422,12 @@ const useManualTrade = () => {
                 return true;
             } catch (thrown) {
                 const message = readError(thrown) ?? 'The trade could not be placed.';
-                if (/rate.?limit|too many requests|throttl|timed out|timeout/i.test(message)) {
-                    // Stop unsent work rather than continuing to issue
-                    // hundreds of requests into an overloaded connection.
-                    stop_batch.current = true;
-                }
-                if (is_mounted.current) setErrorMessage(message);
+                first_error.current ??= message;
+                // Stop the rest of a batch on a failed opening purchase.
+                // One rejected contract is useful diagnostic evidence; don't
+                // keep sending the other 9–249 requests blindly.
+                stop_batch.current = true;
+                if (is_mounted.current) setErrorMessage(first_error.current);
                 globalObserver.emit('ui.log.error', message);
                 return false;
             }
@@ -451,6 +451,7 @@ const useManualTrade = () => {
             }
             placing_lock.current = true;
             stop_batch.current = false;
+            first_error.current = null;
             setIsPlacing(true);
             setBatchProgress({ attempted: 0, requested: count, opened: 0 });
             try {
@@ -461,9 +462,23 @@ const useManualTrade = () => {
                     return 0;
                 }
                 setErrorMessage(null);
-                let next = 0;
-                let processed = 0;
-                let confirmed = 0;
+                // One immediate proposal + buy validates this exact market,
+                // account, stake, prediction and contract type. Only then
+                // start the remaining workers; don't flood Deriv with invalid
+                // quotes when the first purchase fails.
+                const first = await placeTrade(params, on_contract);
+                let processed = 1;
+                let confirmed = first ? 1 : 0;
+                if (is_mounted.current) {
+                    setBatchProgress({ attempted: processed, requested: count, opened: confirmed });
+                }
+                if (!first || stop_batch.current || count === 1) {
+                    if (!first && is_mounted.current) {
+                        setErrorMessage(`No contracts opened. ${first_error.current ?? 'Deriv did not confirm the first purchase.'} Remaining ${count - 1} orders were not sent.`);
+                    }
+                    return confirmed;
+                }
+                let next = 1;
                 const worker = async () => {
                     while (!stop_batch.current && next < count) {
                         next += 1;
@@ -484,7 +499,7 @@ const useManualTrade = () => {
                 };
                 await Promise.all(Array.from({ length: Math.min(BATCH_CONCURRENCY, count) }, worker));
                 if (confirmed < count && is_mounted.current) {
-                    setErrorMessage(`Only ${confirmed} of ${count} purchases were confirmed${stop_batch.current ? '; remaining requests were stopped after a connection or pricing error' : ''}. Check Transactions and open positions before placing another batch.`);
+                    setErrorMessage(`Only ${confirmed} of ${count} purchases were confirmed. ${first_error.current ?? 'Some requests were unsuccessful.'} Check Transactions and open positions before another batch.`);
                 }
                 return confirmed;
             } finally {
