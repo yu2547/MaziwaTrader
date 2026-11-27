@@ -57,6 +57,7 @@ let historyLimit = 1000;
 let lastTickId: string | null = null;
 let trigger: number | null = null;
 let entryPermission = false;
+let permissionTimestamp = 0;
 
 const publish = (patch: Partial<TScannerSession>) =>
     scannerSession$.next({ ...scannerSession$.getValue(), ...patch });
@@ -74,6 +75,7 @@ export function resetScannerSession() {
     lastTickId = null;
     trigger = null;
     entryPermission = false;
+    permissionTimestamp = 0;
     scannerSession$.next(empty);
 }
 
@@ -91,6 +93,7 @@ function onTick(tick: TTick) {
     // A signal expires on the next tick if it was not consumed. It must never
     // be reused later to open a contract on stale conditions.
     entryPermission = false;
+    permissionTimestamp = 0;
     if (!match?.eligible) {
         trigger = null;
         publish({
@@ -112,6 +115,7 @@ function onTick(tick: TTick) {
     // frequent of digits 1, 2, 3.
     if (trigger !== null && digit >= 4 && digit <= 9) {
         entryPermission = true;
+        permissionTimestamp = Date.now();
         publish({
             lastDigit: digit, percentages: match.percentages, status: 'confirmed',
             triggerDigit: trigger, confirmationDigit: digit,
@@ -164,15 +168,21 @@ export function armScannerSession(options: TArmOptions) {
  * or when the latest live confirmation has expired. The permission is consumed
  * exactly once. Manual bots (no scanner session) use their original behavior.
  */
-export function consumeScannerEntryPermission(symbol: string, contractType: string): boolean {
+export function consumeScannerEntryPermission(symbol: string, contractType: string, amount: number): boolean {
     if (!controlled) return true;
     const state = scannerSession$.getValue();
     const expectedType = state.side === 'OVER' ? 'DIGITOVER' : 'DIGITUNDER';
+    // The confirmation belongs to the current live tick, not a later tick.
+    // No trade can exceed the configured stake cap or remaining loss budget.
+    const maxAllowed = Math.min(state.maxStake, state.stopLoss + state.netProfit);
     if (!state.active || state.symbol !== symbol ||
-        contractType.toUpperCase() !== expectedType || !entryPermission) {
+        contractType.toUpperCase() !== expectedType || !entryPermission ||
+        Date.now() - permissionTimestamp > 1500 ||
+        !Number.isFinite(amount) || amount <= 0 || amount > maxAllowed) {
         return false;
     }
     entryPermission = false;
+    permissionTimestamp = 0;
     publish({ status: 'waiting', message: 'Live entry accepted by the bot; monitoring the contract.' });
     return true;
 }
@@ -181,12 +191,18 @@ export function consumeScannerEntryPermission(symbol: string, contractType: stri
 export function recordScannerSettlement(profit: number, isWin: boolean): boolean {
     if (!controlled) return false;
     const state = scannerSession$.getValue();
+    if (!Number.isFinite(profit)) {
+        entryPermission = false;
+        publish({ active: false, status: 'stopped', message: 'Settlement profit was invalid; scanner bot stopped.' });
+        return true;
+    }
     if (!state.active) return true;
     const wins = state.wins + (isWin ? 1 : 0);
     const netProfit = state.netProfit + profit;
     const hitLimit = wins >= state.maxWins || netProfit <= -state.stopLoss;
     if (hitLimit) {
         entryPermission = false;
+        permissionTimestamp = 0;
         trigger = null;
         publish({
             active: false, wins, netProfit, status: 'stopped',
@@ -201,4 +217,21 @@ export function recordScannerSettlement(profit: number, isWin: boolean): boolean
         });
     }
     return hitLimit;
+}
+
+/** Stop the scanner's socket without losing its last report. */
+export function finishScannerSession(message?: string) {
+    if (!controlled) return;
+    subscribed?.();
+    subscribed = null;
+    public_market_feed.release();
+    controlled = false;
+    entryPermission = false;
+    permissionTimestamp = 0;
+    trigger = null;
+    publish({
+        active: false,
+        status: 'stopped',
+        message: message || scannerSession$.getValue().message || 'Scanner bot stopped.',
+    });
 }
