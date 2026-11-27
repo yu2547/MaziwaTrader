@@ -223,6 +223,34 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
             }
         });
 
+        if (data.scanner_strategy === true) {
+            // The bundled strategy was originally a Rise/Fall (CALL) template.
+            // Updating only the trade-parameters dropdown would leave its
+            // Purchase block buying CALL regardless of scan outcome.
+            // Match the actual purchase choice to the selected scanner side.
+            const selectedContract = data.type === 'DIGITUNDER' ? 'DIGITUNDER' : 'DIGITOVER';
+            const purchaseField = strategy_dom.querySelector(
+                'block[type="before_purchase"] block[type="purchase"] field[name="PURCHASE_LIST"]'
+            );
+            if (!purchaseField) {
+                throw new Error('AI Scanner XML has no purchase contract selector.');
+            }
+            purchaseField.textContent = selectedContract;
+
+            const selectedPrediction = Number(data.last_digit_prediction);
+            if (!Number.isInteger(selectedPrediction) || selectedPrediction < 0 || selectedPrediction > 9) {
+                throw new Error('Invalid scanned prediction digit.');
+            }
+            const barrierInput = strategy_dom.querySelector(
+                'block[type="trade_definition_tradeoptions"] value[name="PREDICTION"]'
+            );
+            if (!barrierInput) throw new Error('AI Scanner XML is missing the digit prediction input.');
+            // This node is created by addDynamicBlockToDOM() above.
+            const numberField = barrierInput.querySelector('field[name="NUM"]');
+            if (!numberField) throw new Error('AI Scanner XML cannot set the digit prediction.');
+            numberField.textContent = String(selectedPrediction);
+        }
+
         const { derivWorkspace: workspace } = Blockly;
         if (data.scanner_strategy === true && !workspace) {
             throw new Error('Bot Builder workspace is not initialized. Open Bot Builder and try again.');
