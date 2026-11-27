@@ -370,6 +370,9 @@ const EntryScanner = observer(
             let historyErrors = 0;
             let nextIndex = 0;
             let completed = 0;
+            // Keep the progress label aligned with a request that is actually
+            // in flight. Two history workers can finish out of order.
+            const activeMarkets = new Map<number, string>();
             const total = symbols.length;
             const selectedMode = active_mode;
             const selectedDirection = direction;
@@ -396,13 +399,13 @@ const EntryScanner = observer(
                         const index = nextIndex++;
                         if (index >= total) return;
                         const item = symbols[index];
+                        activeMarkets.set(index, item.underlying_symbol_name);
                         if (is_live.current) {
-                            // The label describes the IN-FLIGHT market, not the
-                            // last one completed. The X/18 counter is incremented
-                            // only when a market finishes.
                             setProgress(previous => ({
                                 ...previous,
-                                market: item.underlying_symbol_name,
+                                // Show the earliest unfinished market, matching
+                                // the reference video's sequential progress.
+                                market: activeMarkets.get(Math.min(...activeMarkets.keys())) ?? item.underlying_symbol_name,
                             }));
                         }
                         try {
@@ -449,7 +452,11 @@ const EntryScanner = observer(
                         } finally {
                             if (is_live.current) {
                                 completed += 1;
-                                setProgress({ done: completed, total, market: item.underlying_symbol_name });
+                                activeMarkets.delete(index);
+                                const nextActive = activeMarkets.size
+                                    ? activeMarkets.get(Math.min(...activeMarkets.keys()))
+                                    : item.underlying_symbol_name;
+                                setProgress({ done: completed, total, market: nextActive ?? item.underlying_symbol_name });
                                 setStatus(
                                     localize('Scanning {{mode}}: {{done}}/{{total}} markets checked. Last completed: {{market}}.', {
                                         mode: selectedMode.label,
