@@ -323,14 +323,9 @@ const BulkTraderPage = observer(() => {
     const total_risk = stake * trades_per_click;
     const valid_amounts = Number.isFinite(stake) && stake > 0 && Number.isInteger(trades_per_click) && trades_per_click >= 1 && trades_per_click <= MAX_BATCH_TRADES && Number.isInteger(duration_ticks) && duration_ticks >= 1 && duration_ticks <= 10;
 
-    // Every contract in the batch goes out together, so all of them price off
-    // the same moment in the market. Placing them one after another meant the
-    // last contract of a 20-trade batch opened many ticks after the first,
-    // which is not one signal traded 20 times.
-    //
-    // The count is whatever was typed - there is no ceiling on it here. What
-    // actually opened is reported back rather than assumed, because a batch
-    // large enough to be throttled will land short and the difference matters.
+    // A click immediately starts the selected contract without waiting for
+    // digit frequency or a trading signal. Deriv must still return a proposal
+    // and confirm the buy; the first failure stops the remaining batch.
     const placeSide = async (contract_type: string) => {
         if (!valid_amounts || trade.is_placing) return;
         setLastBatch(null);
@@ -386,7 +381,7 @@ const BulkTraderPage = observer(() => {
                     </label>
                 </div>
 
-                <div className='mw-bulk-trader__row mw-bulk-trader__row--single'>
+                <div className={`mw-bulk-trader__row ${!config.barrier ? 'mw-bulk-trader__row--single' : ''}`}>
                     <NumberField
                         label={localize('Number of ticks')}
                         value={sample_size}
@@ -396,13 +391,14 @@ const BulkTraderPage = observer(() => {
                         step={10}
                     />
                     {config.barrier && (
-                        <NumberField
-                            label={localize('Barrier digit')}
-                            value={barrier}
-                            onChange={value => setBarrier(Math.min(9, Math.max(0, value)))}
-                            min={0}
-                            max={9}
-                        />
+                        <label className='mw-bulk-trader__select'>
+                            <span>{localize('Prediction (0–9)')}</span>
+                            <select value={barrier} onChange={event => setBarrier(Number(event.target.value))}>
+                                {Array.from({ length: 10 }, (_, digit) => (
+                                    <option key={digit} value={digit}>{digit}</option>
+                                ))}
+                            </select>
+                        </label>
                     )}
                 </div>
 
