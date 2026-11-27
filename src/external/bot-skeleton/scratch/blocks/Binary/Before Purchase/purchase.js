@@ -46,7 +46,7 @@ window.Blockly.Blocks.purchase = {
         // import, which previously reset a digit Under purchase to CALL/Rise
         // even though the preview initially validated correctly.
         const scanner = scannerSession$.getValue();
-        if (scannerIsControlling() && scanner.active) {
+        if (scannerIsControlling() && scanner.symbol) {
             this.populatePurchaseList(event);
             return;
         }
@@ -79,7 +79,7 @@ window.Blockly.Blocks.purchase = {
             const contract_type_options = getContractTypeOptions(contract_type, trade_type);
 
             const scanner = scannerSession$.getValue();
-            if (scannerIsControlling() && scanner.active) {
+            if (scannerIsControlling() && scanner.symbol) {
                 const expected = scanner.side === 'UNDER' ? 'DIGITUNDER' : 'DIGITOVER';
                 // Don't manufacture a Rise quote while category dropdowns are
                 // still initializing. Restore the correct options only after
