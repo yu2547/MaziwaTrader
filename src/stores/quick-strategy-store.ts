@@ -170,7 +170,9 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
             : STRATEGIES()[this.selected_strategy];
         const strategy_xml = await import(/* webpackChunkName: `[request]` */ `../xml/${selected_strategy.name}.xml`);
         const strategy_dom = window.Blockly.utils.xml.textToDom(strategy_xml.default);
-        addDynamicBlockToDOM('PREDICTION', 'last_digit_prediction', trade_type_cat, strategy_dom);
+        if (data.scanner_strategy !== true) {
+            addDynamicBlockToDOM('PREDICTION', 'last_digit_prediction', trade_type_cat, strategy_dom);
+        }
 
         const modifyValueInputs = (key: string, value: number) => {
             const el_value_inputs = strategy_dom?.querySelectorAll(`value[strategy_value="${key}"]`);
@@ -195,6 +197,7 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
         const { unit, action, type, growth_rate, ...rest_data } = data;
         // This is a routing flag, not a field in the XML strategy.
         delete rest_data.scanner_strategy;
+        delete rest_data.scanner_entry_digit;
         const fields_to_update = {
             market,
             submarket,
@@ -257,14 +260,59 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
             if (!Number.isInteger(selectedPrediction) || selectedPrediction < 0 || selectedPrediction > 9) {
                 throw new Error('Invalid scanned prediction digit.');
             }
-            const barrierInput = strategy_dom.querySelector(
-                'block[type="trade_definition_tradeoptions"] value[name="PREDICTION"]'
-            );
-            if (!barrierInput) throw new Error('AI Scanner XML is missing the digit prediction input.');
-            // This node is created by addDynamicBlockToDOM() above.
-            const numberField = barrierInput.querySelector('field[name="NUM"]');
-            if (!numberField) throw new Error('AI Scanner XML cannot set the digit prediction.');
-            numberField.textContent = String(selectedPrediction);
+            const selectedEntryDigit = Number(data.scanner_entry_digit);
+            if (!Number.isInteger(selectedEntryDigit) ||
+                !(selectedContract === 'DIGITOVER'
+                    ? [1, 2, 3].includes(selectedEntryDigit)
+                    : [6, 7, 8].includes(selectedEntryDigit))) {
+                throw new Error('The selected entry digit is not valid for this Over/Under scan.');
+            }
+
+            // This XML stores the prediction in the "Prediction" Blockly
+            // variable, not in a direct number field. Configure the actual
+            // initialization blocks, keeping both shadow and live value
+            // synchronized for import and later manual edits.
+            const setNumber = (id: string, value: number) => {
+                const el = strategy_dom.querySelector(`block[id="${id}"] > field[name="NUM"]`);
+                if (!el) throw new Error(`AI Scanner XML is missing numeric block ${id}`);
+                el.textContent = String(value);
+            };
+            const setShadowNumber = (id: string, value: number) => {
+                const el = strategy_dom.querySelector(`shadow[id="${id}"] > field[name="NUM"]`);
+                if (el) el.textContent = String(value);
+            };
+            const setPair = (blockId: string, shadowId: string, value: number) => {
+                setNumber(blockId, value);
+                setShadowNumber(shadowId, value);
+            };
+
+            const scannerStake = Number(data.stake);
+            const scannerFactor = Number(data.size);
+            const scannerWins = Number(data.scanner_wins ?? 5);
+            const scannerStopLoss = Number(data.loss);
+            setPair('init_stake_num', 'init_stake_shadow', scannerStake);
+            setPair('init_ip_num', 'init_ip_shadow', selectedPrediction);
+            // Recovery predictions default to the same selected barrier:
+            // otherwise the live scanner guard rejects a changed contract
+            // prediction after loss. This remains editable in Free Bots.
+            setPair('init_rp_num', 'init_rp_shadow', selectedPrediction);
+            setPair('init_ed_num', 'init_ed_shadow', selectedEntryDigit);
+            setPair('init_mt_num', 'init_mt_shadow', scannerFactor);
+            setPair('init_nw_num', 'init_nw_shadow', scannerWins);
+            setPair('init_sl_num', 'init_sl_shadow', scannerStopLoss);
+            const useMartingale = strategy_dom.querySelector('block[id="init_um_bool"] > field[name="BOOL"]');
+            if (!useMartingale) throw new Error('AI Scanner XML is missing Use Martingale setting.');
+            useMartingale.textContent = data.scanner_use_martingale === false ? 'FALSE' : 'TRUE';
+
+            // The confirmation test is <= 4 for Under, >= 4 for Over.
+            const comparison = strategy_dom.querySelector('block[id="scanner_confirm_cmp"] > field[name="OP"]');
+            if (!comparison) throw new Error('AI Scanner XML lacks next-tick confirmation.');
+            comparison.textContent = selectedContract === 'DIGITUNDER' ? 'LTE' : 'GTE';
+
+            // Confirm this file is the bot shared with Trading Bots → Free Bots.
+            if (!strategy_dom.querySelector('block[id="scanner_arm_next_tick"]')) {
+                throw new Error('AI Scanner template has no next-tick entry arming logic.');
+            }
         }
 
         const { derivWorkspace: workspace } = Blockly;
