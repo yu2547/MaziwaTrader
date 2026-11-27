@@ -66,6 +66,11 @@ const readError = (thrown: unknown): string | null => {
 // directly. Covers the case where the global proposal_open_contract
 // subscription drops an update rather than the contract never settling.
 const SETTLEMENT_GRACE_MS = 15000;
+const MAX_BATCH_TRADES = 250;
+// Limit parallel proposal/buy requests on one Deriv socket; a 100-request
+// Promise.all can trigger API rate limiting and leave purchase outcomes unknown.
+const BATCH_CONCURRENCY = 4;
+const BATCH_SPACING_MS = 150;
 
 /**
  * Deriv can leave a request unanswered, and api.send() then never settles: a
@@ -132,6 +137,8 @@ const withTimeout = <T>(work: Promise<unknown>, ms: number, message: string): Pr
 const useManualTrade = () => {
     const { run_panel, oauth_session } = useStore() ?? {};
     const [is_placing, setIsPlacing] = useState(false);
+    const [batch_progress, setBatchProgress] = useState<{ attempted: number; requested: number; opened: number } | null>(null);
+    const placing_lock = useRef(false);
     const [is_selling, setIsSelling] = useState(false);
     const [pending_count, setPendingCount] = useState(0);
     const [error_message, setErrorMessage] = useState<string | null>(null);
@@ -422,27 +429,23 @@ const useManualTrade = () => {
     );
 
     /**
-     * Fires `count` contracts together rather than one after another.
-     *
-     * Sequentially, a batch of 20 took as long as 20 round trips to Deriv and
-     * the later contracts opened against ticks the earlier ones had already
-     * traded through - which is not "20 trades on this signal", it is 20
-     * trades on 20 different signals. They go out concurrently so the whole
-     * batch prices off the same moment.
-     *
-     * One failure no longer cancels the rest. Aborting the batch on the first
-     * error meant a single rejected contract - a momentary price move, one
-     * proposal refused - silently swallowed every trade behind it. Each
-     * contract now stands or falls on its own and the count that actually
-     * opened is reported back.
+     * Controlled batch execution. A click schedules a bounded set of requests
+     * through at most four workers. Every contract is independently confirmed
+     * from Deriv; an unanswered buy is NEVER automatically retried. Requests
+     * may take multiple ticks and are not guaranteed to enter simultaneously.
      */
     const placeTrades = useCallback(
         async (params: TPlaceTradeParams, count: number, on_contract?: (contract_id: number) => void) => {
-            const attempts = Math.max(1, count);
+            if (placing_lock.current) return 0;
+            if (!Number.isInteger(count) || count < 1 || count > MAX_BATCH_TRADES ||
+                !Number.isFinite(params.stake) || params.stake <= 0) {
+                setErrorMessage('Enter 1–250 trades and a valid positive stake.');
+                return 0;
+            }
+            placing_lock.current = true;
             setIsPlacing(true);
+            setBatchProgress({ attempted: 0, requested: count, opened: 0 });
             try {
-                // Once per click, not once per contract: a batch of 20 against
-                // a sleeping socket would otherwise open 20 connections.
                 const blocked = await prepareConnection();
                 if (blocked) {
                     if (is_mounted.current) setErrorMessage(blocked);
@@ -450,11 +453,34 @@ const useManualTrade = () => {
                     return 0;
                 }
                 setErrorMessage(null);
-                const results = await Promise.all(
-                    Array.from({ length: attempts }, () => placeTrade(params, on_contract))
-                );
-                return results.filter(Boolean).length;
+                let next = 0;
+                let processed = 0;
+                let confirmed = 0;
+                const worker = async () => {
+                    while (next < count) {
+                        next += 1;
+                        // This request is independent; never reattempt a buy on
+                        // timeout, because it may already exist on the account.
+                        const successful = await placeTrade(params, on_contract);
+                        processed += 1;
+                        if (successful) confirmed += 1;
+                        if (is_mounted.current) {
+                            setBatchProgress({ attempted: processed, requested: count, opened: confirmed });
+                        }
+                        // Give the shared WebSocket room to process quotes and
+                        // settlements; respect exchange rate-limit responses.
+                        if (next < count) {
+                            await new Promise(resolve => setTimeout(resolve, BATCH_SPACING_MS));
+                        }
+                    }
+                };
+                await Promise.all(Array.from({ length: Math.min(BATCH_CONCURRENCY, count) }, worker));
+                if (confirmed < count && is_mounted.current) {
+                    setErrorMessage(`Only ${confirmed} of ${count} purchases were confirmed. Check Transactions and open positions before placing another batch.`);
+                }
+                return confirmed;
             } finally {
+                placing_lock.current = false;
                 if (is_mounted.current) setIsPlacing(false);
             }
         },
@@ -518,7 +544,7 @@ const useManualTrade = () => {
         [prepareConnection]
     );
 
-    return { error_message, is_placing, is_selling, pending_count, placeTrade, placeTrades, sellContract };
+    return { error_message, is_placing, is_selling, pending_count, batch_progress, placeTrade, placeTrades, sellContract };
 };
 
 export default useManualTrade;
