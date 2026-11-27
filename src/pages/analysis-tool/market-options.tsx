@@ -35,7 +35,12 @@ const MarketOptions = ({ symbols }: TMarketOptionsProps) => {
     const groups = [
         { items: pick(/^1HZ\d+V$/), label: localize('Volatility (1s)') },
         { items: pick(/^R_\d+$/), label: localize('Volatility') },
-        { items: pick(/^JD\d+$/), label: localize('Jump') },
+        {
+            items: pick(/^JD(?:10|25|50|75|100)$/).sort(
+                (a, b) => Number(a.underlying_symbol.slice(2)) - Number(b.underlying_symbol.slice(2))
+            ),
+            label: localize('Jump'),
+        },
     ].filter(group => group.items.length > 0);
 
     // Anything the groups do not describe is still listed, loose, after them.
