@@ -878,14 +878,7 @@ const EntryScanner = observer(
                                 </label>
                                 <label>
                                     <span>{localize('NO. OF DIGITS TO CHECK')}</span>
-                                    <input
-                                        type='number'
-                                        value={params.digits_to_check}
-                                        min={1}
-                                        onChange={e =>
-                                            setParams(p => ({ ...p, digits_to_check: Number(e.target.value) || 1 }))
-                                        }
-                                    />
+                                    <input type='number' value={1} min={1} max={1} disabled />
                                 </label>
                                 <label>
                                     <span>{localize('STOP LOSS')}</span>
@@ -930,7 +923,7 @@ const EntryScanner = observer(
 
                             <p className='mw-scanner__note'>
                                 {localize(
-                                    'Launch opens the AI Scanner-only bot and starts its monitoring engine. Purchases require a fresh qualifying live Over entry signal; they do not occur immediately merely because a historical scan qualified. Number of wins and digits to check have no field in that strategy, so they are not applied; send me the scanner bot XML and I will wire them.'
+                                    'Launch starts the AI Scanner bot with the selected market, prediction and one-tick live entry condition. It waits for a fresh qualifying Over signal before buying. The scanner session tracks the win limit, maximum stake and stop loss; it blocks Under purchases until an Under entry trigger is defined. Trading can lose money.'
                                 )}
                             </p>
 
