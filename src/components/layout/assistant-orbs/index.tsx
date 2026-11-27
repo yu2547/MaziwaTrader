@@ -2,6 +2,8 @@ import { CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useStat
 import { createPortal } from 'react-dom';
 import { localize } from '@deriv-com/translations';
 import EntryScanner from '../execution-bar/entry-scanner';
+import { scannerSession$ } from '@/utils/market-data/scanner-entry-session';
+import type { TScannerSession } from '@/utils/market-data/scanner-entry-session';
 import useDraggableOrb from './use-draggable-orb';
 import '../execution-bar/execution-bar.scss';
 import './assistant-orbs.scss';
@@ -74,6 +76,13 @@ const AssistantOrbs = () => {
     // Reported up by the scanner so the orb can show a scan is under way even
     // with the modal dismissed behind it.
     const [is_scanning, setIsScanning] = useState(false);
+    // Persistent scanner status belongs to the shell, not the modal: it remains
+    // visible after Launch closes the scanner and Bot Builder opens.
+    const [scannerSession, setScannerSession] = useState<TScannerSession>(scannerSession$.getValue());
+    useEffect(() => {
+        const subscription = scannerSession$.subscribe(setScannerSession);
+        return () => subscription.unsubscribe();
+    }, []);
     // The post-load card. Timed rather than dismissed, and never shown while
     // the scanner itself is open - pointing at a button the user is already
     // using would be noise.
@@ -254,6 +263,32 @@ className={[
                         </span>
                     </span>
                 </button>
+            )}
+
+            {/* Live scanner bot monitor: trading uses the same account and
+                Blockly workspace; this is a read-only summary of the scanner
+                signal and actual settled contracts, never a fake trade panel. */}
+            {(scannerSession.active || Boolean(scannerSession.message)) && (
+                <aside className='mw-scanner-session' role='status' aria-live='polite'>
+                    <div className='mw-scanner-session__head'>
+                        <strong>AI Scanner Bot</strong>
+                        <span>{scannerSession.active ? 'Monitoring' : 'Stopped'}</span>
+                    </div>
+                    <div className='mw-scanner-session__market'>
+                        {scannerSession.market} ({scannerSession.symbol}) · {scannerSession.side} {scannerSession.prediction}
+                    </div>
+                    <div className='mw-scanner-session__details'>
+                        <span>Last digit: {scannerSession.lastDigit ?? '—'}</span>
+                        <span>Trigger: {scannerSession.triggerDigit ?? '—'}</span>
+                        <span>Confirmation: {scannerSession.confirmationDigit ?? '—'}</span>
+                    </div>
+                    <p>{scannerSession.message}</p>
+                    <div className='mw-scanner-session__details'>
+                        <span>Wins: {scannerSession.wins}/{scannerSession.maxWins}</span>
+                        <span>Net P/L: {scannerSession.netProfit.toFixed(2)}</span>
+                        <span>Stop loss: {scannerSession.stopLoss.toFixed(2)}</span>
+                    </div>
+                </aside>
             )}
 
             {/* Held mounted through its exit. The wrapper only carries the
