@@ -107,19 +107,22 @@ export function evaluateOverUnder(digitsNewestFirst: number[], minSample = 100):
         const eligible = sufficientData && lowEnough && trendDecreasing &&
             high.length >= 2 && lowBar && highBars;
 
-        // The user supplied a next-tick trigger for OVER only. Do not invent a
-        // symmetrical UNDER entry rule. Live tick confirmation is handled by
-        // the scanner's tick subscription, not by this historical observation.
-        const triggerDigits = config.side === 'OVER' ? [1, 2, 3] : [];
-        const least = triggerDigits.length ? Math.min(...triggerDigits.map(d => counts[d])) : Infinity;
+        // Live entry patterns: Over follows the supplied 1/2/3 -> 4..9 rule.
+        // Under uses its mirrored low-frequency sequence (6/7/8 -> 0..5),
+        // consistent with the supplied Under frequency groups. The reference
+        // video demonstrates a launched bot but does not expose its XML.
+        // This is an explicit scanner implementation choice, not a claim that
+        // the reference bot's private entry code was recovered.
+        const triggerDigits = config.side === 'OVER' ? [1, 2, 3] : [6, 7, 8];
+        const least = Math.min(...triggerDigits.map(d => counts[d]));
         const leastTriggerDigits = triggerDigits.filter(d => counts[d] === least);
-        const triggerDigit = config.side === 'OVER' && digitsNewestFirst.length > 1
-            ? digitsNewestFirst[1] : null;
-        const confirmationDigit = config.side === 'OVER' && digitsNewestFirst.length
-            ? digitsNewestFirst[0] : null;
+        const triggerDigit = digitsNewestFirst.length > 1 ? digitsNewestFirst[1] : null;
+        const confirmationDigit = digitsNewestFirst.length ? digitsNewestFirst[0] : null;
         const confirmed = triggerDigit !== null && confirmationDigit !== null &&
             leastTriggerDigits.includes(triggerDigit) &&
-            confirmationDigit >= 4 && confirmationDigit <= 9;
+            (config.side === 'OVER'
+                ? confirmationDigit >= 4 && confirmationDigit <= 9
+                : confirmationDigit >= 0 && confirmationDigit <= 5);
 
         let reason: string;
         if (!sufficientData) reason = `Need at least ${minSample} historical ticks.`;
@@ -127,9 +130,10 @@ export function evaluateOverUnder(digitsNewestFirst: number[], minSample = 100):
         else if (!trendDecreasing) reason = `Digits ${config.low.join(', ')} are not all decreasing across the last two tick windows.`;
         else if (high.length < 2 || !highBars) reason = `Need two ${config.strong.join(', ')} digits at 11% or higher (blue and green scanner bars).`;
         else if (!lowBar) reason = 'Missing a red or yellow low-frequency scanner bar.';
-        else if (config.side === 'UNDER') reason = 'Under frequency filters matched. No Under entry timing rule was supplied.';
-        else if (confirmed) reason = 'Historical trigger pattern seen. Wait for fresh live confirmation.';
-        else reason = 'Over frequency filters matched. Waiting for the least of digits 1, 2, 3, then 4–9 on the next live tick.';
+        else if (confirmed) reason = 'Historical two-tick pattern observed. This does not confirm a live entry.';
+        else reason = config.side === 'OVER'
+            ? 'Over frequency filters met. Waiting for least digit 1/2/3, then 4–9 on the following live tick.'
+            : 'Under frequency filters met. Waiting for least digit 6/7/8, then 0–5 on the following live tick.';
 
         return {
             side: config.side,
