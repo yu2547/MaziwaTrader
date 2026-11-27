@@ -67,6 +67,15 @@ function hasWorkspaceGuard(): boolean {
         return false;
     }
 }
+// Blockly may restore the scanner template after a browser refresh. Keep
+// its purchases blocked until the user launches a fresh qualified scan.
+if (hasWorkspaceGuard()) {
+    scannerSession$.next({
+        ...empty,
+        message: 'AI Scanner workspace restored. Rescan and launch from the AI orb before attempting trades.',
+        status: 'stopped',
+    });
+}
 let controlled = false;
 let scannerFeedAcquired = false;
 let subscribed: (() => void) | null = null;
