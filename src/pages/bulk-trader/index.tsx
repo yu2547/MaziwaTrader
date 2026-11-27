@@ -133,7 +133,7 @@ const NumberField = ({
 
 const BulkTraderPage = observer(() => {
     const { feed, isConnected } = usePublicMarketFeed();
-    const { oauth_session, client } = useStore() ?? {};
+    const { oauth_session, client, run_panel } = useStore() ?? {};
     const { localize } = useTranslations();
     const trade = useManualTrade();
 
@@ -351,7 +351,7 @@ const BulkTraderPage = observer(() => {
     const currency = oauth_session?.currency || (is_logged_in && (client?.currency as string)) || 'USD';
 
     return (
-        <div className='mw-bulk-trader'>
+        <div className={`mw-bulk-trader ${run_panel?.is_drawer_open ? 'mw-bulk-trader--drawer-open' : ''}`}>
             <div className='mw-bulk-trader__main'>
                 <div className='mw-bulk-trader__row'>
                     <label className='mw-bulk-trader__select'>
