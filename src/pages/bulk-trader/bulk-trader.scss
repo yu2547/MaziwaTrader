@@ -6,8 +6,12 @@
     padding: 1.6rem;
     min-height: 100%;
 
+    // Preserve usable chart width when the Transactions drawer is closed.
+    // Only reserve the 366px drawer when it is actually open.
     @media (width >= 1101px) {
-        padding-inline-end: 38rem;
+        &--drawer-open {
+            padding-inline-end: 38rem;
+        }
     }
 
     &__main {
@@ -361,5 +365,112 @@
     // shortened rather than removed.
     .mw-bulk-trader__gauge-fill {
         transition-duration: 0.15s;
+    }
+}
+
+
+// Compact, clean Bulk Trader layout matching the reference: shallow inputs,
+// small evenly spaced digit dials and full-width red/teal action bars.
+.mw-bulk-trader {
+    padding: 1.2rem 1.8rem 2.4rem;
+
+    &__main {
+        gap: 1rem;
+    }
+
+    &__row {
+        gap: 1.2rem;
+    }
+
+    &__select,
+    &__field {
+        gap: 0.25rem;
+
+        select,
+        input {
+            min-height: 3.7rem;
+            padding: 0.65rem 1rem;
+            border: 1px solid #a2a8af;
+            border-radius: 3px;
+            background: #f3f4f5;
+            font-size: 1.4rem;
+            font-weight: 650;
+        }
+
+        > span,
+        &-label {
+            font-size: 1.05rem;
+            letter-spacing: 0.055em;
+        }
+    }
+
+    &__current-tick {
+        padding-top: 0.1rem;
+        gap: 0;
+    }
+
+    &__current-tick-value {
+        font-size: clamp(2.6rem, 2.5vw, 3.4rem);
+        line-height: 1.05;
+        color: #377cfb;
+    }
+
+    &__gauges {
+        gap: 0.3rem;
+    }
+
+    &__gauge-svg {
+        max-width: 8.2rem;
+    }
+
+    &__history {
+        margin-top: 0.8rem;
+        gap: 0.4rem;
+    }
+
+    &__history-chip {
+        width: 2.5rem;
+        height: 2.5rem;
+    }
+
+    &__actions {
+        gap: 1.2rem;
+    }
+
+    &__action {
+        border-radius: 4px;
+
+        &--left {
+            background: #4dafa9;
+        }
+
+        &--right {
+            background: #ef4042;
+        }
+    }
+
+    &__action-label,
+    &__action-pct {
+        padding: 0.75rem 1rem;
+        font-size: 1.4rem;
+        text-align: center;
+    }
+
+    &__risk {
+        font-size: 1.2rem;
+        line-height: 1.5;
+    }
+
+    @media (width <= 600px) {
+        padding: 1.1rem 1.2rem 10rem;
+
+        &__gauges {
+            gap: 0.45rem;
+        }
+
+        &__row,
+        &__actions {
+            gap: 1rem;
+        }
     }
 }
