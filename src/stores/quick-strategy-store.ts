@@ -229,6 +229,22 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
             // Purchase block buying CALL regardless of scan outcome.
             // Match the actual purchase choice to the selected scanner side.
             const selectedContract = data.type === 'DIGITUNDER' ? 'DIGITUNDER' : 'DIGITOVER';
+            // The underlying XML was copied from a Rise/Fall Martingale bot.
+            // Force all dependent dropdowns to Digits > Over/Under BEFORE
+            // import. The generic categories resolver does not reliably reset
+            // these when a nested, dynamic Blockly dropdown is constructed.
+            const setScannerField = (blockType: string, fieldName: string, value: string) => {
+                const field = strategy_dom.querySelector(
+                    `block[type="${blockType}"] > field[name="${fieldName}"]`
+                );
+                if (!field) throw new Error(`AI Scanner XML is missing ${blockType}/${fieldName}`);
+                field.textContent = value;
+            };
+            setScannerField('trade_definition_tradetype', 'TRADETYPECAT_LIST', 'digits');
+            setScannerField('trade_definition_tradetype', 'TRADETYPE_LIST', 'overunder');
+            // One specific contract type rather than 'both' means one
+            // pricing path, not two redundant opposite-side proposals.
+            setScannerField('trade_definition_contracttype', 'TYPE_LIST', selectedContract);
             const purchaseField = strategy_dom.querySelector(
                 'block[type="before_purchase"] block[type="purchase"] field[name="PURCHASE_LIST"]'
             );
@@ -286,6 +302,32 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
             const definitions = workspace.getBlocksByType('trade_definition', false);
             if (!definitions?.length) {
                 throw new Error('AI Scanner bot could not create Trade Parameters. Retry loading the strategy.');
+            }
+            // Validate the actual restored Blockly workspace, not just its XML.
+            // A dropdown may reject the digit category and silently revert
+            // to the prior Rise/Fall value during import.
+            const tradeTypeBlock = workspace.getBlocksByType('trade_definition_tradetype', false)[0];
+            const contractTypeBlock = workspace.getBlocksByType('trade_definition_contracttype', false)[0];
+            const marketBlock = workspace.getBlocksByType('trade_definition_market', false)[0];
+            const purchaseBlock = workspace.getBlocksByType('purchase', false)[0];
+            const expectedContract = data.type === 'DIGITUNDER' ? 'DIGITUNDER' : 'DIGITOVER';
+            const actual = {
+                category: tradeTypeBlock?.getFieldValue('TRADETYPECAT_LIST'),
+                tradeType: tradeTypeBlock?.getFieldValue('TRADETYPE_LIST'),
+                contractType: contractTypeBlock?.getFieldValue('TYPE_LIST'),
+                symbol: marketBlock?.getFieldValue('SYMBOL_LIST'),
+                purchase: purchaseBlock?.getFieldValue('PURCHASE_LIST'),
+            };
+            if (
+                actual.category !== 'digits' ||
+                actual.tradeType !== 'overunder' ||
+                actual.contractType !== expectedContract ||
+                actual.symbol !== data.symbol ||
+                actual.purchase !== expectedContract
+            ) {
+                throw new Error(
+                    `Scanner bot mismatch: expected Digits/Over-Under/${expectedContract} ${data.symbol}, got ${JSON.stringify(actual)}. Run was blocked.`
+                );
             }
             await this.root_store.run_panel.onRunButtonClick();
             if (!this.root_store.run_panel.is_running) {
