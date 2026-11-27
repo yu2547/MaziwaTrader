@@ -556,48 +556,60 @@ const EntryScanner = observer(
          * has been provided. The shared engine enforces max stake/stop loss.
          */
         const launchBot = async () => {
-            if (!best?.strategy || !quick_strategy || run_panel?.is_running) return;
-            if (best.strategy.side === 'UNDER') {
-                setIsError(true);
-                setStatus(localize(
-                    'Under {{prediction}} qualified historically, but the Under entry-point trigger was not supplied. Automatic Under trades are blocked.',
-                    { prediction: best.strategy.prediction }
-                ));
+            if (launchInProgress.current) return;
+            setLaunchError('');
+            if (!best?.strategy || !quick_strategy) {
+                setLaunchError(localize('No qualifying scanner result or strategy loader is available. Scan again.'));
+                return;
+            }
+            if (run_panel?.is_running) {
+                setLaunchError(localize('A bot is already running. Stop it before launching a new scanner session.'));
                 return;
             }
             if (!Number.isFinite(params.stake) || params.stake <= 0 ||
                 !Number.isFinite(params.max_stake) || params.max_stake < params.stake ||
                 !Number.isFinite(params.stop_loss) || params.stop_loss < params.stake ||
                 !Number.isInteger(params.wins) || params.wins < 1) {
-                setIsError(true);
-                setStatus(localize('Enter valid stake, maximum stake, stop loss, and win limit before launching.'));
+                setLaunchError(localize('Check stake, maximum stake, stop loss, and number of wins. All must be valid.'));
                 return;
             }
+            launchInProgress.current = true;
+            setIsLaunching(true);
             try {
+                // The scanner can monitor an Under result, but cannot invent
+                // an Under purchase trigger. In this mode, it never loads a
+                // trading bot or requests a purchase.
+                if (best.strategy.side === 'UNDER') {
+                    armScannerSession({
+                        market: best.name, symbol: best.symbol,
+                        side: best.strategy.side, prediction: best.strategy.prediction,
+                        digits: best.historyDigits, stake: params.stake,
+                        maxStake: params.max_stake, stopLoss: params.stop_loss,
+                        maxWins: params.wins,
+                    });
+                    setShowParams(false);
+                    onClose();
+                    return;
+                }
+
                 const availableContracts = await feed.getContractsFor(best.symbol);
                 if (!allowsSide(availableContracts, best.strategy.side)) {
-                    setIsError(true);
-                    setStatus(localize('Digit {{side}} contracts are not offered on {{market}}.', {
-                        side: best.strategy.side,
+                    setLaunchError(localize('Digit Over contracts are not offered for {{market}}. Select a different scan result.', {
                         market: best.name,
                     }));
                     return;
                 }
+                if (!is_live.current) return;
 
-                // Arm before RUN: quick-strategy may start the engine as soon as
-                // Blockly creates the trade definition block.
+                // Armed BEFORE the RUN action. Even a premature Blockly
+                // purchase must pass the live-entry permission at the engine.
                 armScannerSession({
-                    market: best.name,
-                    symbol: best.symbol,
-                    side: best.strategy.side,
-                    prediction: best.strategy.prediction,
-                    digits: best.historyDigits,
-                    stake: params.stake,
-                    maxStake: params.max_stake,
-                    stopLoss: params.stop_loss,
+                    market: best.name, symbol: best.symbol,
+                    side: best.strategy.side, prediction: best.strategy.prediction,
+                    digits: best.historyDigits, stake: params.stake,
+                    maxStake: params.max_stake, stopLoss: params.stop_loss,
                     maxWins: params.wins,
                 });
-
                 startTransition(() => {
                     navigate('/');
                     dashboard?.setActiveTab(DBOT_TABS.BOT_BUILDER);
@@ -606,33 +618,31 @@ const EntryScanner = observer(
                     scanner_strategy: true,
                     symbol: best.symbol,
                     tradetype: 'overunder',
-                    type: best.strategy.side === 'OVER' ? 'DIGITOVER' : 'DIGITUNDER',
+                    type: 'DIGITOVER',
                     last_digit_prediction: best.strategy.prediction,
                     stake: params.stake,
                     size: params.use_martingale ? params.martingale : 1,
                     max_stake: params.max_stake,
                     boolean_max_stake: true,
                     loss: params.stop_loss,
-                    // Live session enforces the win limit; the XML requires
-                    // a profit parameter but does not encode Number of Wins.
                     profit: 1000000,
                     duration: 1,
                     durationtype: 't',
                     unit: 't',
                     action: 'RUN',
                 });
+                if (!is_live.current) return;
                 setShowParams(false);
                 onClose();
             } catch (error) {
-                // A partially loaded scanner workspace must stay locked.
-                // If the bot started before the loader failed, stop it first.
-                blockScannerSession('Scanner bot failed to launch; all purchases blocked.');
+                blockScannerSession('AI Scanner launch failed; purchases remain blocked.');
                 if (run_panel?.is_running) run_panel.onStopButtonClick();
-                setIsError(true);
-                setStatus(localize('Could not launch scanner-only bot: {{reason}}', {
-                    reason: error instanceof Error ? error.message : String(error),
-                }));
-                console.error('[MW-Scanner] Scanner bot launch failed:', error);
+                const reason = error instanceof Error ? error.message : String(error);
+                setLaunchError(localize('Unable to launch the AI Scanner: {{reason}}', { reason }));
+                console.error('[MW-Scanner] Launch failed', error);
+            } finally {
+                launchInProgress.current = false;
+                if (is_live.current) setIsLaunching(false);
             }
         };
 
@@ -974,9 +984,22 @@ const EntryScanner = observer(
 
                             <p className='mw-scanner__note'>
                                 {localize(
-                                    'Launch starts the AI Scanner bot with the selected market, prediction and one-tick live entry condition. It waits for a fresh qualifying Over signal before buying. The scanner session tracks the win limit, maximum stake and stop loss; it blocks Under purchases until an Under entry trigger is defined. Trading can lose money.'
+                                    'For Over, Launch Bot loads the scanner-only strategy and starts watching the one-tick live entry sequence before allowing a purchase. Under mode is monitoring-only because its live entry trigger has not been defined. Historical scan results do not guarantee trades or profit.'
                                 )}
                             </p>
+
+                            {best?.strategy.side === 'UNDER' && (
+                                <div className='mw-scanner__params-info' role='status'>
+                                    {localize('Under {{prediction}} meets the historical filters. The live Under entry trigger has not been specified, so Start Monitoring tracks this market without placing trades.', {
+                                        prediction: best.strategy.prediction,
+                                    })}
+                                </div>
+                            )}
+                            {launch_error && (
+                                <div className='mw-scanner__params-error' role='alert'>
+                                    {launch_error}
+                                </div>
+                            )}
 
                             <div className='mw-scanner__params-actions'>
                                 <button type='button' onClick={() => setShowParams(false)}>
@@ -986,9 +1009,13 @@ const EntryScanner = observer(
                                     type='button'
                                     className='mw-scanner__params-launch'
                                     onClick={launchBot}
-                                    disabled={run_panel?.is_running}
+                                    disabled={is_launching || run_panel?.is_running}
                                 >
-                                    {localize('Launch Bot')}
+                                    {is_launching
+                                        ? localize('Starting…')
+                                        : best?.strategy.side === 'UNDER'
+                                            ? localize('Start Monitoring')
+                                            : localize('Launch Bot')}
                                 </button>
                             </div>
                         </div>
