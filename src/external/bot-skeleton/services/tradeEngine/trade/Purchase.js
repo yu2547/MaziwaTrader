@@ -1,4 +1,5 @@
 import { localize } from '@deriv-com/translations';
+import { consumeScannerEntryPermission, scannerIsControlling } from '@/utils/market-data/scanner-entry-session';
 import { config } from '../../../constants/config';
 import { LogTypes, MessageTypes } from '../../../constants/messages';
 import { observer as globalObserver } from '../../../utils/observer';
@@ -36,6 +37,18 @@ export default Engine =>
             // simply never buys again until it is stopped.
             if (!canPurchase()) {
                 return Promise.resolve();
+            }
+
+            // Scanner-launched bots are different from ordinary builder bots.
+            // This is enforced at the final shared purchase boundary, including
+            // all Martingale recovery purchases, so the existing Blockly
+            // purchase block cannot bypass the live scanner's entry sequence.
+            // The selected symbol, side, stake and fresh tick are all checked.
+            if (scannerIsControlling()) {
+                const { symbol, amount } = this.tradeOptions ?? {};
+                if (!consumeScannerEntryPermission(symbol, contract_type, Number(amount))) {
+                    return Promise.resolve();
+                }
             }
 
             // Virtual Hook: while it is watching, this contract is scored on
