@@ -134,23 +134,20 @@ function onTick(tick: TTick) {
         });
         return;
     }
-    if (current.side === 'UNDER') {
-        trigger = null;
-        publish({
-            lastDigit: digit, percentages: match.percentages, status: 'waiting',
-            message: 'Under distribution qualifies; no Under entry-point timing rule has been provided. Live purchases blocked.',
-        });
-        return;
-    }
-    // Confirmation is ONLY on the tick immediately following the least
-    // frequent of digits 1, 2, 3.
-    if (trigger !== null && digit >= 4 && digit <= 9) {
+    // The selected prediction's low-frequency trigger must be followed
+    // IMMEDIATELY by a digit in the majority group on the next live tick.
+    // Under is a mirrored entry pattern, not evidence that the video exposes
+    // an identical hidden rule. Never buy on scan completion alone.
+    const isConfirmation = current.side === 'OVER'
+        ? digit >= 4 && digit <= 9
+        : digit >= 0 && digit <= 5;
+    if (trigger !== null && isConfirmation) {
         entryPermission = true;
         permissionTimestamp = Date.now();
         publish({
             lastDigit: digit, percentages: match.percentages, status: 'confirmed',
             triggerDigit: trigger, confirmationDigit: digit,
-            message: `Over ${current.prediction} live entry: ${trigger} → ${digit}. Bot may purchase once on this tick.`,
+            message: `${current.side} ${current.prediction} entry confirmed: ${trigger} → ${digit}. Trading engine may purchase once on this tick.`,
         });
         trigger = null;
         return;
@@ -161,8 +158,10 @@ function onTick(tick: TTick) {
         triggerDigit: trigger, confirmationDigit: null,
         status: trigger === null ? 'waiting' : 'trigger',
         message: trigger === null
-            ? 'Live filters qualify. Waiting for least-frequent digit 1, 2 or 3.'
-            : `Digit ${trigger} detected. The very next tick must be 4–9.`,
+            ? current.side === 'OVER'
+                ? 'Over filters qualify. Waiting for least-frequent digit 1, 2 or 3.'
+                : 'Under filters qualify. Waiting for least-frequent digit 6, 7 or 8.'
+            : `Digit ${trigger} detected. Next tick must be ${current.side === 'OVER' ? '4–9' : '0–5'}.`,
     });
 }
 
@@ -188,8 +187,8 @@ export function armScannerSession(options: TArmOptions) {
         stake: options.stake, maxStake: options.maxStake,
         stopLoss: options.stopLoss, maxWins: options.maxWins,
         message: options.side === 'OVER'
-            ? 'Scanner bot armed. Waiting for live qualifying ticks; no purchase yet.'
-            : 'Under conditions detected, but Under live entry timing is unspecified; purchases disabled.',
+            ? 'Scanner bot running. Waiting for digits 1/2/3 followed by 4–9 on the next live tick.'
+            : 'Scanner bot running. Waiting for digits 6/7/8 followed by 0–5 on the next live tick.',
         status: 'waiting',
     });
     public_market_feed.acquire();
