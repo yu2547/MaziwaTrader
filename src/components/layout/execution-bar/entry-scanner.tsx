@@ -575,22 +575,6 @@ const EntryScanner = observer(
             launchInProgress.current = true;
             setIsLaunching(true);
             try {
-                // The scanner can monitor an Under result, but cannot invent
-                // an Under purchase trigger. In this mode, it never loads a
-                // trading bot or requests a purchase.
-                if (best.strategy.side === 'UNDER') {
-                    armScannerSession({
-                        market: best.name, symbol: best.symbol,
-                        side: best.strategy.side, prediction: best.strategy.prediction,
-                        digits: best.historyDigits, stake: params.stake,
-                        maxStake: params.max_stake, stopLoss: params.stop_loss,
-                        maxWins: params.wins,
-                    });
-                    setShowParams(false);
-                    onClose();
-                    return;
-                }
-
                 // The selected index already came from the live market list
                 // and qualified against its actual tick history. A separate
                 // contracts_for request on the PUBLIC market-data socket could
@@ -618,7 +602,7 @@ const EntryScanner = observer(
                     scanner_strategy: true,
                     symbol: best.symbol,
                     tradetype: 'overunder',
-                    type: 'DIGITOVER',
+                    type: best.strategy.side === 'UNDER' ? 'DIGITUNDER' : 'DIGITOVER',
                     last_digit_prediction: best.strategy.prediction,
                     stake: params.stake,
                     size: params.use_martingale ? params.martingale : 1,
@@ -960,17 +944,10 @@ const EntryScanner = observer(
                                     />
                                 </label>
                                 <p className='mw-scanner__note'>
-                                    {localize('The loaded bot waits for the exact qualifying live entry sequence. Under contracts are monitor-only until an entry rule is supplied. No strategy guarantees a profit.')}
+                                    {localize('Launch loads the selected AI Scanner bot and starts Run. Over waits for a 1/2/3 then 4–9 tick sequence. Under uses the mirrored 6/7/8 then 0–5 tick sequence (an implementation assumption, not visible source code from the reference video). Contracts are only submitted after a live confirmation. Demo-test first; no profit is guaranteed.')}
                                 </p>
                             </details>
 
-                            {best?.strategy.side === 'UNDER' && (
-                                <div className='mw-scanner__params-info' role='status'>
-                                    {localize('Under {{prediction}} meets the historical filters. The live Under entry trigger has not been specified, so Start Monitoring tracks this market without placing trades.', {
-                                        prediction: best.strategy.prediction,
-                                    })}
-                                </div>
-                            )}
                             {launch_error && (
                                 <div className='mw-scanner__params-error' role='alert'>
                                     {launch_error}
@@ -989,9 +966,7 @@ const EntryScanner = observer(
                                 >
                                     {is_launching
                                         ? localize('Starting…')
-                                        : best?.strategy.side === 'UNDER'
-                                            ? localize('Start Monitoring')
-                                            : localize('Launch Bot')}
+                                        : localize('Launch Bot')}
                                 </button>
                             </div>
                         </div>
