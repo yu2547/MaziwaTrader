@@ -1,4 +1,5 @@
 import { getRoundedNumber } from '@/components/shared';
+import { recordScannerSettlement } from '@/utils/market-data/scanner-entry-session';
 import { localize } from '@deriv-com/translations';
 import { config } from '../../../constants/config';
 import { MessageTypes } from '../../../constants/messages';
@@ -75,6 +76,12 @@ export default Engine =>
                 this.stopContractWatchdog();
                 clearTimeout(this.transaction_recovery_timeout);
                 this.updateTotals(contract);
+                // Only a settled, real contract changes scanner wins and net
+                // profit. The resulting stop decision is enforced by the
+                // scanner gate immediately, before any follow-up purchase.
+                const scannerMustStop = recordScannerSettlement(
+                    Number(contract.profit), Number(contract.profit) > 0
+                );
 
                 // Real results are what let Virtual Hook go back to watching.
                 // Counted here rather than at purchase, because only a settled
@@ -98,6 +105,11 @@ export default Engine =>
                 }
 
                 this.store.dispatch(sell());
+                if (scannerMustStop) {
+                    // Let the normal settlement/transaction updates finish,
+                    // then stop the running bot through its existing handler.
+                    setTimeout(() => globalObserver.emit('bot.click_stop'), 0);
+                }
             } else {
                 this.store.dispatch(openContractReceived());
             }
