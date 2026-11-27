@@ -9,6 +9,7 @@ import './bulk-trader.scss';
 
 const DEFAULT_SYMBOL = 'R_100';
 const MAX_TICK_HISTORY = 1000;
+const MAX_BATCH_TRADES = 250;
 
 /**
  * Each trade type is two opposing contracts, which is exactly the pair of
@@ -142,6 +143,8 @@ const BulkTraderPage = observer(() => {
     const [sample_size, setSampleSize] = useState(1000);
     const [barrier, setBarrier] = useState(5);
     const [digits, setDigits] = useState<number[]>([]);
+    // Rise/Fall is derived from full quotes, not the quote's last digit.
+    const [quotes, setQuotes] = useState<number[]>([]);
     const [last_tick, setLastTick] = useState<TTick | null>(null);
 
     const [stake, setStake] = useState(0.5);
@@ -171,6 +174,7 @@ const BulkTraderPage = observer(() => {
     useEffect(() => {
         if (!isConnected) return undefined;
         setDigits([]);
+        setQuotes([]);
         setLastTick(null);
 
         // The percentages have to describe the window the page says it is
@@ -191,6 +195,7 @@ const BulkTraderPage = observer(() => {
                 // ticks_history returns oldest-first; digits[] is newest-first.
                 const seeded = prices.map(price => getLastDigit(price, history_decimals)).reverse();
                 setDigits(prev => [...prev, ...seeded].slice(0, MAX_TICK_HISTORY));
+                setQuotes(prev => [...prev, ...prices.slice().reverse()].slice(0, MAX_TICK_HISTORY));
             })
             .catch(() => {
                 // Non-fatal: the sample still fills from live ticks, it just
@@ -203,6 +208,7 @@ const BulkTraderPage = observer(() => {
                 toDecimalPlaces(tick.pip_size) ?? toDecimalPlaces(selected_symbol_info?.pip_size) ?? 2;
             const digit = getLastDigit(tick.quote, tick_decimals);
             setDigits(prev => [digit, ...prev].slice(0, MAX_TICK_HISTORY));
+            setQuotes(prev => [tick.quote, ...prev].slice(0, MAX_TICK_HISTORY));
         });
 
         return () => {
@@ -213,6 +219,7 @@ const BulkTraderPage = observer(() => {
     }, [isConnected, feed, selected_symbol]);
 
     const sample = useMemo(() => digits.slice(0, sample_size), [digits, sample_size]);
+    const price_sample = useMemo(() => quotes.slice(0, sample_size), [quotes, sample_size]);
 
     const digit_percentages = useMemo(() => {
         const counts = new Array(10).fill(0);
@@ -241,18 +248,26 @@ const BulkTraderPage = observer(() => {
     }, [digit_percentages, sample.length]);
 
     const rise_fall_stats = useMemo(() => {
-        if (sample.length < 2) return { rise_pct: 0, fall_pct: 0 };
+        if (price_sample.length < 2) return { rise_pct: 0, fall_pct: 0 };
         let rises = 0;
         let falls = 0;
-        // digits[] is newest-first, so compare each entry to the one after it
-        // (its chronological predecessor) to classify the tick-over-tick move.
-        for (let i = 0; i < sample.length - 1; i += 1) {
-            if (sample[i] > sample[i + 1]) rises += 1;
-            else if (sample[i] < sample[i + 1]) falls += 1;
+        // Newest-first quotes; compare each with its chronological predecessor.
+        for (let i = 0; i < price_sample.length - 1; i += 1) {
+            if (price_sample[i] > price_sample[i + 1]) rises += 1;
+            else if (price_sample[i] < price_sample[i + 1]) falls += 1;
         }
         const total = rises + falls || 1;
         return { rise_pct: (rises / total) * 100, fall_pct: (falls / total) * 100 };
-    }, [sample]);
+    }, [price_sample]);
+
+    const recent_directions = useMemo(() => {
+        const directions: ('R' | 'F' | '—')[] = [];
+        for (let i = 0; i < Math.min(8, price_sample.length - 1); i += 1) {
+            const delta = price_sample[i] - price_sample[i + 1];
+            directions.push(delta > 0 ? 'R' : delta < 0 ? 'F' : '—');
+        }
+        return directions;
+    }, [price_sample]);
 
     // The percentage printed inside each action button: how often that side
     // has won over the current sample. Rise/Fall is measured tick-over-tick,
@@ -283,6 +298,7 @@ const BulkTraderPage = observer(() => {
     const config = TRADE_TYPES[trade_type];
     const is_logged_in = Boolean(oauth_session?.is_authenticated || client?.is_logged_in);
     const total_risk = stake * trades_per_click;
+    const valid_amounts = Number.isFinite(stake) && stake > 0 && Number.isInteger(trades_per_click) && trades_per_click >= 1 && trades_per_click <= MAX_BATCH_TRADES && Number.isInteger(duration_ticks) && duration_ticks >= 1 && duration_ticks <= 10;
 
     // Every contract in the batch goes out together, so all of them price off
     // the same moment in the market. Placing them one after another meant the
@@ -293,6 +309,8 @@ const BulkTraderPage = observer(() => {
     // actually opened is reported back rather than assumed, because a batch
     // large enough to be throttled will land short and the difference matters.
     const placeSide = async (contract_type: string) => {
+        if (!valid_amounts || trade.is_placing) return;
+        setLastBatch(null);
         const requested = trades_per_click;
         const opened = await trade.placeTrades(
             {
@@ -380,17 +398,22 @@ const BulkTraderPage = observer(() => {
                     ))}
                 </div>
 
-                {recent_digits.length > 0 && (
-                    <div className='mw-bulk-trader__history'>
-                        {recent_digits.map((digit, index) => (
-                            <span
-                                key={index}
-                                className={`mw-bulk-trader__history-chip ${digit % 2 === 0 ? 'mw-bulk-trader__history-chip--even' : 'mw-bulk-trader__history-chip--odd'}`}
-                            >
-                                {digit % 2 === 0 ? 'E' : 'O'}
-                            </span>
+                {trade_type === 'Rise/Fall' ? (
+                    <div className='mw-bulk-trader__history' aria-label={localize('Recent Rise/Fall ticks')}>
+                        {recent_directions.map((direction, index) => (
+                            <span key={index} className={`mw-bulk-trader__history-chip ${direction === 'R' ? 'mw-bulk-trader__history-chip--rise' : direction === 'F' ? 'mw-bulk-trader__history-chip--fall' : 'mw-bulk-trader__history-chip--flat'}`}>{direction}</span>
                         ))}
                     </div>
+                ) : (
+                    recent_digits.length > 0 && (
+                        <div className='mw-bulk-trader__history'>
+                            {recent_digits.map((digit, index) => (
+                                <span key={index} className={`mw-bulk-trader__history-chip ${digit % 2 === 0 ? 'mw-bulk-trader__history-chip--even' : 'mw-bulk-trader__history-chip--odd'}`}>
+                                    {digit % 2 === 0 ? 'E' : 'O'}
+                                </span>
+                            ))}
+                        </div>
+                    )
                 )}
 
                 <div className='mw-bulk-trader__row mw-bulk-trader__row--three'>
@@ -405,8 +428,9 @@ const BulkTraderPage = observer(() => {
                     <NumberField
                         label={localize('Trades per click')}
                         value={trades_per_click}
-                        onChange={value => setTradesPerClick(Math.max(1, value))}
+                        onChange={value => setTradesPerClick(Math.min(MAX_BATCH_TRADES, Math.max(1, Math.floor(value))))}
                         min={1}
+                        max={MAX_BATCH_TRADES}
                     />
                 </div>
 
@@ -415,7 +439,7 @@ const BulkTraderPage = observer(() => {
                         type='button'
                         className='mw-bulk-trader__action mw-bulk-trader__action--left'
                         onClick={() => placeSide(config.left)}
-                        disabled={!is_logged_in || trade.is_placing}
+                        disabled={!is_logged_in || trade.is_placing || !valid_amounts}
                     >
                         <span className='mw-bulk-trader__action-label'>{localize(config.left_label)}</span>
                         <span className='mw-bulk-trader__action-pct'>{side_percentages.left.toFixed(2)}%</span>
@@ -424,7 +448,7 @@ const BulkTraderPage = observer(() => {
                         type='button'
                         className='mw-bulk-trader__action mw-bulk-trader__action--right'
                         onClick={() => placeSide(config.right)}
-                        disabled={!is_logged_in || trade.is_placing}
+                        disabled={!is_logged_in || trade.is_placing || !valid_amounts}
                     >
                         <span className='mw-bulk-trader__action-label'>{localize(config.right_label)}</span>
                         <span className='mw-bulk-trader__action-pct'>{side_percentages.right.toFixed(2)}%</span>
@@ -440,6 +464,15 @@ const BulkTraderPage = observer(() => {
                               stake: stake.toFixed(2),
                           })
                         : localize('Log in to place trades. The statistics above are live either way.')}
+                    {trade.batch_progress && trade.is_placing && (
+                        <span className='mw-bulk-trader__progress'>
+                            {` ${localize('Batch progress: {{attempted}} / {{requested}} processed; {{opened}} confirmed.', {
+                                attempted: trade.batch_progress.attempted,
+                                requested: trade.batch_progress.requested,
+                                opened: trade.batch_progress.opened,
+                            })}`}
+                        </span>
+                    )}
                     {trade.pending_count > 0 &&
                         ` ${localize('{{count}} still running.', { count: trade.pending_count })}`}
                     {last_batch && last_batch.opened < last_batch.requested && (
@@ -452,7 +485,11 @@ const BulkTraderPage = observer(() => {
                     )}
                 </div>
 
+                {!valid_amounts && <div className='mw-bulk-trader__error'>{localize('Enter a valid stake, 1–10 duration ticks and 1–250 whole-number trades per click.')}</div>}
                 {trade.error_message && <div className='mw-bulk-trader__error'>{trade.error_message}</div>}
+                <p className='mw-bulk-trader__caution'>
+                    {localize('Bulk orders use controlled request groups to reduce rate-limit errors. Markets and allowed durations depend on Deriv. Orders are not guaranteed to execute on the same tick. Demo-test first; all purchases spend actual account funds.')}
+                </p>
             </div>
         </div>
     );
