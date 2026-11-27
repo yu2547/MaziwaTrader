@@ -117,7 +117,17 @@ window.Blockly.Blocks.purchase = {
 };
 
 window.Blockly.JavaScript.javascriptGenerator.forBlock.purchase = block => {
-    const purchaseList = block.getFieldValue('PURCHASE_LIST');
+    // A scanner bot is locked to the scan's contract side. Blockly may
+    // rebuild its dropdowns while importing or changing markets; do not let
+    // those transient defaults compile a CALL/PUT purchase. The final trade
+    // engine independently verifies the selected market and fresh entry.
+    const scanner = scannerSession$.getValue();
+    const purchaseList =
+        scannerIsControlling() && scanner.symbol
+            ? scanner.side === 'UNDER'
+                ? 'DIGITUNDER'
+                : 'DIGITOVER'
+            : block.getFieldValue('PURCHASE_LIST');
 
     const code = `Bot.purchase('${purchaseList}');\n`;
     return code;
