@@ -6,7 +6,7 @@ import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
 import { useStore } from '@/hooks/useStore';
 import { getLastDigit, toDecimalPlaces } from '@/utils/market-data/last-digit';
 import type { TActiveSymbol } from '@/utils/market-data/public-market-feed';
-import { armScannerSession, resetScannerSession } from '@/utils/market-data/scanner-entry-session';
+import { armScannerSession, blockScannerSession } from '@/utils/market-data/scanner-entry-session';
 import { allowsSide, evaluateOverUnder, type TStrategyMatch } from '@/utils/market-data/over-under-strategy';
 import { useTranslations } from '@deriv-com/translations';
 
@@ -595,7 +595,10 @@ const EntryScanner = observer(
                 setShowParams(false);
                 onClose();
             } catch (error) {
-                resetScannerSession();
+                // A partially loaded scanner workspace must stay locked.
+                // If the bot started before the loader failed, stop it first.
+                blockScannerSession('Scanner bot failed to launch; all purchases blocked.');
+                if (run_panel?.is_running) run_panel.onStopButtonClick();
                 setIsError(true);
                 setStatus(localize('Could not launch scanner-only bot: {{reason}}', {
                     reason: error instanceof Error ? error.message : String(error),
