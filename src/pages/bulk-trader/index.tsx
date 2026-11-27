@@ -158,8 +158,10 @@ const BulkTraderPage = observer(() => {
         if (!isConnected) return;
         feed.getActiveSymbols()
             .then(list => {
-                const synthetics = list.filter(item => item.market === 'synthetic_index');
-                setSymbols(synthetics.length ? synthetics : list);
+                // List all available Deriv markets, including Crash/Boom and
+                // Jump, rather than silently hiding non-synthetic markets.
+                const available = list.filter(item => item.underlying_symbol && item.underlying_symbol_name);
+                setSymbols(available);
             })
             .catch(() => {
                 // Non-fatal: the selector just stays limited to the default symbol.
@@ -167,6 +169,27 @@ const BulkTraderPage = observer(() => {
     }, [isConnected, feed]);
 
     const selected_symbol_info = symbols.find(item => item.underlying_symbol === selected_symbol);
+    const grouped_symbols = useMemo(() => {
+        const groups = new Map<string, TActiveSymbol[]>();
+        symbols.forEach(item => {
+            const symbol = item.underlying_symbol;
+            const label = /^(?:BOOM|CRASH)/i.test(symbol) || /\b(?:Boom|Crash)\b/i.test(item.underlying_symbol_name)
+                ? 'Crash / Boom Indices'
+                : /^JD(?:10|25|50|75|100)$/.test(symbol)
+                    ? 'Jump Indices'
+                    : /^(?:R_\d+|1HZ\d+V)$/.test(symbol)
+                        ? 'Volatility Indices'
+                        : item.market === 'synthetic_index'
+                            ? 'Other Synthetic Indices'
+                            : item.market || 'Other Markets';
+            if (!groups.has(label)) groups.set(label, []);
+            groups.get(label)?.push(item);
+        });
+        return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([label, items]) => ({
+            label,
+            items: items.sort((a, b) => a.underlying_symbol_name.localeCompare(b.underlying_symbol_name, undefined, { numeric: true })),
+        }));
+    }, [symbols]);
     // The tick is the more trustworthy source - it is the message the quote
     // itself arrived on - so it wins over the symbol list.
     const decimals = toDecimalPlaces(last_tick?.pip_size) ?? toDecimalPlaces(selected_symbol_info?.pip_size) ?? 2;
@@ -340,10 +363,14 @@ const BulkTraderPage = observer(() => {
                         <span>{localize('Market')}</span>
                         <select value={selected_symbol} onChange={event => setSelectedSymbol(event.target.value)}>
                             {symbols.length === 0 && <option value={selected_symbol}>{selected_symbol}</option>}
-                            {symbols.map(item => (
-                                <option key={item.underlying_symbol} value={item.underlying_symbol}>
-                                    {item.underlying_symbol_name}
-                                </option>
+                            {grouped_symbols.map(group => (
+                                <optgroup key={group.label} label={group.label}>
+                                    {group.items.map(item => (
+                                        <option key={item.underlying_symbol} value={item.underlying_symbol}>
+                                            {item.underlying_symbol_name}
+                                        </option>
+                                    ))}
+                                </optgroup>
                             ))}
                         </select>
                     </label>
