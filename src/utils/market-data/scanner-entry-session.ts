@@ -45,6 +45,7 @@ type TArmOptions = {
     side: TSide;
     prediction: TPrediction;
     digits: number[]; // newest first, verified against Deriv's pip precision
+    entryDigit: number; // least frequent at time of selected scan
     stake: number;
     maxStake: number;
     stopLoss: number;
@@ -83,6 +84,7 @@ let digits: number[] = [];
 let historyLimit = 1000;
 let lastTickId: string | null = null;
 let trigger: number | null = null;
+let targetDigit: number | null = null;
 let entryPermission = false;
 let permissionTimestamp = 0;
 
@@ -104,6 +106,7 @@ export function resetScannerSession() {
     digits = [];
     lastTickId = null;
     trigger = null;
+    targetDigit = null;
     entryPermission = false;
     permissionTimestamp = 0;
     scannerSession$.next(empty);
@@ -140,7 +143,7 @@ function onTick(tick: TTick) {
     // an identical hidden rule. Never buy on scan completion alone.
     const isConfirmation = current.side === 'OVER'
         ? digit >= 4 && digit <= 9
-        : digit >= 0 && digit <= 5;
+        : digit >= 0 && digit <= 4;
     if (trigger !== null && isConfirmation) {
         entryPermission = true;
         permissionTimestamp = Date.now();
@@ -152,7 +155,8 @@ function onTick(tick: TTick) {
         trigger = null;
         return;
     }
-    trigger = match.leastTriggerDigits.includes(digit) ? digit : null;
+    // Keep the XML's fixed entry digit and live scanner in agreement.
+    trigger = digit === targetDigit && match.leastTriggerDigits.includes(digit) ? digit : null;
     publish({
         lastDigit: digit, percentages: match.percentages,
         triggerDigit: trigger, confirmationDigit: null,
@@ -160,8 +164,8 @@ function onTick(tick: TTick) {
         message: trigger === null
             ? current.side === 'OVER'
                 ? 'Over filters qualify. Waiting for least-frequent digit 1, 2 or 3.'
-                : 'Under filters qualify. Waiting for least-frequent digit 6, 7 or 8.'
-            : `Digit ${trigger} detected. Next tick must be ${current.side === 'OVER' ? '4–9' : '0–5'}.`,
+                : 'Under filters qualify. Waiting for the selected least-frequent digit 6, 7 or 8.'
+            : `Digit ${trigger} detected. Next tick must be ${current.side === 'OVER' ? '4–9' : '0–4'}.`,
     });
 }
 
@@ -171,13 +175,16 @@ export function armScannerSession(options: TArmOptions) {
     if (!Number.isFinite(options.stake) || options.stake <= 0 ||
         !Number.isFinite(options.stopLoss) || options.stopLoss <= 0 ||
         !Number.isFinite(options.maxStake) || options.maxStake < options.stake ||
-        !Number.isInteger(options.maxWins) || options.maxWins < 1) {
+        !Number.isInteger(options.maxWins) || options.maxWins < 1 ||
+        !Number.isInteger(options.entryDigit) ||
+        !(options.side === 'OVER' ? [1, 2, 3].includes(options.entryDigit) : [6, 7, 8].includes(options.entryDigit))) {
         throw new Error('Invalid scanner stake, stop-loss, max-stake or win-limit.');
     }
     resetScannerSession();
     controlled = true;
     markWorkspaceGuard(true);
     digits = [...options.digits];
+    targetDigit = options.entryDigit;
     historyLimit = Math.max(100, digits.length);
     scannerSession$.next({
         ...empty,
@@ -188,7 +195,7 @@ export function armScannerSession(options: TArmOptions) {
         stopLoss: options.stopLoss, maxWins: options.maxWins,
         message: options.side === 'OVER'
             ? 'Scanner bot running. Waiting for digits 1/2/3 followed by 4–9 on the next live tick.'
-            : 'Scanner bot running. Waiting for digits 6/7/8 followed by 0–5 on the next live tick.',
+            : 'Scanner bot running. Waiting for selected digit 6/7/8 followed by 0–4 on the next live tick.',
         status: 'waiting',
     });
     public_market_feed.acquire();
