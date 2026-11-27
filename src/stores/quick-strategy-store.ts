@@ -153,7 +153,12 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
             resetScannerSession();
         }
         const { contracts_for } = ApiHelpers?.instance ?? {};
-        if (!contracts_for) return;
+        if (!contracts_for) {
+            if (data.scanner_strategy === true) {
+                throw new Error('Deriv contract options have not loaded. Reconnect to Deriv and try Launch Bot again.');
+            }
+            return;
+        }
         const market = await contracts_for.getMarketBySymbol(data.symbol);
         const submarket = await contracts_for.getSubmarketBySymbol(data.symbol);
         const trade_type_cat = await contracts_for.getTradeTypeCategoryByTradeType(data.tradetype);
@@ -219,6 +224,9 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
         });
 
         const { derivWorkspace: workspace } = Blockly;
+        if (data.scanner_strategy === true && !workspace) {
+            throw new Error('Bot Builder workspace is not initialized. Open Bot Builder and try again.');
+        }
 
         if (action === 'RUN') {
             workspace
