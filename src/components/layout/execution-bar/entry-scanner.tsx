@@ -63,6 +63,16 @@ const MIN_DEPTH = 100;
 const MAX_DEPTH = 5000;
 const RECENT_WINDOW = 200;
 
+// The requested scan universe, ordered by preferred groups: 1-second
+// Volatility indices, regular Volatility indices, then Jump indices.
+// An index is scanned only when Deriv reports it as active.
+const SCAN_MARKETS = [
+    '1HZ100V', '1HZ75V', '1HZ50V', '1HZ30V',
+    '1HZ15V', '1HZ10V', '1HZ25V', '1HZ90V',
+    'R_100', 'R_50', 'R_75', 'R_25', 'R_10',
+    'JD10', 'JD25', 'JD50', 'JD75', 'JD100',
+] as const;
+
 type TResult = {
     symbol: string;
     name: string;
@@ -241,15 +251,22 @@ const EntryScanner = observer(
                         seen.add(item.underlying_symbol);
                         return true;
                     });
+                    const bySymbol = new Map(synthetics.map(item => [item.underlying_symbol, item]));
+                    const selected = SCAN_MARKETS
+                        .map(symbol => bySymbol.get(symbol))
+                        .filter((item): item is TActiveSymbol => Boolean(item));
+                    const missing = SCAN_MARKETS.filter(symbol => !bySymbol.has(symbol));
                     if (!is_live.current) return;
-                    setSymbols(synthetics);
-                    setIsError(synthetics.length === 0);
+                    setSymbols(selected);
+                    setIsError(selected.length === 0);
                     setStatus(
-                        synthetics.length
-                            ? localize('Found {{count}} synthetic markets. Jump markets are included when available.', {
-                                  count: synthetics.length,
+                        selected.length
+                            ? localize('Ready to scan {{found}} of {{requested}} requested markets.{{missing}}', {
+                                  found: selected.length,
+                                  requested: SCAN_MARKETS.length,
+                                  missing: missing.length ? ` Unavailable: ${missing.join(', ')}.` : '',
                               })
-                            : localize('No synthetic markets are currently available from the market-data API.')
+                            : localize('None of the 18 requested Volatility or Jump markets are currently available.')
                     );
                 })
                 .catch(error => {
