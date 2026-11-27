@@ -122,7 +122,7 @@ export function evaluateOverUnder(digitsNewestFirst: number[], minSample = 100):
             leastTriggerDigits.includes(triggerDigit) &&
             (config.side === 'OVER'
                 ? confirmationDigit >= 4 && confirmationDigit <= 9
-                : confirmationDigit >= 0 && confirmationDigit <= 5);
+                : confirmationDigit >= 0 && confirmationDigit <= 4);
 
         let reason: string;
         if (!sufficientData) reason = `Need at least ${minSample} historical ticks.`;
@@ -133,7 +133,7 @@ export function evaluateOverUnder(digitsNewestFirst: number[], minSample = 100):
         else if (confirmed) reason = 'Historical two-tick pattern observed. This does not confirm a live entry.';
         else reason = config.side === 'OVER'
             ? 'Over frequency filters met. Waiting for least digit 1/2/3, then 4–9 on the following live tick.'
-            : 'Under frequency filters met. Waiting for least digit 6/7/8, then 0–5 on the following live tick.';
+            : 'Under frequency filters met. Waiting for least digit 6/7/8, then 0–4 on the following live tick.';
 
         return {
             side: config.side,
