@@ -19,7 +19,7 @@ import { useTranslations } from '@deriv-com/translations';
  * rather than left to look like a black box.
  */
 
-type TMode = 'O0/U9' | 'O1/U8' | 'O2/U7' | 'O3/U6';
+type TMode = 'O1/U8' | 'O2/U7' | 'O3/U6';
 
 const MODES: {
     id: TMode;
@@ -30,15 +30,6 @@ const MODES: {
     title: string;
     blurb: string;
 }[] = [
-    {
-        id: 'O0/U9',
-        over: 0,
-        under: 9,
-        label: 'Over0 / Under9',
-        badge: 'FREQUENCY FILTER',
-        title: 'Digits Scanner',
-        blurb: 'Scans Over 0 and Under 9 using frequency and trend rules.',
-    },
     {
         id: 'O1/U8',
         over: 1,
@@ -72,7 +63,7 @@ const MIN_DEPTH = 100;
 const MAX_DEPTH = 5000;
 const RECENT_WINDOW = 200;
 // Share one socket without sending all 18 histories at once (rate-limit risk).
-const SCAN_CONCURRENCY = 4;
+const SCAN_CONCURRENCY = 2;
 
 // The video starts at Jump 10 (1/18), then moves through Volatility
 // indices, ending at Volatility 90 (1s) (18/18). Preserve the exact
@@ -189,6 +180,8 @@ const EntryScanner = observer(
         const [scan_depth, setScanDepth] = useState(1000);
         const [symbols, setSymbols] = useState<TActiveSymbol[]>([]);
         const [is_scanning, setIsScanning] = useState(false);
+        // A synchronous guard blocks double-clicks before React can rerender.
+        const scanInProgress = useRef(false);
 
         // Mirrors the scan state out to the floating button so it can show it is
         // working. Reported rather than duplicated - this stays the only place the
@@ -278,7 +271,14 @@ const EntryScanner = observer(
                         .filter((item): item is TActiveSymbol => Boolean(item));
                     const missing = SCAN_MARKETS.filter(symbol => !bySymbol.has(symbol));
                     if (!is_live.current) return;
-                    setSymbols(selected);
+                    setSymbols(current => {
+                        // Keep the same array identity if the market list has not
+                        // actually changed. No unnecessary observer rerenders.
+                        if (current.length === selected.length &&
+                            current.every((item, index) => item.underlying_symbol === selected[index].underlying_symbol)
+                        ) return current;
+                        return selected;
+                    });
                     setIsError(selected.length === 0);
                     setStatus(
                         selected.length
@@ -300,11 +300,17 @@ const EntryScanner = observer(
                         })
                     );
                 });
-        }, [isConnected, feed, localize]);
+        // localize is intentionally excluded: its identity can change on a
+        // render, while getActiveSymbols() reads a cached response and creates
+        // a fresh array. Depending on it can cause a self-sustaining render loop.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [isConnected, feed]);
 
         const selectMode = (next: TMode) => {
             setMode(next);
             setBest(null);
+            setProgress({ done: 0, total: 0, market: '' });
+            setIsError(false);
             setLiveSignal('');
             setLiveStatus('');
             const picked = MODES.find(item => item.id === next);
@@ -312,7 +318,7 @@ const EntryScanner = observer(
         };
 
         const scanMarkets = async () => {
-            if (is_scanning) return;
+            if (scanInProgress.current) return;
             // Pressing Scan with no market list used to return silently, which is
             // the one case where the button genuinely cannot work and so the one
             // case that most needs to say so.
@@ -321,6 +327,7 @@ const EntryScanner = observer(
                 setStatus(localize('No markets available to scan yet. Reopen the scanner once connected.'));
                 return;
             }
+            scanInProgress.current = true;
             setIsScanning(true);
             setIsError(false);
             setBest(null);
@@ -334,114 +341,124 @@ const EntryScanner = observer(
             let nextIndex = 0;
             let completed = 0;
             const total = symbols.length;
+            const selectedMode = active_mode;
+            const selectedDepth = scan_depth;
 
-            // Use a small worker pool: history calls share one socket, and can
-            // be outstanding together using the feed's per-request IDs. Four
-            // in flight avoids the full 18 x timeout sequential wait, without
-            // dispatching every market at once and risking API rate limits.
-            // A market only counts as completed AFTER its request settles.
-            setProgress({ done: 0, total, market: localize('Starting scan…') });
-            setStatus(localize('Scanning {{total}} markets (up to {{concurrent}} at once)…', {
+            setProgress({ done: 0, total, market: localize('Starting with {{market}}', {
+                market: symbols[0].underlying_symbol_name,
+            }) });
+            setStatus(localize('Scan started: 0/{{total}} markets for {{mode}}.', {
                 total,
-                concurrent: Math.min(SCAN_CONCURRENCY, total),
+                mode: selectedMode.label,
             }));
+            console.info('[MW-Scanner] Scan started', { mode: selectedMode.id, markets: total, depth: selectedDepth });
 
-            const scanWorker = async () => {
-                while (is_live.current) {
-                    const index = nextIndex;
-                    nextIndex += 1;
-                    if (index >= total) return;
-                    const item = symbols[index];
+            try {
+                // Allow the browser to paint the Scanning state BEFORE network
+                // requests begin. Without this, a blocking task makes the
+                // button look like it was never clicked.
+                await new Promise<void>(resolve => window.setTimeout(resolve, 16));
 
-                    try {
-                        const { prices, pip_size } = await feed.getTickHistory(item.underlying_symbol, scan_depth);
-                        if (!is_live.current) return;
-                        if (prices.length < MIN_DEPTH) {
-                            shortHistories += 1;
-                        } else {
-                            usableHistories += 1;
-                            const places = toDecimalPlaces(pip_size) ?? 2;
-                            const digits = prices.map(price => getLastDigit(price, places)).reverse();
-                            const eligibleMatches = evaluateOverUnder(digits).filter(
-                                match =>
-                                    match.eligible &&
-                                    ((match.side === 'OVER' && match.prediction === active_mode.over) ||
-                                        (match.side === 'UNDER' && match.prediction === active_mode.under))
-                            );
-                            for (const match of eligibleMatches) {
-                                const metrics = analyse(digits, active_mode.over, active_mode.under);
-                                const sideRate = match.side === 'OVER' ? metrics.win_rate : metrics.under_rate;
-                                const recentDigits = digits.slice(0, RECENT_WINDOW);
-                                const recentRate = recentDigits.length
-                                    ? 100 * recentDigits.filter(d =>
-                                        match.side === 'OVER' ? d > match.prediction : d < match.prediction
-                                    ).length / recentDigits.length
-                                    : 0;
-                                results.push({
-                                    symbol: item.underlying_symbol,
-                                    name: item.underlying_symbol_name,
-                                    ...metrics,
-                                    win_rate: sideRate,
-                                    recent_rate: recentRate,
-                                    score: scoreOf(sideRate, recentRate),
-                                    strategy: match,
-                                    historyDigits: digits,
-                                });
+                const scanWorker = async () => {
+                    while (is_live.current) {
+                        const index = nextIndex++;
+                        if (index >= total) return;
+                        const item = symbols[index];
+                        try {
+                            const { prices, pip_size } = await feed.getTickHistory(item.underlying_symbol, selectedDepth);
+                            if (!is_live.current) return;
+                            if (prices.length < MIN_DEPTH) {
+                                shortHistories += 1;
+                            } else {
+                                usableHistories += 1;
+                                const places = toDecimalPlaces(pip_size) ?? 2;
+                                const digits = prices.map(price => getLastDigit(price, places)).reverse();
+                                const qualified = evaluateOverUnder(digits).filter(
+                                    match => match.eligible &&
+                                        ((match.side === 'OVER' && match.prediction === selectedMode.over) ||
+                                         (match.side === 'UNDER' && match.prediction === selectedMode.under))
+                                );
+                                for (const match of qualified) {
+                                    const metrics = analyse(digits, selectedMode.over, selectedMode.under);
+                                    const sideRate = match.side === 'OVER' ? metrics.win_rate : metrics.under_rate;
+                                    const recentDigits = digits.slice(0, RECENT_WINDOW);
+                                    const recentRate = recentDigits.length
+                                        ? 100 * recentDigits.filter(d =>
+                                            match.side === 'OVER' ? d > match.prediction : d < match.prediction
+                                        ).length / recentDigits.length
+                                        : 0;
+                                    results.push({
+                                        symbol: item.underlying_symbol,
+                                        name: item.underlying_symbol_name,
+                                        ...metrics,
+                                        win_rate: sideRate,
+                                        recent_rate: recentRate,
+                                        score: scoreOf(sideRate, recentRate),
+                                        strategy: match,
+                                        historyDigits: digits,
+                                    });
+                                }
+                            }
+                        } catch (error) {
+                            if (!is_live.current) return;
+                            historyErrors += 1;
+                            console.warn('[MW-Scanner] Tick history failed:', item.underlying_symbol, error);
+                        } finally {
+                            if (is_live.current) {
+                                completed += 1;
+                                setProgress({ done: completed, total, market: item.underlying_symbol_name });
+                                setStatus(
+                                    localize('Scanning {{mode}}: {{done}}/{{total}} markets checked. Latest: {{market}}.', {
+                                        mode: selectedMode.label,
+                                        done: completed,
+                                        total,
+                                        market: item.underlying_symbol_name,
+                                    })
+                                );
+                                // Yield between requests so the modal remains
+                                // responsive even on low-powered computers.
+                                await new Promise<void>(resolve => window.setTimeout(resolve, 0));
                             }
                         }
-                    } catch (error) {
-                        if (!is_live.current) return;
-                        historyErrors += 1;
-                        console.warn('[MW-Scanner] Tick history failed:', item.underlying_symbol, error);
-                    } finally {
-                        if (is_live.current) {
-                            completed += 1;
-                            setProgress({ done: completed, total, market: item.underlying_symbol_name });
-                            setStatus(
-                                localize('Completed {{done}}/{{total}} markets; most recent: {{market}}.', {
-                                    done: completed,
-                                    total,
-                                    market: item.underlying_symbol_name,
-                                })
-                            );
-                        }
                     }
+                };
+
+                await Promise.all(
+                    Array.from({ length: Math.min(SCAN_CONCURRENCY, total) }, () => scanWorker())
+                );
+                if (!is_live.current) return;
+
+                results.sort((a, b) => b.score - a.score);
+                const winner = results[0] ?? null;
+                setBest(winner);
+                setIsError(usableHistories === 0);
+                if (winner) {
+                    setStatus(localize(
+                        'Completed {{total}} markets for {{mode}}. {{matched}} qualified; selected {{market}} (historical only).',
+                        { total, mode: selectedMode.label, matched: results.length, market: winner.name }
+                    ));
+                } else if (usableHistories > 0) {
+                    setStatus(localize(
+                        'Completed {{total}} markets for {{mode}}. No market met every required digit condition. Try another mode or scan again later.',
+                        { total, mode: selectedMode.label }
+                    ));
+                } else {
+                    setStatus(localize(
+                        'No usable tick history for {{mode}}: {{failed}} requests failed, {{short}} returned fewer than {{minimum}} ticks.',
+                        { mode: selectedMode.label, failed: historyErrors, short: shortHistories, minimum: MIN_DEPTH }
+                    ));
                 }
-            };
-
-            await Promise.all(
-                Array.from({ length: Math.min(SCAN_CONCURRENCY, total) }, () => scanWorker())
-            );
-
-            // The last market's request can still land after the panel closes.
-            if (!is_live.current) return;
-
-            results.sort((a, b) => b.score - a.score);
-            const winner = results[0] ?? null;
-            setBest(winner);
-            setIsScanning(false);
-            setIsError(!winner && usableHistories === 0);
-            if (winner) {
-                setStatus(
-                    localize(
-                        'Completed {{total}} requested markets; {{scanned}} had tick history; {{matched}} qualified under the selected digit conditions. Live entry not confirmed.',
-                        { total: symbols.length, scanned: usableHistories, matched: results.length }
-                    )
-                );
-            } else if (usableHistories > 0) {
-                setStatus(
-                    localize(
-                        'Completed {{total}} requested markets; {{scanned}} had tick history, but none met the selected Over/Under conditions.',
-                        { total: symbols.length, scanned: usableHistories }
-                    )
-                );
-            } else {
-                setStatus(
-                    localize(
-                        'No usable tick history: {{failed}} requests failed and {{short}} returned fewer than {{minimum}} ticks.',
-                        { failed: historyErrors, short: shortHistories, minimum: MIN_DEPTH }
-                    )
-                );
+            } catch (error) {
+                console.error('[MW-Scanner] Unexpected scanner error:', error);
+                if (is_live.current) {
+                    setIsError(true);
+                    setStatus(localize('Scanner error: {{reason}}', {
+                        reason: error instanceof Error ? error.message : String(error),
+                    }));
+                }
+            } finally {
+                scanInProgress.current = false;
+                if (is_live.current) setIsScanning(false);
             }
         };
 
@@ -495,7 +512,10 @@ const EntryScanner = observer(
                         : localize('Over filters qualify. Waiting for the least of digits 1, 2, 3.')
                 );
             });
-        }, [best, feed, localize, scan_depth]);
+        // Keeping this subscription stable is important: an unstable localize
+        // function would unsubscribe/re-subscribe after every tick-state update.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [best, feed, scan_depth]);
 
         /**
          * Hands the scan result to Quick Strategy - the app's own strategy
