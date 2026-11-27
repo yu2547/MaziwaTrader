@@ -1,4 +1,5 @@
 import { localize } from '@deriv-com/translations';
+import { scannerIsControlling, scannerSession$ } from '@/utils/market-data/scanner-entry-session';
 import { getContractTypeOptions } from '../../../shared';
 import { excludeOptionFromContextMenu, modifyContextMenu } from '../../../utils';
 
@@ -41,10 +42,19 @@ window.Blockly.Blocks.purchase = {
             return;
         }
 
-        if (event.type === window.Blockly.Events.BLOCK_CREATE && event.ids.includes(this.id)) {
+        // Scanner workspace fields can be repopulated asynchronously after
+        // import, which previously reset a digit Under purchase to CALL/Rise
+        // even though the preview initially validated correctly.
+        const scanner = scannerSession$.getValue();
+        if (scannerIsControlling() && scanner.active) {
+            this.populatePurchaseList(event);
+            return;
+        }
+
+        if (event.type === window.Blockly.Events.BLOCK_CREATE && event.ids?.includes(this.id)) {
             this.populatePurchaseList(event);
         } else if (event.type === window.Blockly.Events.BLOCK_CHANGE) {
-            if (event.name === 'TYPE_LIST' || event.name === 'TRADETYPE_LIST') {
+            if (['TYPE_LIST', 'TRADETYPE_LIST', 'TRADETYPECAT_LIST'].includes(event.name)) {
                 this.populatePurchaseList(event);
             }
         } else if (event.type === window.Blockly.Events.BLOCK_DRAG && !event.isStart && event.blockId === this.id) {
@@ -68,9 +78,32 @@ window.Blockly.Blocks.purchase = {
             const purchase_type = purchase_type_list.getValue();
             const contract_type_options = getContractTypeOptions(contract_type, trade_type);
 
+            const scanner = scannerSession$.getValue();
+            if (scannerIsControlling() && scanner.active) {
+                const expected = scanner.side === 'UNDER' ? 'DIGITUNDER' : 'DIGITOVER';
+                // Don't manufacture a Rise quote while category dropdowns are
+                // still initializing. Restore the correct options only after
+                // the trade type and contract type agree with the scan.
+                if (trade_type !== 'overunder' || contract_type !== expected) return;
+                const correctOptions = getContractTypeOptions(expected, 'overunder');
+                if (
+                    purchase_type_list.getValue() !== expected ||
+                    purchase_type_list.menuGenerator_?.length !== correctOptions.length
+                ) {
+                    purchase_type_list.updateOptions(correctOptions, {
+                        default_value: expected,
+                        event_group: event?.group,
+                        should_pretend_empty: true,
+                    });
+                    if (purchase_type_list.getValue() !== expected) {
+                        purchase_type_list.setValue(expected);
+                    }
+                }
+                return;
+            }
             purchase_type_list.updateOptions(contract_type_options, {
                 default_value: purchase_type,
-                event_group: event.group,
+                event_group: event?.group,
                 should_pretend_empty: true,
             });
         }
