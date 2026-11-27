@@ -5,7 +5,8 @@ import { DBOT_TABS } from '@/constants/bot-contents';
 import usePublicMarketFeed from '@/hooks/usePublicMarketFeed';
 import { useStore } from '@/hooks/useStore';
 import { getLastDigit, toDecimalPlaces } from '@/utils/market-data/last-digit';
-import { TActiveSymbol } from '@/utils/market-data/public-market-feed';
+import type { TActiveSymbol } from '@/utils/market-data/public-market-feed';
+import { allowsSide, evaluateOverUnder, type TStrategyMatch } from '@/utils/market-data/over-under-strategy';
 import { useTranslations } from '@deriv-com/translations';
 
 /**
@@ -58,27 +59,6 @@ const MODES: {
     },
 ];
 
-/**
- * The markets the scan covers: the 1-second volatility indices and their
- * standard counterparts. Named the way Deriv names them in active_symbols, so
- * the symbol codes are read from the API rather than written here.
- */
-const SCAN_MARKETS = [
-    'Volatility 100 (1s) Index',
-    'Volatility 90 (1s) Index',
-    'Volatility 75 (1s) Index',
-    'Volatility 50 (1s) Index',
-    'Volatility 30 (1s) Index',
-    'Volatility 25 (1s) Index',
-    'Volatility 15 (1s) Index',
-    'Volatility 10 (1s) Index',
-    'Volatility 100 Index',
-    'Volatility 75 Index',
-    'Volatility 50 Index',
-    'Volatility 25 Index',
-    'Volatility 10 Index',
-];
-
 const MIN_DEPTH = 100;
 const MAX_DEPTH = 5000;
 const RECENT_WINDOW = 200;
@@ -97,8 +77,7 @@ type TResult = {
     low_streak: number;
     high_streak: number;
     character: string;
-strategy?: TStrategyMatch;
-
+    strategy?: TStrategyMatch;
 };
 
 /**
@@ -254,21 +233,34 @@ const EntryScanner = observer(
             if (!isConnected) return;
             feed.getActiveSymbols()
                 .then(list => {
-                    const by_name = new Map(list.map(item => [item.underlying_symbol_name, item]));
-                    const wanted = SCAN_MARKETS.map(name => by_name.get(name)).filter(
-                        (item): item is TActiveSymbol => !!item
+                    const seen = new Set<string>();
+                    const synthetics = list.filter(item => {
+                        if (item.market !== 'synthetic_index' || !item.underlying_symbol) return false;
+                        if (item.exchange_is_open === 0 || item.is_trading_suspended === 1) return false;
+                        if (seen.has(item.underlying_symbol)) return false;
+                        seen.add(item.underlying_symbol);
+                        return true;
+                    });
+                    if (!is_live.current) return;
+                    setSymbols(synthetics);
+                    setIsError(synthetics.length === 0);
+                    setStatus(
+                        synthetics.length
+                            ? localize('Found {{count}} synthetic markets. Jump markets are included when available.', {
+                                  count: synthetics.length,
+                              })
+                            : localize('No synthetic markets are currently available from the market-data API.')
                     );
-                    const synthetics = list.filter(item => item.market === 'synthetic_index');
-                    // Same reason as the scan loop: this request outlives a
-                    // scanner closed before the market list came back.
-                    if (!is_live.current) return;
-                    setSymbols(wanted.length ? wanted : synthetics);
-                    setIsError(false);
                 })
-                .catch(() => {
+                .catch(error => {
                     if (!is_live.current) return;
+                    console.warn('[MW-Scanner] Active symbols request failed:', error);
                     setIsError(true);
-                    setStatus(localize('Could not load the market list. Check your connection and try again.'));
+                    setStatus(
+                        localize('Could not load markets: {{reason}}', {
+                            reason: error instanceof Error ? error.message : 'Unknown market-data error',
+                        })
+                    );
                 });
         }, [isConnected, feed, localize]);
 
@@ -294,6 +286,9 @@ const EntryScanner = observer(
             setBest(null);
 
             const results: TResult[] = [];
+            let usableHistories = 0;
+            let shortHistories = 0;
+            let historyErrors = 0;
             for (let i = 0; i < symbols.length; i += 1) {
                 // Abandoned scanner: stop requesting, stop reporting.
                 if (!is_live.current) return;
@@ -309,33 +304,29 @@ const EntryScanner = observer(
                 try {
                     // eslint-disable-next-line no-await-in-loop
                     const { prices, pip_size } = await feed.getTickHistory(item.underlying_symbol, scan_depth);
-                    if (!prices.length) continue;
+                    if (prices.length < MIN_DEPTH) {
+                        shortHistories += 1;
+                        continue;
+                    }
+                    usableHistories += 1;
                     const places = toDecimalPlaces(pip_size) ?? 2;
                     const digits = prices.map(price => getLastDigit(price, places)).reverse();
-                    
-const eligibleMatches = evaluateOverUnder(digits).filter(
-    match =>
-        match.eligible &&
-        (
-            (match.side === 'OVER' &&
-                match.prediction === active_mode.over) ||
-            (match.side === 'UNDER' &&
-                match.prediction === active_mode.under)
-        )
-);
-
-if (eligibleMatches.length === 0) continue;
-
-                    
-results.push({
-    symbol: item.underlying_symbol,
-    name: item.underlying_symbol_name,
-    ...analyse(digits, active_mode.over, active_mode.under),
-    strategy: eligibleMatches[0],
-});
-
-                } catch {
-                    // A market that will not return history is skipped, not faked.
+                    const eligibleMatches = evaluateOverUnder(digits).filter(
+                        match =>
+                            match.eligible &&
+                            ((match.side === 'OVER' && match.prediction === active_mode.over) ||
+                                (match.side === 'UNDER' && match.prediction === active_mode.under))
+                    );
+                    if (!eligibleMatches.length) continue;
+                    results.push({
+                        symbol: item.underlying_symbol,
+                        name: item.underlying_symbol_name,
+                        ...analyse(digits, active_mode.over, active_mode.under),
+                        strategy: eligibleMatches[0],
+                    });
+                } catch (error) {
+                    historyErrors += 1;
+                    console.warn('[MW-Scanner] Tick history failed:', item.underlying_symbol, error);
                 }
             }
 
@@ -346,17 +337,29 @@ results.push({
             const winner = results[0] ?? null;
             setBest(winner);
             setIsScanning(false);
-            // Nothing ranked means every market refused history - a failed scan,
-            // not a scan with a quiet result.
-            setIsError(!winner);
-            setStatus(
-                winner
-                    ? localize('Scanned {{count}} markets over {{depth}} ticks each.', {
-                          count: results.length,
-                          depth: scan_depth,
-                      })
-                    : localize('No market returned enough history to rank. Try again in a moment.')
-            );
+            setIsError(!winner && usableHistories === 0);
+            if (winner) {
+                setStatus(
+                    localize(
+                        'Scanned {{scanned}} of {{total}} synthetic markets with tick history; {{matched}} met historical rules. Live entry not confirmed.',
+                        { scanned: usableHistories, total: symbols.length, matched: results.length }
+                    )
+                );
+            } else if (usableHistories > 0) {
+                setStatus(
+                    localize(
+                        'Scanned {{scanned}} markets with tick history, but none met the selected Over/Under percentage conditions.',
+                        { scanned: usableHistories }
+                    )
+                );
+            } else {
+                setStatus(
+                    localize(
+                        'No usable tick history: {{failed}} requests failed and {{short}} returned fewer than {{minimum}} ticks.',
+                        { failed: historyErrors, short: shortHistories, minimum: MIN_DEPTH }
+                    )
+                );
+            }
         };
 
         /**
@@ -379,8 +382,27 @@ results.push({
          * still loads, still lands in the Bot Builder, and the existing Run
          * control is what starts it.
          */
-        const launchBot = () => {
-            if (!best || !quick_strategy) return;
+        const launchBot = async () => {
+            if (!best?.strategy || !quick_strategy) return;
+            try {
+                const availableContracts = await feed.getContractsFor(best.symbol);
+                if (!allowsSide(availableContracts, best.strategy.side)) {
+                    setIsError(true);
+                    setStatus(
+                        localize('Digit {{side}} contracts are not available for {{market}}.', {
+                            side: best.strategy.side,
+                            market: best.name,
+                        })
+                    );
+                    return;
+                }
+            } catch (error) {
+                console.warn('[MW-Scanner] Contract availability check failed:', best.symbol, error);
+                setIsError(true);
+                setStatus(localize('Could not verify which Over/Under contracts this market supports.'));
+                return;
+            }
+            if (!is_live.current) return;
             startTransition(() => {
                 navigate('/');
                 dashboard?.setActiveTab(DBOT_TABS.BOT_BUILDER);
@@ -389,8 +411,8 @@ results.push({
             quick_strategy.onSubmit({
                 symbol: best.symbol,
                 tradetype: 'overunder',
-                type: 'DIGITOVER',
-                prediction: active_mode.over,
+                type: best.strategy.side === 'OVER' ? 'DIGITOVER' : 'DIGITUNDER',
+                prediction: best.strategy.prediction,
                 stake: params.stake,
                 // Martingale off means every stake is the first stake.
                 size: params.use_martingale ? params.martingale : 1,
@@ -504,11 +526,8 @@ results.push({
                             <div className='mw-scanner__field mw-scanner__field--static'>
                                 <span>{localize('TRADE TYPE')}</span>
                                 <strong>
-                                    {best
-                                        ? localize('Over {{over}} / Under {{under}}', {
-                                              over: active_mode.over,
-                                              under: active_mode.under,
-                                          })
+                                    {best?.strategy
+                                        ? `${best.strategy.side} ${best.strategy.prediction} (historical setup)`
                                         : localize('Waiting for scan')}
                                 </strong>
                             </div>
@@ -553,6 +572,15 @@ results.push({
                                         score: best.score.toFixed(2),
                                     })}
                                 </div>
+                                {best.strategy && (
+                                    <div className='mw-scanner__best'>
+                                        {localize('Historical setup: {{side}} {{prediction}}. {{reason}}', {
+                                            side: best.strategy.side,
+                                            prediction: best.strategy.prediction,
+                                            reason: best.strategy.reason,
+                                        })}
+                                    </div>
+                                )}
                             </>
                         )}
 
