@@ -178,6 +178,9 @@ const EntryScanner = observer(
         const navigate = useNavigate();
 
         const [mode, setMode] = useState<TMode>('O1/U8');
+        // Keep Over and Under as separate explicit scan choices. Under can
+        // only monitor until its live entry trigger is defined by the trader.
+        const [direction, setDirection] = useState<'OVER' | 'UNDER'>('OVER');
         const [scan_depth, setScanDepth] = useState(1000);
         const [symbols, setSymbols] = useState<TActiveSymbol[]>([]);
         const [is_scanning, setIsScanning] = useState(false);
@@ -243,6 +246,9 @@ const EntryScanner = observer(
         // indistinguishable from one waiting to be told to.
         const [is_error, setIsError] = useState(false);
         const [show_params, setShowParams] = useState(false);
+        const [launch_error, setLaunchError] = useState('');
+        const [is_launching, setIsLaunching] = useState(false);
+        const launchInProgress = useRef(false);
         const [params, setParams] = useState({
             stake: 0.5,
             martingale: 2,
@@ -315,8 +321,26 @@ const EntryScanner = observer(
             setIsError(false);
             setLiveSignal('');
             setLiveStatus('');
+            setLaunchError('');
             const picked = MODES.find(item => item.id === next);
             setStatus(localize('Ready to scan {{label}}.', { label: picked?.label ?? next }));
+        };
+
+        const selectDirection = (next: 'OVER' | 'UNDER') => {
+            if (scanInProgress.current) return;
+            setDirection(next);
+            setBest(null);
+            setProgress({ done: 0, total: 0, market: '' });
+            setLiveSignal('');
+            setLiveStatus('');
+            setLaunchError('');
+            setIsError(false);
+            setStatus(next === 'OVER'
+                ? localize('Over selected. Scan for live-tradable Over {{prediction}} setups.', { prediction: active_mode.over })
+                : localize('Under selected. Scan Under {{prediction}} setups for monitoring only until its live entry trigger is defined.', {
+                    prediction: active_mode.under,
+                })
+            );
         };
 
         const scanMarkets = async () => {
@@ -335,6 +359,7 @@ const EntryScanner = observer(
             setBest(null);
             setLiveSignal('');
             setLiveStatus('');
+            setLaunchError('');
 
             const results: TResult[] = [];
             let usableHistories = 0;
@@ -344,14 +369,16 @@ const EntryScanner = observer(
             let completed = 0;
             const total = symbols.length;
             const selectedMode = active_mode;
+            const selectedDirection = direction;
             const selectedDepth = scan_depth;
 
             setProgress({ done: 0, total, market: localize('Starting with {{market}}', {
                 market: symbols[0].underlying_symbol_name,
             }) });
-            setStatus(localize('Scan started: 0/{{total}} markets for {{mode}}.', {
+            setStatus(localize('Scan started: 0/{{total}} markets for {{mode}} ({{direction}}).', {
                 total,
                 mode: selectedMode.label,
+                direction: selectedDirection,
             }));
             console.info('[MW-Scanner] Scan started', { mode: selectedMode.id, markets: total, depth: selectedDepth });
 
@@ -377,8 +404,10 @@ const EntryScanner = observer(
                                 const digits = prices.map(price => getLastDigit(price, places)).reverse();
                                 const qualified = evaluateOverUnder(digits).filter(
                                     match => match.eligible &&
-                                        ((match.side === 'OVER' && match.prediction === selectedMode.over) ||
-                                         (match.side === 'UNDER' && match.prediction === selectedMode.under))
+                                        match.side === selectedDirection &&
+                                        (selectedDirection === 'OVER'
+                                            ? match.prediction === selectedMode.over
+                                            : match.prediction === selectedMode.under)
                                 );
                                 for (const match of qualified) {
                                     const metrics = analyse(digits, selectedMode.over, selectedMode.under);
@@ -441,8 +470,8 @@ const EntryScanner = observer(
                     ));
                 } else if (usableHistories > 0) {
                     setStatus(localize(
-                        'Completed {{total}} markets for {{mode}}. No market met every required digit condition. Try another mode or scan again later.',
-                        { total, mode: selectedMode.label }
+                        'Completed {{total}} markets for {{mode}} ({{direction}}). No qualifying market met every condition. Try another mode or scan again later.',
+                        { total, mode: selectedMode.label, direction: selectedDirection }
                     ));
                 } else {
                     setStatus(localize(
@@ -668,6 +697,25 @@ const EntryScanner = observer(
                                     <span>{localize(item.label)}</span>
                                 </button>
                             ))}
+                        </div>
+
+                        <div className='mw-scanner__direction' role='group' aria-label={localize('Scan trade direction')}>
+                            <button
+                                type='button'
+                                className={`mw-scanner__direction-btn ${direction === 'OVER' ? 'mw-scanner__direction-btn--active' : ''}`}
+                                onClick={() => selectDirection('OVER')}
+                                disabled={is_scanning}
+                            >
+                                {localize('Over {{prediction}}', { prediction: active_mode.over })}
+                            </button>
+                            <button
+                                type='button'
+                                className={`mw-scanner__direction-btn ${direction === 'UNDER' ? 'mw-scanner__direction-btn--active' : ''}`}
+                                onClick={() => selectDirection('UNDER')}
+                                disabled={is_scanning}
+                            >
+                                {localize('Under {{prediction}} (monitor only)', { prediction: active_mode.under })}
+                            </button>
                         </div>
 
                         <div className='mw-scanner__fields'>
