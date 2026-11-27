@@ -35,7 +35,7 @@ const MODES: {
         id: 'O1/U8',
         over: 1,
         under: 8,
-        label: 'Over1 / Under8',
+        label: 'O1 / U8',
         badge: 'RECOVERY ENGINE',
         title: 'Digits Scanner',
         blurb: 'Scans Over 1 and Under 8 using their digit frequency and trend rules.',
@@ -44,19 +44,19 @@ const MODES: {
         id: 'O2/U7',
         over: 2,
         under: 7,
-        label: 'Over2 / Under7',
-        badge: 'RECOVERY ENGINE',
-        title: 'Digits Scanner',
-        blurb: 'Scans Over 2 and Under 7 using their digit frequency and trend rules.',
+        label: 'O2 / U7',
+        badge: 'PATTERN HUNTER',
+        title: 'Even/Odd Precision',
+        blurb: 'Scans Over 2 and Under 7 using the same recovery flow.',
     },
     {
         id: 'O3/U6',
         over: 3,
         under: 6,
-        label: 'Over3 / Under6',
-        badge: 'RECOVERY ENGINE',
-        title: 'Digits Scanner',
-        blurb: 'Scans Over 3 and Under 6 using their digit frequency and trend rules.',
+        label: 'O3 / U6',
+        badge: 'TREND PULSE',
+        title: 'Rise/Fall Filter',
+        blurb: 'Scans Over 3 and Under 6 using the same recovery flow.',
     },
 ];
 
@@ -178,10 +178,7 @@ const EntryScanner = observer(
         const navigate = useNavigate();
 
         const [mode, setMode] = useState<TMode>('O1/U8');
-        // Keep Over and Under as separate explicit scan choices. Under can
-        // only monitor until its live entry trigger is defined by the trader.
-        const [direction, setDirection] = useState<'OVER' | 'UNDER'>('OVER');
-        const [scan_depth, setScanDepth] = useState(1000);
+        const [scan_depth, setScanDepth] = useState(3000);
         const [symbols, setSymbols] = useState<TActiveSymbol[]>([]);
         const [is_scanning, setIsScanning] = useState(false);
         // A synchronous guard blocks double-clicks before React can rerender.
@@ -326,23 +323,6 @@ const EntryScanner = observer(
             setStatus(localize('Ready to scan {{label}}.', { label: picked?.label ?? next }));
         };
 
-        const selectDirection = (next: 'OVER' | 'UNDER') => {
-            if (scanInProgress.current) return;
-            setDirection(next);
-            setBest(null);
-            setProgress({ done: 0, total: 0, market: '' });
-            setLiveSignal('');
-            setLiveStatus('');
-            setLaunchError('');
-            setIsError(false);
-            setStatus(next === 'OVER'
-                ? localize('Over selected. Scan for live-tradable Over {{prediction}} setups.', { prediction: active_mode.over })
-                : localize('Under selected. Scan Under {{prediction}} setups for monitoring only until its live entry trigger is defined.', {
-                    prediction: active_mode.under,
-                })
-            );
-        };
-
         const scanMarkets = async () => {
             if (scanInProgress.current) return;
             // Pressing Scan with no market list used to return silently, which is
@@ -375,16 +355,14 @@ const EntryScanner = observer(
             const activeMarkets = new Map<number, string>();
             const total = symbols.length;
             const selectedMode = active_mode;
-            const selectedDirection = direction;
             const selectedDepth = scan_depth;
 
             setProgress({ done: 0, total, market: localize('Starting with {{market}}', {
                 market: symbols[0].underlying_symbol_name,
             }) });
-            setStatus(localize('Scan started: 0/{{total}} markets for {{mode}} ({{direction}}).', {
+            setStatus(localize('Scanning {{mode}}: 0/{{total}} markets.', {
                 total,
                 mode: selectedMode.label,
-                direction: selectedDirection,
             }));
             console.info('[MW-Scanner] Scan started', { mode: selectedMode.id, markets: total, depth: selectedDepth });
 
@@ -419,10 +397,8 @@ const EntryScanner = observer(
                                 const digits = prices.map(price => getLastDigit(price, places)).reverse();
                                 const qualified = evaluateOverUnder(digits).filter(
                                     match => match.eligible &&
-                                        match.side === selectedDirection &&
-                                        (selectedDirection === 'OVER'
-                                            ? match.prediction === selectedMode.over
-                                            : match.prediction === selectedMode.under)
+                                        ((match.side === 'OVER' && match.prediction === selectedMode.over) ||
+                                         (match.side === 'UNDER' && match.prediction === selectedMode.under))
                                 );
                                 for (const match of qualified) {
                                     const metrics = analyse(digits, selectedMode.over, selectedMode.under);
@@ -479,7 +455,11 @@ const EntryScanner = observer(
                 if (!is_live.current) return;
 
                 results.sort((a, b) => b.score - a.score);
-                const winner = results[0] ?? null;
+                // Prefer a qualified Over market: it has the user's live
+                // two-tick entry sequence and can load the scanner trading bot.
+                // Under is still a valid scan result, but monitoring-only until
+                // the user defines its live entry point.
+                const winner = results.find(result => result.strategy?.side === 'OVER') ?? results[0] ?? null;
                 setBest(winner);
                 setIsError(usableHistories === 0);
                 if (winner) {
@@ -489,8 +469,8 @@ const EntryScanner = observer(
                     ));
                 } else if (usableHistories > 0) {
                     setStatus(localize(
-                        'Completed {{total}} markets for {{mode}} ({{direction}}). No qualifying market met every condition. Try another mode or scan again later.',
-                        { total, mode: selectedMode.label, direction: selectedDirection }
+                        'Completed {{total}} markets for {{mode}}. No market met the required digit conditions. Try another mode or scan again later.',
+                        { total, mode: selectedMode.label }
                     ));
                 } else {
                     setStatus(localize(
@@ -729,25 +709,6 @@ const EntryScanner = observer(
                             ))}
                         </div>
 
-                        <div className='mw-scanner__direction' role='group' aria-label={localize('Scan trade direction')}>
-                            <button
-                                type='button'
-                                className={`mw-scanner__direction-btn ${direction === 'OVER' ? 'mw-scanner__direction-btn--active' : ''}`}
-                                onClick={() => selectDirection('OVER')}
-                                disabled={is_scanning}
-                            >
-                                {localize('Over {{prediction}}', { prediction: active_mode.over })}
-                            </button>
-                            <button
-                                type='button'
-                                className={`mw-scanner__direction-btn ${direction === 'UNDER' ? 'mw-scanner__direction-btn--active' : ''}`}
-                                onClick={() => selectDirection('UNDER')}
-                                disabled={is_scanning}
-                            >
-                                {localize('Under {{prediction}} (monitor only)', { prediction: active_mode.under })}
-                            </button>
-                        </div>
-
                         <div className='mw-scanner__fields'>
                             <label className='mw-scanner__field'>
                                 <span>{localize('SCAN DEPTH')}</span>
@@ -786,7 +747,7 @@ const EntryScanner = observer(
                                 <span>{localize('TRADE TYPE')}</span>
                                 <strong>
                                     {best?.strategy
-                                        ? `${best.strategy.side} ${best.strategy.prediction} (historical filters)`
+                                        ? `${best.strategy.side === 'OVER' ? 'Over' : 'Under'} ${best.strategy.prediction}${best.strategy.side === 'OVER' ? ' · Recovery Over 4' : ' · Monitor only'}`
                                         : localize('Waiting for scan')}
                                 </strong>
                             </div>
@@ -813,7 +774,8 @@ const EntryScanner = observer(
                                     </div>
                                 </div>
                                 {best.strategy && (
-                                    <>
+                                    <details className='mw-scanner__conditions'>
+                                        <summary>{localize('View all digit conditions')}</summary>
                                         <div className='mw-scanner__digit-distribution' aria-label={localize('Last-digit percentages')}>
                                             {best.strategy.percentages.map((share, digit) => (
                                                 <div className='mw-scanner__digit' key={digit}>
@@ -834,7 +796,7 @@ const EntryScanner = observer(
                                                 strong: best.strategy.strongDigits.join(', '),
                                             })}
                                         </div>
-                                    </>
+                                    </details>
                                 )}
                                 <div className='mw-scanner__heat'>
                                     {localize(
@@ -855,18 +817,11 @@ const EntryScanner = observer(
                                         score: best.score.toFixed(2),
                                     })}
                                 </div>
-                                {best.strategy && (
-                                    <div className='mw-scanner__best'>
-                                        {localize('Historical filters: {{side}} {{prediction}}. {{reason}}', {
-                                            side: best.strategy.side,
-                                            prediction: best.strategy.prediction,
-                                            reason: best.strategy.reason,
-                                        })}
-                                    </div>
-                                )}
-                                <div className='mw-scanner__best'>
-                                    {liveSignal || liveStatus || localize('Monitoring live market conditions…')}
-                                </div>
+                                <details className='mw-scanner__conditions'>
+                                    <summary>{localize('Entry conditions and live monitoring')}</summary>
+                                    {best.strategy?.reason}
+                                    <p>{liveSignal || liveStatus || localize('Watching qualifying live ticks…')}</p>
+                                </details>
                             </>
                         )}
 
