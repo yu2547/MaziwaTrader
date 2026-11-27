@@ -7,7 +7,7 @@ import { useStore } from '@/hooks/useStore';
 import { getLastDigit, toDecimalPlaces } from '@/utils/market-data/last-digit';
 import type { TActiveSymbol } from '@/utils/market-data/public-market-feed';
 import { armScannerSession, blockScannerSession } from '@/utils/market-data/scanner-entry-session';
-import { allowsSide, evaluateOverUnder, type TStrategyMatch } from '@/utils/market-data/over-under-strategy';
+import { evaluateOverUnder, type TStrategyMatch } from '@/utils/market-data/over-under-strategy';
 import { useTranslations } from '@deriv-com/translations';
 
 /**
@@ -38,25 +38,25 @@ const MODES: {
         label: 'Over1 / Under8',
         badge: 'RECOVERY ENGINE',
         title: 'Digits Scanner',
-        blurb: 'Scans Over 1 and Under 8 with recovery confirmation.',
+        blurb: 'Scans Over 1 and Under 8 using their digit frequency and trend rules.',
     },
     {
         id: 'O2/U7',
         over: 2,
         under: 7,
         label: 'Over2 / Under7',
-        badge: 'PATTERN HUNTER',
-        title: 'Even/Odd Precision',
-        blurb: 'Scans Over 2 and Under 7 using the same recovery flow.',
+        badge: 'RECOVERY ENGINE',
+        title: 'Digits Scanner',
+        blurb: 'Scans Over 2 and Under 7 using their digit frequency and trend rules.',
     },
     {
         id: 'O3/U6',
         over: 3,
         under: 6,
         label: 'Over3 / Under6',
-        badge: 'TREND PULSE',
-        title: 'Rise/Fall Filter',
-        blurb: 'Scans Over 3 and Under 6 using the same recovery flow.',
+        badge: 'RECOVERY ENGINE',
+        title: 'Digits Scanner',
+        blurb: 'Scans Over 3 and Under 6 using their digit frequency and trend rules.',
     },
 ];
 
@@ -354,6 +354,9 @@ const EntryScanner = observer(
                 return;
             }
             scanInProgress.current = true;
+            // A long previous result can leave this modal scrolled to the bottom
+            // with the active scan hidden. Always return to the progress view.
+            sheet_ref.current?.scrollTo(0, 0);
             setIsScanning(true);
             setIsError(false);
             setBest(null);
@@ -393,6 +396,15 @@ const EntryScanner = observer(
                         const index = nextIndex++;
                         if (index >= total) return;
                         const item = symbols[index];
+                        if (is_live.current) {
+                            // The label describes the IN-FLIGHT market, not the
+                            // last one completed. The X/18 counter is incremented
+                            // only when a market finishes.
+                            setProgress(previous => ({
+                                ...previous,
+                                market: item.underlying_symbol_name,
+                            }));
+                        }
                         try {
                             const { prices, pip_size } = await feed.getTickHistory(item.underlying_symbol, selectedDepth);
                             if (!is_live.current) return;
@@ -439,7 +451,7 @@ const EntryScanner = observer(
                                 completed += 1;
                                 setProgress({ done: completed, total, market: item.underlying_symbol_name });
                                 setStatus(
-                                    localize('Scanning {{mode}}: {{done}}/{{total}} markets checked. Latest: {{market}}.', {
+                                    localize('Scanning {{mode}}: {{done}}/{{total}} markets checked. Last completed: {{market}}.', {
                                         mode: selectedMode.label,
                                         done: completed,
                                         total,
@@ -592,13 +604,14 @@ const EntryScanner = observer(
                     return;
                 }
 
-                const availableContracts = await feed.getContractsFor(best.symbol);
-                if (!allowsSide(availableContracts, best.strategy.side)) {
-                    setLaunchError(localize('Digit Over contracts are not offered for {{market}}. Select a different scan result.', {
-                        market: best.name,
-                    }));
-                    return;
-                }
+                // The selected index already came from the live market list
+                // and qualified against its actual tick history. A separate
+                // contracts_for request on the PUBLIC market-data socket could
+                // time out after 10 seconds and abort Launch even though the
+                // trading API was connected. Quick Strategy resolves contract
+                // metadata through its authenticated trading connection and
+                // the shared purchase gate still checks the exact symbol,
+                // side and live entry before any order can be sent.
                 if (!is_live.current) return;
 
                 // Armed BEFORE the RUN action. Even a premature Blockly
@@ -851,9 +864,9 @@ const EntryScanner = observer(
                         )}
 
                         {is_scanning && (
-                            <div className='mw-scanner__progress'>
+                            <div className='mw-scanner__progress' aria-live='polite' aria-label={localize('Market scan progress')}>
                                 <div className='mw-scanner__progress-head'>
-                                    <span>{progress.market}</span>
+                                    <span>{localize('Scanning {{market}}', { market: progress.market })}</span>
                                     <span>
                                         {progress.done}/{progress.total}
                                     </span>
