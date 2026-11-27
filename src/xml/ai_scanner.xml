@@ -127,8 +127,8 @@
     </statement>
   </block>
   <block type="before_purchase" id="Z])37`R^9KsrX4I7bAqP" deletable="false" x="0" y="648">
+    <comment pinned="false" h="84" w="320">AI Scanner only: purchases are checked by the shared execution gate. No entry occurs before the live digit-frequency, least-digit and next-tick conditions qualify. A qualifying historical scan is NOT an entry.</comment>
     <statement name="BEFOREPURCHASE_STACK">
-      <comment pinned="false" h="84" w="320">AI Scanner only: purchases are checked by the shared execution gate. No entry occurs before the live digit-frequency, least-digit and next-tick conditions qualify. A qualifying historical scan is NOT an entry.</comment>
       <block type="purchase" id="?QH{0D:/t^fpgu}4sb`x">
         <field name="PURCHASE_LIST">CALL</field>
       </block>
