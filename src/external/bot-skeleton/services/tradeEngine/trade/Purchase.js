@@ -46,7 +46,7 @@ export default Engine =>
             // The selected symbol, side, stake and fresh tick are all checked.
             if (scannerIsControlling()) {
                 const { symbol, amount } = this.tradeOptions ?? {};
-                if (!consumeScannerEntryPermission(symbol, contract_type, Number(amount))) {
+                if (!consumeScannerEntryPermission(symbol, contract_type, Number(amount), Number(this.tradeOptions?.prediction))) {
                     return Promise.resolve();
                 }
             }
