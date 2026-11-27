@@ -21,6 +21,7 @@ import {
     setSlowExecution,
 } from '@/external/bot-skeleton/services/tradeEngine/utils/run-pacing';
 import { getActiveCurrency } from '@/utils/active-account-id';
+import { finishScannerSession } from '@/utils/market-data/scanner-entry-session';
 import { getStoredAccessToken } from '@/utils/auth/deriv-oauth';
 // import { journalError, switch_account_notification } from '@/utils/bot-notifications';
 import GTM from '@/utils/gtm';
@@ -391,6 +392,7 @@ export default class RunPanelStore {
         const { ui } = this.core;
 
         this.dbot.stopBot();
+        finishScannerSession();
 
         ui.setPromptHandler(false);
 
@@ -456,6 +458,7 @@ export default class RunPanelStore {
     };
 
     stopMyBot = () => {
+        finishScannerSession();
         const { summary_card, quick_strategy } = this.root_store;
         const { ui } = this.core;
         const { toggleStopBotDialog } = quick_strategy;
@@ -756,6 +759,7 @@ export default class RunPanelStore {
     };
 
     onBotReadyEvent = () => {
+        finishScannerSession();
         this.setIsRunning(false);
         observer.unregisterAll('bot.bot_ready');
     };
