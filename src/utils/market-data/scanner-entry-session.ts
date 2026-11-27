@@ -50,6 +50,23 @@ type TArmOptions = {
     stopLoss: number;
     maxWins: number;
 };
+
+const WORKSPACE_GUARD_KEY = 'mw_scanner_exclusive_workspace';
+function markWorkspaceGuard(isScanner: boolean) {
+    try {
+        if (isScanner) localStorage.setItem(WORKSPACE_GUARD_KEY, '1');
+        else localStorage.removeItem(WORKSPACE_GUARD_KEY);
+    } catch {
+        // In private storage modes, the in-memory gate still applies this run.
+    }
+}
+function hasWorkspaceGuard(): boolean {
+    try {
+        return localStorage.getItem(WORKSPACE_GUARD_KEY) === '1';
+    } catch {
+        return false;
+    }
+}
 let controlled = false;
 let subscribed: (() => void) | null = null;
 let digits: number[] = [];
@@ -63,7 +80,7 @@ const publish = (patch: Partial<TScannerSession>) =>
     scannerSession$.next({ ...scannerSession$.getValue(), ...patch });
 
 /** True when a bot is still subject to scanner-only gating. */
-export const scannerIsControlling = () => controlled;
+export const scannerIsControlling = () => controlled || hasWorkspaceGuard();
 
 /** Release all public-feed resources; other bots remain unaffected. */
 export function resetScannerSession() {
@@ -77,6 +94,7 @@ export function resetScannerSession() {
     entryPermission = false;
     permissionTimestamp = 0;
     scannerSession$.next(empty);
+    markWorkspaceGuard(false);
 }
 
 function onTick(tick: TTick) {
@@ -145,6 +163,7 @@ export function armScannerSession(options: TArmOptions) {
         throw new Error('Invalid scanner stake, stop-loss, max-stake or win-limit.');
     }
     controlled = true;
+    markWorkspaceGuard(true);
     digits = [...options.digits];
     historyLimit = Math.max(100, digits.length);
     scannerSession$.next({
@@ -169,7 +188,9 @@ export function armScannerSession(options: TArmOptions) {
  * exactly once. Manual bots (no scanner session) use their original behavior.
  */
 export function consumeScannerEntryPermission(symbol: string, contractType: string, amount: number): boolean {
-    if (!controlled) return true;
+    // After a page reload there is no live armed session, even if Blockly
+    // restores the scanner XML. Never let that stale workspace buy ungated.
+    if (!controlled) return !hasWorkspaceGuard();
     const state = scannerSession$.getValue();
     const expectedType = state.side === 'OVER' ? 'DIGITOVER' : 'DIGITUNDER';
     // The confirmation belongs to the current live tick, not a later tick.
@@ -225,7 +246,8 @@ export function finishScannerSession(message?: string) {
     subscribed?.();
     subscribed = null;
     public_market_feed.release();
-    controlled = false;
+    // Keep the guard armed but inactive. Pressing Run again on this XML
+    // cannot place trades without a fresh scanner launch/requalification.
     entryPermission = false;
     permissionTimestamp = 0;
     trigger = null;
@@ -234,4 +256,13 @@ export function finishScannerSession(message?: string) {
         status: 'stopped',
         message: message || scannerSession$.getValue().message || 'Scanner bot stopped.',
     });
+}
+
+/** A launch/loading failure must retain the entry gate until the bot stops. */
+export function blockScannerSession(reason: string) {
+    if (!controlled) return;
+    entryPermission = false;
+    permissionTimestamp = 0;
+    trigger = null;
+    publish({ active: false, status: 'stopped', message: reason });
 }
