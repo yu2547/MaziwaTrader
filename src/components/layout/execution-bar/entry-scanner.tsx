@@ -587,7 +587,12 @@ const EntryScanner = observer(
 
                 // Armed BEFORE the RUN action. Even a premature Blockly
                 // purchase must pass the live-entry permission at the engine.
+                const entryDigit = best.strategy.leastTriggerDigits[0];
+                if (!Number.isInteger(entryDigit)) {
+                    throw new Error('The selected market has no valid least-frequent entry digit. Scan again.');
+                }
                 armScannerSession({
+                    entryDigit,
                     market: best.name, symbol: best.symbol,
                     side: best.strategy.side, prediction: best.strategy.prediction,
                     digits: best.historyDigits, stake: params.stake,
@@ -600,6 +605,7 @@ const EntryScanner = observer(
                 });
                 await quick_strategy.onSubmit({
                     scanner_strategy: true,
+                    scanner_entry_digit: entryDigit,
                     symbol: best.symbol,
                     tradetype: 'overunder',
                     type: best.strategy.side === 'UNDER' ? 'DIGITUNDER' : 'DIGITOVER',
