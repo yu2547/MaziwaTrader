@@ -202,7 +202,7 @@ export function armScannerSession(options: TArmOptions) {
  * or when the latest live confirmation has expired. The permission is consumed
  * exactly once. Manual bots (no scanner session) use their original behavior.
  */
-export function consumeScannerEntryPermission(symbol: string, contractType: string, amount: number): boolean {
+export function consumeScannerEntryPermission(symbol: string, contractType: string, amount: number, prediction: number): boolean {
     // After a page reload there is no live armed session, even if Blockly
     // restores the scanner XML. Never let that stale workspace buy ungated.
     if (!controlled) return !hasWorkspaceGuard();
@@ -212,7 +212,7 @@ export function consumeScannerEntryPermission(symbol: string, contractType: stri
     // No trade can exceed the configured stake cap or remaining loss budget.
     const maxAllowed = Math.min(state.maxStake, state.stopLoss + state.netProfit);
     if (!state.active || state.symbol !== symbol ||
-        contractType.toUpperCase() !== expectedType || !entryPermission ||
+        contractType.toUpperCase() !== expectedType || prediction !== state.prediction || !entryPermission ||
         Date.now() - permissionTimestamp > 1500 ||
         !Number.isFinite(amount) || amount <= 0 || amount > maxAllowed) {
         return false;
