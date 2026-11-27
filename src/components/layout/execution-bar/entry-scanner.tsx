@@ -606,6 +606,8 @@ const EntryScanner = observer(
                 await quick_strategy.onSubmit({
                     scanner_strategy: true,
                     scanner_entry_digit: entryDigit,
+                    scanner_wins: params.wins,
+                    scanner_use_martingale: params.use_martingale,
                     symbol: best.symbol,
                     tradetype: 'overunder',
                     type: best.strategy.side === 'UNDER' ? 'DIGITUNDER' : 'DIGITOVER',
