@@ -19,7 +19,7 @@ import { useTranslations } from '@deriv-com/translations';
  * rather than left to look like a black box.
  */
 
-type TMode = 'O1/U8' | 'O2/U7' | 'O3/U6';
+type TMode = 'O0/U9' | 'O1/U8' | 'O2/U7' | 'O3/U6';
 
 const MODES: {
     id: TMode;
@@ -30,6 +30,15 @@ const MODES: {
     title: string;
     blurb: string;
 }[] = [
+    {
+        id: 'O0/U9',
+        over: 0,
+        under: 9,
+        label: 'Over0 / Under9',
+        badge: 'FREQUENCY FILTER',
+        title: 'Digits Scanner',
+        blurb: 'Scans Over 0 and Under 9 using frequency and trend rules.',
+    },
     {
         id: 'O1/U8',
         over: 1,
@@ -90,6 +99,7 @@ type TResult = {
     high_streak: number;
     character: string;
     strategy?: TStrategyMatch;
+    historyDigits: number[];
 };
 
 /**
@@ -224,6 +234,8 @@ const EntryScanner = observer(
         }, []);
         const [progress, setProgress] = useState({ done: 0, total: 0, market: '' });
         const [best, setBest] = useState<TResult | null>(null);
+        const [liveSignal, setLiveSignal] = useState('');
+        const [liveStatus, setLiveStatus] = useState('');
         const [status, setStatus] = useState('');
         // Kept apart from `status` so a failure reads as one. Every message used to
         // land in the same neutral line, so "Could not load the market list" looked
@@ -287,6 +299,8 @@ const EntryScanner = observer(
         const selectMode = (next: TMode) => {
             setMode(next);
             setBest(null);
+            setLiveSignal('');
+            setLiveStatus('');
             const picked = MODES.find(item => item.id === next);
             setStatus(localize('Ready to scan {{label}}.', { label: picked?.label ?? next }));
         };
@@ -304,6 +318,8 @@ const EntryScanner = observer(
             setIsScanning(true);
             setIsError(false);
             setBest(null);
+            setLiveSignal('');
+            setLiveStatus('');
 
             const results: TResult[] = [];
             let usableHistories = 0;
@@ -346,12 +362,24 @@ const EntryScanner = observer(
                                     ((match.side === 'OVER' && match.prediction === active_mode.over) ||
                                         (match.side === 'UNDER' && match.prediction === active_mode.under))
                             );
-                            if (eligibleMatches.length) {
+                            for (const match of eligibleMatches) {
+                                const metrics = analyse(digits, active_mode.over, active_mode.under);
+                                const sideRate = match.side === 'OVER' ? metrics.win_rate : metrics.under_rate;
+                                const recentDigits = digits.slice(0, RECENT_WINDOW);
+                                const recentRate = recentDigits.length
+                                    ? 100 * recentDigits.filter(d =>
+                                        match.side === 'OVER' ? d > match.prediction : d < match.prediction
+                                    ).length / recentDigits.length
+                                    : 0;
                                 results.push({
                                     symbol: item.underlying_symbol,
                                     name: item.underlying_symbol_name,
-                                    ...analyse(digits, active_mode.over, active_mode.under),
-                                    strategy: eligibleMatches[0],
+                                    ...metrics,
+                                    win_rate: sideRate,
+                                    recent_rate: recentRate,
+                                    score: scoreOf(sideRate, recentRate),
+                                    strategy: match,
+                                    historyDigits: digits,
                                 });
                             }
                         }
@@ -410,6 +438,56 @@ const EntryScanner = observer(
                 );
             }
         };
+
+        // Historical scans select candidates, never place trades.
+        // A fresh live Over signal needs the least digit among 1,2,3 followed
+        // by 4–9 on the very next tick. The user provided no Under entry rule.
+        useEffect(() => {
+            if (!best?.strategy) return undefined;
+            let history = [...best.historyDigits];
+            let pendingTrigger = false;
+            let previousEpoch: number | null = null;
+            const { side, prediction } = best.strategy;
+            setLiveSignal('');
+            setLiveStatus(
+                side === 'OVER'
+                    ? localize('Frequency filters passed. Watching live ticks for an Over entry.')
+                    : localize('Under filters passed. No Under live entry timing rule was supplied.')
+            );
+            return feed.subscribeTicks(best.symbol, tick => {
+                if (!is_live.current) return;
+                if (previousEpoch === tick.epoch) return;
+                previousEpoch = tick.epoch;
+                const digit = getLastDigit(tick.quote, toDecimalPlaces(tick.pip_size) ?? 2);
+                history = [digit, ...history].slice(0, scan_depth);
+                const current = evaluateOverUnder(history).find(
+                    match => match.side === side && match.prediction === prediction
+                );
+                if (!current?.eligible) {
+                    pendingTrigger = false;
+                    setLiveSignal('');
+                    setLiveStatus(localize('Live frequency/trend filters no longer qualify. Rescan this market.'));
+                    return;
+                }
+                if (side !== 'OVER') {
+                    setLiveStatus(localize('Under filters still qualify. Entry timing is not defined.'));
+                    return;
+                }
+                if (pendingTrigger && digit >= 4 && digit <= 9) {
+                    setLiveSignal(localize('LIVE OVER {{prediction}} confirmation observed. Manual decision only.', { prediction }));
+                    setLiveStatus(localize('Least trigger followed by 4–9 on this tick.'));
+                    pendingTrigger = false;
+                    return;
+                }
+                setLiveSignal('');
+                pendingTrigger = current.leastTriggerDigits.includes(digit);
+                setLiveStatus(
+                    pendingTrigger
+                        ? localize('Least-frequency trigger {{digit}} observed; checking next tick.', { digit })
+                        : localize('Over filters qualify. Waiting for the least of digits 1, 2, 3.')
+                );
+            });
+        }, [best, feed, localize, scan_depth]);
 
         /**
          * Hands the scan result to Quick Strategy - the app's own strategy
@@ -576,7 +654,7 @@ const EntryScanner = observer(
                                 <span>{localize('TRADE TYPE')}</span>
                                 <strong>
                                     {best?.strategy
-                                        ? `${best.strategy.side} ${best.strategy.prediction} (historical setup)`
+                                        ? `${best.strategy.side} ${best.strategy.prediction} (historical filters)`
                                         : localize('Waiting for scan')}
                                 </strong>
                             </div>
@@ -590,7 +668,7 @@ const EntryScanner = observer(
                                         <strong>{best.score.toFixed(2)}%</strong>
                                     </div>
                                     <div>
-                                        <span>{localize('WIN RATE')}</span>
+                                        <span>{localize('HISTORICAL DIGIT RATE')}</span>
                                         <strong>{best.win_rate.toFixed(1)}%</strong>
                                     </div>
                                     <div>
@@ -623,13 +701,16 @@ const EntryScanner = observer(
                                 </div>
                                 {best.strategy && (
                                     <div className='mw-scanner__best'>
-                                        {localize('Historical setup: {{side}} {{prediction}}. {{reason}}', {
+                                        {localize('Historical filters: {{side}} {{prediction}}. {{reason}}', {
                                             side: best.strategy.side,
                                             prediction: best.strategy.prediction,
                                             reason: best.strategy.reason,
                                         })}
                                     </div>
                                 )}
+                                <div className='mw-scanner__best'>
+                                    {liveSignal || liveStatus || localize('Monitoring live market conditions…')}
+                                </div>
                             </>
                         )}
 
