@@ -10,8 +10,20 @@ import TradingConfiguration from './trading-configuration';
 
 const DEFAULT_SYMBOL = '1HZ100V';
 
-/** Volatility indices - R_10..R_100 and their 1s variants. */
-const VOLATILITY_SYMBOL = /^(R_\d+|1HZ\d+V)$/;
+/** Volatility (standard and 1s), plus Jump 10/25/50/75/100. */
+const DCIRCLE_MARKET_SYMBOL = /^(?:R_\d+|1HZ\d+V|JD(?:10|25|50|75|100))$/;
+const DCIRCLE_MARKET_KEY = 'maziwa.analysis.dcircles.selected-market';
+
+// The Analysis Tool unmounts when navigating to Dashboard or Bot Builder.
+// Restore the last chosen market when returning (also after a reload).
+const restoreDcircleMarket = () => {
+    try {
+        const stored = window.localStorage.getItem(DCIRCLE_MARKET_KEY);
+        return stored && DCIRCLE_MARKET_SYMBOL.test(stored) ? stored : DEFAULT_SYMBOL;
+    } catch {
+        return DEFAULT_SYMBOL;
+    }
+};
 const DEFAULT_TICK_WINDOW = 1000;
 const MIN_TICK_WINDOW = 50;
 const MAX_TICK_WINDOW = 5000;
@@ -112,7 +124,7 @@ const Dcircles = observer(() => {
     const { localize } = useTranslations();
 
     const [symbols, setSymbols] = useState<TActiveSymbol[]>([]);
-    const [selected_symbol, setSelectedSymbol] = useState(DEFAULT_SYMBOL);
+    const [selected_symbol, setSelectedSymbol] = useState(restoreDcircleMarket);
     const [tick_window, setTickWindow] = useState(DEFAULT_TICK_WINDOW);
     const [barrier, setBarrier] = useState(5);
     const [digits, setDigits] = useState<number[]>([]);
@@ -137,23 +149,20 @@ const Dcircles = observer(() => {
             });
     }, [isConnected, feed]);
 
-    /**
-     * What Select Market offers: the volatility indices and nothing else.
-     *
-     * The synthetic list also carries Boom, Crash, Jump, Step and Range Break.
-     * Several of those quote to a precision that leaves the last digit barely
-     * moving - Range Break 100 prints to one decimal, so its last digit is
-     * always 0 - and a digit distribution on them is a reading of the tick
-     * format rather than the market. They are the markets this page cannot say
-     * anything true about, so it does not offer them.
-     *
-     * `symbols` itself is left whole: Trading Configuration takes it as its
-     * fallback market list, and that panel trades contracts this one does not.
-     */
+    /** Only the selected D-Circle market is subscribed to; Jump is
+     * selectable here without expanding automated multi-market scans. */
     const market_options = useMemo(
-        () => symbols.filter(item => VOLATILITY_SYMBOL.test(item.underlying_symbol)),
+        () => symbols.filter(item => DCIRCLE_MARKET_SYMBOL.test(item.underlying_symbol)),
         [symbols]
     );
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(DCIRCLE_MARKET_KEY, selected_symbol);
+        } catch {
+            // Browsers without storage can still retain the selection while mounted.
+        }
+    }, [selected_symbol]);
 
     const selected_symbol_info = symbols.find(item => item.underlying_symbol === selected_symbol);
     const decimals =
