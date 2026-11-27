@@ -228,16 +228,25 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
             throw new Error('Bot Builder workspace is not initialized. Open Bot Builder and try again.');
         }
 
-        if (action === 'RUN') {
+        // The AI Scanner must await BOTH a successful Blockly load and its
+        // trade definition creation before Run. Otherwise the UI closes and
+        // reports success even if no bot was actually started. Keep the old
+        // Quick Strategy behavior unchanged for non-scanner callers.
+        const scannerReady = data.scanner_strategy === true && action === 'RUN'
+            ? workspace.waitForBlockEvent({
+                block_type: 'trade_definition',
+                event_type: window.Blockly.Events.BLOCK_CREATE,
+                timeout: 10000,
+            })
+            : null;
+        if (action === 'RUN' && !scannerReady) {
             workspace
                 ?.waitForBlockEvent({
                     block_type: 'trade_definition',
                     event_type: window.Blockly.Events.BLOCK_CREATE,
                     timeout: 5000,
                 })
-                .then(() => {
-                    this.root_store.run_panel.onRunButtonClick();
-                });
+                .then(() => this.root_store.run_panel.onRunButtonClick());
         }
 
         this.setFormVisibility(false);
@@ -251,6 +260,10 @@ export default class QuickStrategyStore implements IQuickStrategyStore {
             strategy_id: null,
             showIncompatibleStrategyDialog: null,
         });
+        if (scannerReady) {
+            await scannerReady;
+            await this.root_store.run_panel.onRunButtonClick();
+        }
     };
 
     toggleStopBotDialog = (): void => {
