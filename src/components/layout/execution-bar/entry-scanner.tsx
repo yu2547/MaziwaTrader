@@ -97,6 +97,8 @@ type TResult = {
     low_streak: number;
     high_streak: number;
     character: string;
+strategy?: TStrategyMatch;
+
 };
 
 /**
@@ -310,11 +312,28 @@ const EntryScanner = observer(
                     if (!prices.length) continue;
                     const places = toDecimalPlaces(pip_size) ?? 2;
                     const digits = prices.map(price => getLastDigit(price, places)).reverse();
-                    results.push({
-                        symbol: item.underlying_symbol,
-                        name: item.underlying_symbol_name,
-                        ...analyse(digits, active_mode.over, active_mode.under),
-                    });
+                    
+const eligibleMatches = evaluateOverUnder(digits).filter(
+    match =>
+        match.eligible &&
+        (
+            (match.side === 'OVER' &&
+                match.prediction === active_mode.over) ||
+            (match.side === 'UNDER' &&
+                match.prediction === active_mode.under)
+        )
+);
+
+if (eligibleMatches.length === 0) continue;
+
+                    
+results.push({
+    symbol: item.underlying_symbol,
+    name: item.underlying_symbol_name,
+    ...analyse(digits, active_mode.over, active_mode.under),
+    strategy: eligibleMatches[0],
+});
+
                 } catch {
                     // A market that will not return history is skipped, not faked.
                 }
