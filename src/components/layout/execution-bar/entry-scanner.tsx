@@ -446,7 +446,7 @@ const EntryScanner = observer(
             if (!best?.strategy) return undefined;
             let history = [...best.historyDigits];
             let pendingTrigger = false;
-            let previousEpoch: number | null = null;
+            let previousTickId: string | null = null;
             const { side, prediction } = best.strategy;
             setLiveSignal('');
             setLiveStatus(
@@ -456,8 +456,10 @@ const EntryScanner = observer(
             );
             return feed.subscribeTicks(best.symbol, tick => {
                 if (!is_live.current) return;
-                if (previousEpoch === tick.epoch) return;
-                previousEpoch = tick.epoch;
+                // Several ticks may share an epoch second on faster markets;
+                // using epoch as a deduplication key would miss real ticks.
+                if (tick.id && previousTickId === tick.id) return;
+                previousTickId = tick.id || null;
                 const digit = getLastDigit(tick.quote, toDecimalPlaces(tick.pip_size) ?? 2);
                 history = [digit, ...history].slice(0, scan_depth);
                 const current = evaluateOverUnder(history).find(
