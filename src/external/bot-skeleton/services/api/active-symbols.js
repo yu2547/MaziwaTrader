@@ -77,6 +77,12 @@ const deriveSymbolName = code => {
     const standard = /^R_(\d+)$/.exec(code ?? '');
     if (standard) return `Volatility ${standard[1]} Index`;
 
+    // Use the same readable Jump names throughout every Bot Builder market
+    // dropdown, Quick Strategy, imported/free bot and Trading Configuration.
+    // The symbols themselves come from Deriv's live list, never invented.
+    const jump = /^JD(10|25|50|75|100)$/.exec(code ?? '');
+    if (jump) return `Jump ${jump[1]} Index`;
+
     // Forex and crypto are coded the same way - a prefix and two currency
     // codes - and would otherwise read as "frxAUDCAD" in the dropdown.
     const pair = /^(?:frx|cry)([A-Z]{3})([A-Z]{3})$/.exec(code ?? '');
