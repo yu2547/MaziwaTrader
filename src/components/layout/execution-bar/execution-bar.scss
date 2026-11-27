@@ -1731,6 +1731,71 @@ animation: mw-ai-square 3.2s ease-in-out infinite;
     }
 }
 
+// Show the actual digit distribution behind the chosen scan result. These
+// are scanner-derived colour groups, not colours received from Deriv's API.
+.mw-scanner__digit-distribution {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.7rem;
+    padding: 1rem;
+    border-radius: 10px;
+    background: var(--general-section-1);
+
+    @media (width <= 600px) {
+        gap: 0.4rem;
+        padding: 0.7rem;
+    }
+}
+
+.mw-scanner__digit {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--text-prominent);
+    font-size: 1.1rem;
+
+    strong {
+        font-size: 1.1rem;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.mw-scanner__digit-name {
+    font-weight: 700;
+}
+
+.mw-scanner__digit-track {
+    width: 100%;
+    height: 0.8rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #dbe4ef;
+}
+
+.mw-scanner__digit-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #94a3b8;
+
+    &--red { background: #dc2626; }
+    &--yellow { background: #eab308; }
+    &--blue { background: #2563eb; }
+    &--green { background: #16a34a; }
+}
+
+.mw-scanner__rule-detail {
+    padding: 1rem 1.2rem;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #1e3a5f;
+    font-size: 1.2rem;
+    line-height: 1.5;
+}
+
 .mw-scanner__metrics {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
