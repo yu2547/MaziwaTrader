@@ -1,4 +1,5 @@
 import { CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { localize } from '@deriv-com/translations';
 import EntryScanner from '../execution-bar/entry-scanner';
 import useDraggableOrb from './use-draggable-orb';
@@ -259,11 +260,13 @@ className={[
                 closing flag - the scanner keeps its own props and state - and
                 the stylesheet runs the reverse of the entrance on the sheet
                 and the backdrop from there. */}
-            {(is_ai_open || is_ai_closing) && (
-                <div className={is_ai_closing ? 'mw-scanner-exit' : undefined}>
-                    <EntryScanner onClose={closeAi} onScanningChange={setIsScanning} />
-                </div>
-            )}
+            {(is_ai_open || is_ai_closing) &&
+                createPortal(
+                    <div className={is_ai_closing ? 'mw-scanner-exit' : undefined}>
+                        <EntryScanner onClose={closeAi} onScanningChange={setIsScanning} />
+                    </div>,
+                    document.body
+                )}
         </>
     );
 };
