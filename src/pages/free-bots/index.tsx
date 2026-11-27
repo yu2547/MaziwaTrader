@@ -65,14 +65,12 @@ export const BOTS: Bot[] = [
     },
     {
         id: 'ai-signal-scanner',
-        name: 'AI SIGNAL SCANNER',
+        name: 'AI Scanner',
         description:
-            'AI Signal Scanner - Intelligent market scanner that detects high-probability setups and automates trade execution with built-in risk controls.',
+            'Free AI Scanner XML: configurable Over/Under two-tick entry, stake, Martingale and stop rules. Use the AI orb for full 18-market historical screening and live digit-frequency checks. Demo-test before trading.',
         fileName: 'AI_Signal_Scanner.xml',
         category: 'AI Trading',
         icon: '🤖',
-        is_premium: true,
-        rating: 5,
     },
     {
         id: '6',
