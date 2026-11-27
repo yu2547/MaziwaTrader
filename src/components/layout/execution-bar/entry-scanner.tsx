@@ -493,19 +493,21 @@ const EntryScanner = observer(
         };
 
         // Historical scans select candidates, never place trades.
-        // A fresh live Over signal needs the least digit among 1,2,3 followed
-        // by 4–9 on the very next tick. The user provided no Under entry rule.
+        // Live entry is two ticks: selected least digit 1/2/3 then 4–9 for
+        // Over; selected least digit 6/7/8 then 0–4 for Under. The preview
+        // only reports signals: purchase execution belongs to the gated bot.
         useEffect(() => {
             if (!best?.strategy) return undefined;
             let history = [...best.historyDigits];
             let pendingTrigger = false;
             let previousTickId: string | null = null;
             const { side, prediction } = best.strategy;
+            const entryDigit = best.strategy.leastTriggerDigits[0];
             setLiveSignal('');
             setLiveStatus(
                 side === 'OVER'
-                    ? localize('Frequency filters passed. Watching live ticks for an Over entry.')
-                    : localize('Under filters passed. No Under live entry timing rule was supplied.')
+                    ? localize('Over filters passed. Waiting for selected least digit 1, 2 or 3 then 4–9.')
+                    : localize('Under filters passed. Waiting for selected least digit 6, 7 or 8 then 0–4.')
             );
             return feed.subscribeTicks(best.symbol, tick => {
                 if (!is_live.current) return;
@@ -524,22 +526,23 @@ const EntryScanner = observer(
                     setLiveStatus(localize('Live frequency/trend filters no longer qualify. Rescan this market.'));
                     return;
                 }
-                if (side !== 'OVER') {
-                    setLiveStatus(localize('Under filters still qualify. Entry timing is not defined.'));
-                    return;
-                }
-                if (pendingTrigger && digit >= 4 && digit <= 9) {
-                    setLiveSignal(localize('LIVE OVER {{prediction}} confirmation observed. Manual decision only.', { prediction }));
-                    setLiveStatus(localize('Least trigger followed by 4–9 on this tick.'));
+                const confirms = side === 'OVER'
+                    ? digit >= 4 && digit <= 9
+                    : digit >= 0 && digit <= 4;
+                if (pendingTrigger && confirms) {
+                    setLiveSignal(localize('LIVE {{side}} {{prediction}} two-tick confirmation observed.', { side, prediction }));
+                    setLiveStatus(localize('Entry digit {{entry}} confirmed by digit {{digit}} on next tick.', { entry: entryDigit, digit }));
                     pendingTrigger = false;
                     return;
                 }
                 setLiveSignal('');
-                pendingTrigger = current.leastTriggerDigits.includes(digit);
+                pendingTrigger = digit === entryDigit && current.leastTriggerDigits.includes(digit);
                 setLiveStatus(
                     pendingTrigger
-                        ? localize('Least-frequency trigger {{digit}} observed; checking next tick.', { digit })
-                        : localize('Over filters qualify. Waiting for the least of digits 1, 2, 3.')
+                        ? localize('Least-frequency entry digit {{digit}} observed; checking next tick.', { digit })
+                        : side === 'OVER'
+                            ? localize('Over filters qualify. Waiting for selected least digit 1, 2 or 3.')
+                            : localize('Under filters qualify. Waiting for selected least digit 6, 7 or 8.')
                 );
             });
         // Keeping this subscription stable is important: an unstable localize
@@ -550,9 +553,8 @@ const EntryScanner = observer(
         /**
          * Launch the scanner-specific strategy. The launch is the explicit
          * user action to run the bot, but the engine will not buy until
-         * the *live* Over entry sequence is confirmed on the chosen market.
-         * Under setups stay informational because no Under entry timing rule
-         * has been provided. The shared engine enforces max stake/stop loss.
+         * the selected Over or Under live two-tick entry sequence qualifies
+         * on the chosen market. The shared engine checks max stake/stop loss.
          */
         const launchBot = async () => {
             if (launchInProgress.current) return;
