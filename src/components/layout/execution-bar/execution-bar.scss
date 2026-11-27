@@ -1005,7 +1005,9 @@ animation: mw-ai-square 3.2s ease-in-out infinite;
 .mw-scanner {
     position: fixed;
     inset: 0;
-    z-index: 10;
+    // Scanner is portalled to document.body; keep it above unrelated page
+    // overlays, including the floating orb and the fixed execution bar.
+    z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
