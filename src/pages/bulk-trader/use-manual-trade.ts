@@ -139,6 +139,7 @@ const useManualTrade = () => {
     const [is_placing, setIsPlacing] = useState(false);
     const [batch_progress, setBatchProgress] = useState<{ attempted: number; requested: number; opened: number } | null>(null);
     const placing_lock = useRef(false);
+    const stop_batch = useRef(false);
     const [is_selling, setIsSelling] = useState(false);
     const [pending_count, setPendingCount] = useState(0);
     const [error_message, setErrorMessage] = useState<string | null>(null);
@@ -368,6 +369,7 @@ const useManualTrade = () => {
                     if (thrown instanceof TimeoutError) {
                         const unconfirmed =
                             'Deriv did not confirm the purchase in time. It may still have been placed - check your open positions before buying again.';
+                        stop_batch.current = true;
                         if (is_mounted.current) setErrorMessage(unconfirmed);
                         globalObserver.emit('ui.log.error', unconfirmed);
                         return false;
@@ -420,6 +422,11 @@ const useManualTrade = () => {
                 return true;
             } catch (thrown) {
                 const message = readError(thrown) ?? 'The trade could not be placed.';
+                if (/rate.?limit|too many requests|throttl|timed out|timeout/i.test(message)) {
+                    // Stop unsent work rather than continuing to issue
+                    // hundreds of requests into an overloaded connection.
+                    stop_batch.current = true;
+                }
                 if (is_mounted.current) setErrorMessage(message);
                 globalObserver.emit('ui.log.error', message);
                 return false;
@@ -443,6 +450,7 @@ const useManualTrade = () => {
                 return 0;
             }
             placing_lock.current = true;
+            stop_batch.current = false;
             setIsPlacing(true);
             setBatchProgress({ attempted: 0, requested: count, opened: 0 });
             try {
@@ -457,7 +465,7 @@ const useManualTrade = () => {
                 let processed = 0;
                 let confirmed = 0;
                 const worker = async () => {
-                    while (next < count) {
+                    while (!stop_batch.current && next < count) {
                         next += 1;
                         // This request is independent; never reattempt a buy on
                         // timeout, because it may already exist on the account.
@@ -476,7 +484,7 @@ const useManualTrade = () => {
                 };
                 await Promise.all(Array.from({ length: Math.min(BATCH_CONCURRENCY, count) }, worker));
                 if (confirmed < count && is_mounted.current) {
-                    setErrorMessage(`Only ${confirmed} of ${count} purchases were confirmed. Check Transactions and open positions before placing another batch.`);
+                    setErrorMessage(`Only ${confirmed} of ${count} purchases were confirmed${stop_batch.current ? '; remaining requests were stopped after a connection or pricing error' : ''}. Check Transactions and open positions before placing another batch.`);
                 }
                 return confirmed;
             } finally {
