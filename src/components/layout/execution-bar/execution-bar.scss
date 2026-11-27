@@ -1172,7 +1172,7 @@ animation: mw-ai-square 3.2s ease-in-out infinite;
     // there: the modes alone took 105px of it against the recording's 35.
     &__modes {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 0.4rem;
         padding: 0.4rem;
         border-radius: 12px;
