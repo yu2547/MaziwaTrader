@@ -141,6 +141,7 @@ const useManualTrade = () => {
     const last_trade_error = useRef<string | null>(null);
     const stop_batch_for_rate_limit = useRef(false);
     const [error_message, setErrorMessage] = useState<string | null>(null);
+    const [trade_stage, setTradeStage] = useState<string | null>(null);
 
     // Contracts bought here and not yet settled. Kept in a ref because the
     // onMessage subscription below is registered once and must see the
@@ -257,37 +258,76 @@ const useManualTrade = () => {
      * switch, say so, and let the next click trade.
      */
     const prepareConnection = useCallback(async (): Promise<string | null> => {
-        if (!api_base.api || !api_base.is_authorized) {
-            if (!getStoredAccessToken()) return 'Log in to place trades.';
+        // A stale WebSocket can remain marked authorized while disconnected.
+        // Don't queue a price request against a closed/connecting socket.
+        const socketOpen = api_base.api?.connection?.readyState === 1;
+        const selected_account_id = oauth_session?.selected_account_id;
+
+        if (!api_base.api || !api_base.is_authorized || !socketOpen) {
+            if (!getStoredAccessToken()) {
+                return 'Your trading connection is not ready. Sign in again, then choose the intended Deriv account.';
+            }
+            if (api_base.is_running) {
+                return 'A trading bot is running. Stop the bot before reconnecting Bulk Trader.';
+            }
             let connected = false;
             try {
                 connected = await withTimeout<boolean>(
-                    api_base.initOtpConnection(),
+                    api_base.initOtpConnection(selected_account_id),
                     CONNECT_TIMEOUT_MS,
-                    'timed out opening the trading connection'
+                    'Timed out opening the Deriv Options account connection.'
                 );
-            } catch {
-                // A connection that never answers is a connection we do not
-                // have, and the message below already says so.
-                connected = false;
+            } catch (err) {
+                return `Could not connect to Deriv: ${readError(err) ?? 'connection timeout'}`;
             }
             if (!connected) {
-                return `Could not open a trading connection for your account. ${api_base.otp_error ?? ''}`.trim();
+                return `Could not connect to your Deriv Options account. ${api_base.otp_error ?? ''}`.trim();
             }
         }
 
-        const selected_account_id = oauth_session?.selected_account_id;
         if (api_base.is_otp_transport && selected_account_id && api_base.account_id !== selected_account_id) {
-            const switched = await withTimeout<boolean>(
-                api_base.switchOtpAccount(selected_account_id),
-                CONNECT_TIMEOUT_MS,
-                'timed out switching account'
-            ).catch(() => false);
-            return switched
-                ? 'Reconnected to the account in the header. Press again to trade on it.'
-                : 'The connection is on a different account than the header shows.';
+            if (api_base.is_running) {
+                return 'A trading bot is running. Stop the bot before switching the trading account.';
+            }
+            let switched = false;
+            try {
+                switched = await withTimeout<boolean>(
+                    api_base.switchOtpAccount(selected_account_id),
+                    CONNECT_TIMEOUT_MS,
+                    'Timed out switching to the selected account.'
+                );
+            } catch (err) {
+                return `Account switch failed: ${readError(err) ?? 'connection timeout'}`;
+            }
+            // Continue with this click only if the new authorized connection
+            // actually matches the selected account; never trade on the old one.
+            if (!switched || api_base.account_id !== selected_account_id) {
+                return 'Could not verify the selected Deriv account. No orders were sent.';
+            }
         }
 
+        const ready_api = api_base.api;
+        if (!ready_api || !api_base.is_authorized || ready_api.connection?.readyState !== 1) {
+            return 'Deriv trading WebSocket is not open/authorized. No orders were sent.';
+        }
+
+        // One read-only account check for the whole batch. This confirms the
+        // trading transport (not the separate public ticks connection) can
+        // handle an authenticated request before any purchase is attempted.
+        try {
+            const response = await withTimeout<{ balance?: { currency?: string }; error?: TApiError['error'] }>(
+                ready_api.send({ balance: 1 }),
+                8000,
+                'Deriv did not respond to the account check.'
+            );
+            const reason = readError(response);
+            if (reason) return `Deriv trading-account check failed: ${reason}`;
+            if (!response?.balance) {
+                return 'Deriv did not return an account balance on the trading connection. No orders were sent.';
+            }
+        } catch (err) {
+            return `Deriv trading-account check failed: ${readError(err) ?? 'request failed'}`;
+        }
         return null;
     }, [oauth_session]);
 
@@ -323,6 +363,7 @@ const useManualTrade = () => {
 
             try {
                 const currency = (api_base.account_info as { currency?: string })?.currency || 'USD';
+                if (is_mounted.current) setTradeStage(`Requesting price for ${contract_type} on ${symbol}…`);
                 const proposal_request: Record<string, unknown> = {
                     proposal: 1,
                     amount: stake,
@@ -358,6 +399,7 @@ const useManualTrade = () => {
                     throw new Error('Deriv returned no valid ask price. No contract was purchased.');
                 }
 
+                if (is_mounted.current) setTradeStage(`Price received. Purchasing ${contract_type}…`);
                 let buy_response: TBuyReply;
                 try {
                     buy_response = await withTimeout<TBuyReply>(
@@ -424,6 +466,8 @@ const useManualTrade = () => {
                     log_type: LogTypes.PURCHASE,
                     extra: { longcode: buy.longcode, transaction_id: buy.transaction_id },
                 });
+                last_trade_error.current = null;
+                if (is_mounted.current) setTradeStage(`Deriv confirmed contract ${contract_id}.`);
                 return true;
             } catch (thrown) {
                 const message = readError(thrown) ?? 'The trade could not be placed.';
@@ -454,17 +498,24 @@ const useManualTrade = () => {
                 return 0;
             }
             setIsPlacing(true);
+            setTradeStage('Checking Deriv trading-account connection…');
             setBatchProgress({ attempted: 0, requested: attempts, opened: 0 });
             stop_batch_for_rate_limit.current = false;
             last_trade_error.current = null;
             try {
                 const blocked = await prepareConnection();
                 if (blocked) {
-                    if (is_mounted.current) setErrorMessage(blocked);
+                    if (is_mounted.current) {
+                        setErrorMessage(blocked);
+                        setTradeStage('Trading-account check failed');
+                    }
                     globalObserver.emit('ui.log.error', blocked);
                     return 0;
                 }
-                if (is_mounted.current) setErrorMessage(null);
+                if (is_mounted.current) {
+                    setErrorMessage(null);
+                    setTradeStage('Trading account verified. Preparing first proposal…');
+                }
                 let opened = 0;
                 let consecutiveFailures = 0;
                 for (let i = 0; i < attempts; i += 1) {
@@ -482,7 +533,7 @@ const useManualTrade = () => {
                     const reason = last_trade_error.current || '';
                     if (
                         stop_batch_for_rate_limit.current ||
-                        consecutiveFailures >= 2 ||
+                        consecutiveFailures >= 1 ||
                         /timed out|not confirmed|no proposal|no valid ask price|invalid contract|not authorized|insufficient/i.test(reason)
                     ) break;
                     if (i < attempts - 1) await new Promise<void>(resolve => setTimeout(resolve, 250));
@@ -493,6 +544,7 @@ const useManualTrade = () => {
                 if (stop_batch_for_rate_limit.current && is_mounted.current) {
                     setErrorMessage(`Deriv rate-limited the batch. ${opened} of ${attempts} contracts opened. Wait before trying another batch.`);
                 }
+                if (is_mounted.current) setTradeStage(opened ? `${opened} confirmed purchase(s)` : 'No purchases confirmed');
                 return opened;
             } finally {
                 if (is_mounted.current) setIsPlacing(false);
@@ -558,7 +610,7 @@ const useManualTrade = () => {
         [prepareConnection]
     );
 
-    return { error_message, is_placing, is_selling, pending_count, batch_progress, placeTrade, placeTrades, sellContract };
+    return { error_message, trade_stage, is_placing, is_selling, pending_count, batch_progress, placeTrade, placeTrades, sellContract };
 };
 
 export default useManualTrade;
