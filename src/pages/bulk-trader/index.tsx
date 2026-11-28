@@ -450,7 +450,12 @@ const BulkTraderPage = observer(() => {
                             : ''}
                 </div>
 
-                {trade.error_message && <div className='mw-bulk-trader__error'>{trade.error_message}</div>}
+                {trade.trade_stage && (
+                    <div className='mw-bulk-trader__result' role='status' aria-live='polite'>
+                        {trade.trade_stage}
+                    </div>
+                )}
+                {trade.error_message && <div className='mw-bulk-trader__error' role='alert'>{trade.error_message}</div>}
             </div>
         </div>
     );
