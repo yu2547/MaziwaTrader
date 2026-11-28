@@ -442,6 +442,15 @@ const BulkTraderPage = observer(() => {
                         : localize('Log in to place trades. The statistics above are live either way.')}
                     {trade.pending_count > 0 &&
                         ` ${localize('{{count}} still running.', { count: trade.pending_count })}`}
+                    {trade.batch_progress && trade.is_placing && (
+                        <span className='mw-bulk-trader__shortfall' role='status'>
+                            {` ${localize('Submitting trade {{attempted}} of {{requested}}. Confirmed: {{opened}}.', {
+                                attempted: trade.batch_progress.attempted,
+                                requested: trade.batch_progress.requested,
+                                opened: trade.batch_progress.opened,
+                            })}`}
+                        </span>
+                    )}
                     {last_batch && last_batch.opened < last_batch.requested && (
                         <span className='mw-bulk-trader__shortfall'>
                             {` ${localize('Last click: {{opened}} of {{requested}} opened.', {
