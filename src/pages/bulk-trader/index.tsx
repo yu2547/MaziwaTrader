@@ -149,7 +149,7 @@ const BulkTraderPage = observer(() => {
     const [trades_per_click, setTradesPerClick] = useState(1);
     // What the last click asked for versus what actually opened. Only
     // interesting when they disagree.
-    const [last_batch, setLastBatch] = useState<{ requested: number; opened: number } | null>(null);
+    const [last_batch, setLastBatch] = useState<{ requested: number; opened: number; contract: string } | null>(null);
 
     useEffect(() => {
         if (!isConnected) return;
@@ -282,18 +282,12 @@ const BulkTraderPage = observer(() => {
     const recent_digits = digits.slice(0, 8);
     const config = TRADE_TYPES[trade_type];
     const is_logged_in = Boolean(oauth_session?.is_authenticated || client?.is_logged_in);
-    const total_risk = stake * trades_per_click;
 
-    // Every contract in the batch goes out together, so all of them price off
-    // the same moment in the market. Placing them one after another meant the
-    // last contract of a 20-trade batch opened many ticks after the first,
-    // which is not one signal traded 20 times.
-    //
-    // The count is whatever was typed - there is no ceiling on it here. What
-    // actually opened is reported back rather than assumed, because a batch
-    // large enough to be throttled will land short and the difference matters.
+    // A "placed" trade must be backed by a confirmed Deriv buy contract ID.
+    // Failed quote/buy requests never count as opened contracts.
     const placeSide = async (contract_type: string) => {
         const requested = trades_per_click;
+        setLastBatch(null);
         const opened = await trade.placeTrades(
             {
                 contract_type,
@@ -304,7 +298,13 @@ const BulkTraderPage = observer(() => {
             },
             requested
         );
-        setLastBatch({ requested, opened });
+        const labels: Record<string, string> = {
+            DIGITEVEN: 'EVEN', DIGITODD: 'ODD',
+            DIGITOVER: 'OVER', DIGITUNDER: 'UNDER',
+            DIGITMATCH: 'MATCHES', DIGITDIFF: 'DIFFERS',
+            CALL: 'RISE', PUT: 'FALL',
+        };
+        setLastBatch({ requested, opened, contract: labels[contract_type] ?? contract_type });
     };
 
     // The OAuth account is the one that actually gets debited, so its currency
@@ -312,7 +312,8 @@ const BulkTraderPage = observer(() => {
     // is deliberately last - it holds a leftover value when nobody is logged
     // in, which would otherwise label the risk line in a currency this session
     // has nothing to do with.
-    const currency = oauth_session?.currency || (is_logged_in && (client?.currency as string)) || 'USD';
+    // Currency and stake totals are not repeated below the trading buttons;
+    // Deriv purchase confirmations (not estimates) determine the result.
 
     return (
         <div className='mw-bulk-trader'>
@@ -403,7 +404,7 @@ const BulkTraderPage = observer(() => {
                     />
                     <NumberField label={localize('Stake')} value={stake} onChange={setStake} min={0.35} step={0.1} />
                     <NumberField
-                        label={localize('Trades per click')}
+                        label={localize('No of Trades')}
                         value={trades_per_click}
                         onChange={value => setTradesPerClick(Math.max(1, value))}
                         min={1}
@@ -431,34 +432,22 @@ const BulkTraderPage = observer(() => {
                     </button>
                 </div>
 
-                <div className='mw-bulk-trader__risk'>
-                    {is_logged_in
-                        ? localize('Each click stakes {{total}} {{currency}} in total ({{count}} × {{stake}}).', {
-                              total: total_risk.toFixed(2),
-                              currency,
-                              count: trades_per_click,
-                              stake: stake.toFixed(2),
+                <div className='mw-bulk-trader__result' role='status' aria-live='polite'>
+                    {trade.batch_progress && trade.is_placing
+                        ? localize('{{attempted}} of {{requested}} processed; {{opened}} confirmed.', {
+                              attempted: trade.batch_progress.attempted,
+                              requested: trade.batch_progress.requested,
+                              opened: trade.batch_progress.opened,
                           })
-                        : localize('Log in to place trades. The statistics above are live either way.')}
-                    {trade.pending_count > 0 &&
-                        ` ${localize('{{count}} still running.', { count: trade.pending_count })}`}
-                    {trade.batch_progress && trade.is_placing && (
-                        <span className='mw-bulk-trader__shortfall' role='status'>
-                            {` ${localize('Submitting trade {{attempted}} of {{requested}}. Confirmed: {{opened}}.', {
-                                attempted: trade.batch_progress.attempted,
-                                requested: trade.batch_progress.requested,
-                                opened: trade.batch_progress.opened,
-                            })}`}
-                        </span>
-                    )}
-                    {last_batch && last_batch.opened < last_batch.requested && (
-                        <span className='mw-bulk-trader__shortfall'>
-                            {` ${localize('Last click: {{opened}} of {{requested}} opened.', {
-                                opened: last_batch.opened,
-                                requested: last_batch.requested,
-                            })}`}
-                        </span>
-                    )}
+                        : last_batch?.opened
+                          ? `Placed ${last_batch.opened} ${last_batch.contract} contracts.${
+                                last_batch.opened < last_batch.requested
+                                    ? ` Requested ${last_batch.requested}; some orders were not confirmed.`
+                                    : ''
+                            }`
+                          : last_batch
+                            ? localize('No contracts placed. See the error below.')
+                            : ''}
                 </div>
 
                 {trade.error_message && <div className='mw-bulk-trader__error'>{trade.error_message}</div>}
