@@ -56,7 +56,10 @@ type TApiError = { error?: { message?: string; code?: string } };
 
 const readError = (thrown: unknown): string | null => {
     const error = (thrown as TApiError)?.error;
-    if (error) return error.message || error.code || 'Request failed.';
+    if (error) {
+        const reason = error.message || 'Request failed.';
+        return error.code ? `${reason} (Deriv: ${error.code})` : reason;
+    }
     if (thrown instanceof Error) return thrown.message;
     return null;
 };
@@ -77,7 +80,7 @@ const SETTLEMENT_GRACE_MS = 15000;
  * answer or in a message, never in a page that has stopped responding.
  */
 const CONNECT_TIMEOUT_MS = 15000;
-const PRICE_TIMEOUT_MS = 10000;
+const PRICE_TIMEOUT_MS = 15000;
 
 /**
  * Longer than the others, and deliberately never retried on its own: a buy that
@@ -342,15 +345,23 @@ const useManualTrade = () => {
                     PRICE_TIMEOUT_MS,
                     'Deriv did not answer the price request in time. Nothing was bought - check your connection and try again.'
                 );
-                if (readError(proposal_response)) throw proposal_response;
+                if (readError(proposal_response)) {
+                    throw new Error(`Proposal rejected for ${contract_type} on ${symbol}: ${readError(proposal_response)}`);
+                }
 
                 const proposal = proposal_response.proposal;
-                if (!proposal?.id) throw new Error('The price request came back without a proposal.');
+                if (!proposal?.id) {
+                    throw new Error(`Deriv returned no proposal ID for ${contract_type} on ${symbol}. No contract was purchased.`);
+                }
+                const price = Number(proposal.ask_price);
+                if (!Number.isFinite(price) || price <= 0) {
+                    throw new Error('Deriv returned no valid ask price. No contract was purchased.');
+                }
 
                 let buy_response: TBuyReply;
                 try {
                     buy_response = await withTimeout<TBuyReply>(
-                        api.send({ buy: proposal.id, price: proposal.ask_price }),
+                        api.send({ buy: proposal.id, price }),
                         BUY_TIMEOUT_MS,
                         'The purchase was not confirmed in time.'
                     );
@@ -368,7 +379,9 @@ const useManualTrade = () => {
                     }
                     throw thrown;
                 }
-                if (readError(buy_response)) throw buy_response;
+                if (readError(buy_response)) {
+                    throw new Error(`Buy rejected for ${contract_type} on ${symbol}: ${readError(buy_response)}`);
+                }
 
                 const buy = buy_response.buy;
                 // Deriv answers a successful buy with the contract; anything
@@ -453,14 +466,25 @@ const useManualTrade = () => {
                 }
                 if (is_mounted.current) setErrorMessage(null);
                 let opened = 0;
+                let consecutiveFailures = 0;
                 for (let i = 0; i < attempts; i += 1) {
                     if (stop_batch_for_rate_limit.current || !is_mounted.current) break;
                     const placed = await placeTrade(params, on_contract);
-                    if (placed) opened += 1;
+                    if (placed) {
+                        opened += 1;
+                        consecutiveFailures = 0;
+                    } else {
+                        consecutiveFailures += 1;
+                    }
                     if (is_mounted.current) setBatchProgress({ attempted: i + 1, requested: attempts, opened });
-                    // Stop immediately if Deriv asks us to slow down. Don't
-                    // queue more requests and compound a rate-limit incident.
-                    if (stop_batch_for_rate_limit.current) break;
+                    // Never continue blindly after repeated rejections, stale
+                    // quote requests, or uncertain buy acknowledgements.
+                    const reason = last_trade_error.current || '';
+                    if (
+                        stop_batch_for_rate_limit.current ||
+                        consecutiveFailures >= 2 ||
+                        /timed out|not confirmed|no proposal|no valid ask price|invalid contract|not authorized|insufficient/i.test(reason)
+                    ) break;
                     if (i < attempts - 1) await new Promise<void>(resolve => setTimeout(resolve, 250));
                 }
                 if (is_mounted.current && opened < attempts && !last_trade_error.current) {
