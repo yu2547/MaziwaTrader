@@ -6,8 +6,11 @@
     padding: 1.6rem;
     min-height: 100%;
 
+    // Bulk Trader occupies the available full width like the reference.
+    // The floating Run panel is an overlay, not a permanently reserved
+    // 380px column; reserving it shrank all ten digit dials and controls.
     @media (width >= 1101px) {
-        padding-inline-end: 38rem;
+        padding-inline-end: 1.6rem;
     }
 
     &__main {
@@ -273,8 +276,10 @@
         background: rgb(0 0 0 / 12%);
     }
 
-    &__risk {
+    &__result {
+        min-height: 2rem;
         font-size: 1.2rem;
+        font-weight: 600;
         color: var(--text-less-prominent);
         text-align: center;
     }
